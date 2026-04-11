@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | إضافة منتج جديد</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#ECFEFF', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
+                        secondary: { 500: '#F59E0B' },
+                        success: { 500: '#22C55E' },
+                        error: { 500: '#EF4444' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style> body { background-color: #F3F4F6; } </style>
+</head>
+<body id="admin-layout" class="font-sans text-gray-800 antialiased flex flex-col md:flex-row min-h-screen">
+
+    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full overflow-hidden">
+        <header class="mb-8">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">إضافة منتج جديد</h1>
+            <p class="text-gray-500 mt-2">أدخل تفاصيل المنتج ليظهر فوراً في المتجر.</p>
+        </header>
+
+        <div id="messageBox" class="hidden px-6 py-3 rounded-md mb-6 font-bold text-center transition-all"></div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 max-w-3xl">
+            <form id="addProductForm" onsubmit="handleAddProduct(event)">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">اسم المنتج <span class="text-red-500">*</span></label>
+                        <input type="text" id="title" required placeholder="مثال: ذراع تحكم PS5" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">السعر (ج.م) <span class="text-red-500">*</span></label>
+                        <input type="number" id="price" required min="1" placeholder="مثال: 3500" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">الكمية المتاحة (Stock) <span class="text-red-500">*</span></label>
+                        <input type="number" id="stock" required min="0" placeholder="مثال: 50" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">رابط الصورة (Image URL)</label>
+                        <input type="text" id="imageUrl" placeholder="مسار الصورة أو رابط خارجي" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-left" dir="ltr">
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">وصف المنتج</label>
+                    <textarea id="description" rows="4" placeholder="اكتب تفاصيل ومميزات المنتج هنا..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"></textarea>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full md:w-auto bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 px-8 rounded-md shadow-sm transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i> حفظ ونشر المنتج
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script src="../../components/admin-sidebar.js"></script>
+    
+    <script>
+        // السطر ده هو اللي بيرسم القائمة كلها وبينور زرار 'add-product'
+        loadAdminSidebar('add-product');
+
+        const API_URL = 'http://127.0.0.1:3000/api';
+
+        // التأكد من تسجيل الدخول كأدمن
+        window.onload = () => {
+            const token = localStorage.getItem('spider_token');
+            if (!token) window.location.href = '../auth/login.html';
+        };
+
+        // دالة إضافة المنتج
+        async function handleAddProduct(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const msgBox = document.getElementById('messageBox');
+            const token = localStorage.getItem('spider_token');
+
+            const productData = {
+                title: document.getElementById('title').value,
+                price: Number(document.getElementById('price').value),
+                stock_quantity: Number(document.getElementById('stock').value),
+                description: document.getElementById('description').value,
+                image_url: document.getElementById('imageUrl').value
+            };
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+            btn.disabled = true;
+            msgBox.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}/products`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok || data.success) {
+                    msgBox.className = 'px-6 py-3 rounded-md mb-6 font-bold text-center bg-success-500 text-white block';
+                    msgBox.innerHTML = '<i class="fas fa-check-circle"></i> تم إضافة المنتج للمتجر بنجاح!';
+                    document.getElementById('addProductForm').reset(); 
+                } else {
+                    msgBox.className = 'px-6 py-3 rounded-md mb-6 font-bold text-center bg-error-500 text-white block';
+                    msgBox.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.message || 'خطأ في إضافة المنتج'}`;
+                }
+            } catch (error) {
+                msgBox.className = 'px-6 py-3 rounded-md mb-6 font-bold text-center bg-error-500 text-white block';
+                msgBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> خطأ في الاتصال بالسيرفر';
+            } finally {
+                btn.innerHTML = '<i class="fas fa-save"></i> حفظ ونشر المنتج';
+                btn.disabled = false;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('spider_token');
+            window.location.href = '../../index.html';
+        }
+    </script>
+</body>
+</html>

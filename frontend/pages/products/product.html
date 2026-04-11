@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | تفاصيل المنتج</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#ECFEFF', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
+                        secondary: { 50: '#FFFBEB', 500: '#F59E0B' },
+                        success: { 500: '#22C55E' },
+                        error: { 500: '#EF4444' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style> body { background-color: #F9FAFB; } .smooth-transition { transition: all 0.2s ease-out; } </style>
+</head>
+<body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
+
+    <nav class="bg-primary-600 text-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 lg:px-8 py-3 flex items-center justify-between">
+            <a href="../../index.html" class="text-2xl font-bold tracking-wider hover:text-secondary-500 smooth-transition">
+                Spider<span class="text-secondary-500">Store</span>
+            </a>
+            <div class="flex items-center gap-6">
+                <a href="../auth/login.html" id="authLink" class="hover:text-secondary-500 smooth-transition text-sm font-medium">
+                    <i class="fas fa-user ml-1"></i> حسابي
+                </a>
+                <a href="../cart/cart.html" class="relative hover:text-secondary-500 smooth-transition flex items-center">
+                    <i class="fas fa-shopping-cart text-xl"></i>
+                    <span id="cartCount" class="absolute -top-2 -right-2 bg-secondary-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-sm">0</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 lg:px-8 py-12 flex-1">
+        <a href="../../index.html" class="inline-flex items-center text-gray-500 hover:text-primary-600 mb-8 transition-colors font-medium">
+            <i class="fas fa-arrow-right ml-2"></i> العودة للمتجر
+        </a>
+
+        <div id="productContainer" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px] flex items-center justify-center">
+            <div class="text-center py-12 text-gray-500">
+                <i class="fas fa-spinner fa-spin text-4xl mb-3"></i>
+                <p class="text-lg">جاري تحميل تفاصيل المنتج...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:3000/api';
+        let currentProduct = null;
+        let selectedQuantity = 1;
+
+        // 1. استخراج رقم المنتج (ID) من رابط الصفحة
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        // 2. تحديث الـ Navbar
+        function checkAuth() {
+            const token = localStorage.getItem('spider_token');
+            const authLink = document.getElementById('authLink');
+            if (token) {
+                authLink.innerHTML = `<i class="fas fa-user ml-1"></i> حسابي`;
+                authLink.href = "../profile/profile.html";
+            }
+        }
+
+        // 3. تحديث رقم السلة
+        function updateCartCount() {
+            let cart = JSON.parse(localStorage.getItem('spider_cart')) || [];
+            let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const cartBadge = document.getElementById('cartCount');
+            if(cartBadge) cartBadge.textContent = totalItems;
+        }
+
+        // 4. جلب تفاصيل المنتج من السيرفر
+        async function fetchProductDetails() {
+            if (!productId) {
+                showError('لم يتم العثور على المنتج.');
+                return;
+            }
+
+            try {
+                // هنجيب كل المنتجات وندور على المنتج بتاعنا (عشان نضمن إنها تشتغل مع الباك اند بتاعك)
+                const response = await fetch(`${API_URL}/products`);
+                const data = await response.json();
+
+                if (response.ok || data.success) {
+                    const products = data.data || data.products || [];
+                    // البحث عن المنتج المطابق للـ ID
+                    currentProduct = products.find(p => p.id == productId);
+                    
+                    if (currentProduct) {
+                        renderProduct(currentProduct);
+                    } else {
+                        showError('هذا المنتج غير موجود أو تم حذفه.');
+                    }
+                } else {
+                    showError(data.message || 'خطأ في جلب بيانات المنتج');
+                }
+            } catch (error) {
+                showError('تأكد من تشغيل سيرفر الباك اند 🔌');
+            }
+        }
+
+        // 5. رسم تفاصيل المنتج على الشاشة
+        function renderProduct(product) {
+            const container = document.getElementById('productContainer');
+            const imageUrl = (product.image_url && product.image_url.trim() !== '') 
+                ? `http://127.0.0.1:3000${product.image_url}` 
+                : 'https://via.placeholder.com/600?text=No+Image';
+            
+            const isAvailable = product.stock_quantity > 0;
+
+            container.innerHTML = `
+                <div class="flex flex-col md:flex-row w-full">
+                    <div class="md:w-1/2 bg-gray-50 flex items-center justify-center p-8 border-b md:border-b-0 md:border-l border-gray-100">
+                        <img src="${imageUrl}" alt="${product.title}" class="max-w-full max-h-[500px] object-contain drop-shadow-md hover:scale-105 transition-transform duration-300">
+                    </div>
+                    
+                    <div class="md:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
+                        ${isAvailable ? 
+                            `<span class="inline-block bg-success-50 text-success-600 text-sm font-bold px-3 py-1 rounded-full mb-4 w-fit border border-success-200">متاح في المخزن</span>` : 
+                            `<span class="inline-block bg-error-50 text-error-600 text-sm font-bold px-3 py-1 rounded-full mb-4 w-fit border border-error-200">نفذت الكمية</span>`
+                        }
+                        
+                        <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 leading-tight">${product.title}</h1>
+                        <p class="text-4xl font-bold text-primary-600 mb-6">${product.price} <span class="text-lg text-gray-500 font-normal">ج.م</span></p>
+                        
+                        <div class="prose prose-sm text-gray-600 mb-8">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2 border-b pb-2">وصف المنتج:</h3>
+                            <p class="whitespace-pre-line leading-relaxed">${product.description || 'لا يوجد وصف متاح لهذا المنتج حتى الآن.'}</p>
+                        </div>
+                        
+                        ${isAvailable ? `
+                            <div class="flex flex-col sm:flex-row gap-4 mt-auto border-t pt-8">
+                                <div class="flex items-center justify-between border border-gray-300 rounded-md w-full sm:w-32 bg-white">
+                                    <button onclick="changeQty(1)" class="w-10 h-12 text-gray-600 hover:text-primary-600 hover:bg-gray-50 transition"><i class="fas fa-plus"></i></button>
+                                    <span id="qtyDisplay" class="font-bold text-lg">1</span>
+                                    <button onclick="changeQty(-1)" class="w-10 h-12 text-gray-600 hover:text-error-500 hover:bg-gray-50 transition"><i class="fas fa-minus"></i></button>
+                                </div>
+                                
+                                <button onclick="addToCartFromDetails()" class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-md shadow-sm transition-colors text-lg flex items-center justify-center gap-2">
+                                    <i class="fas fa-cart-plus"></i> إضافة للسلة
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="mt-auto border-t pt-8">
+                                <button disabled class="w-full bg-gray-200 text-gray-500 font-bold py-3 px-6 rounded-md cursor-not-allowed flex items-center justify-center gap-2 text-lg">
+                                    <i class="fas fa-box-open"></i> المنتج غير متاح حالياً
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        function changeQty(change) {
+            let newQty = selectedQuantity + change;
+            if (newQty >= 1 && newQty <= (currentProduct.stock_quantity || 10)) {
+                selectedQuantity = newQty;
+                document.getElementById('qtyDisplay').textContent = selectedQuantity;
+            }
+        }
+
+        function addToCartFromDetails() {
+            const token = localStorage.getItem('spider_token');
+            if (!token) {
+                showToast('يجب تسجيل الدخول أولاً!', 'error');
+                setTimeout(() => window.location.href = '../auth/login.html', 1500);
+                return;
+            }
+
+            let cart = JSON.parse(localStorage.getItem('spider_cart')) || [];
+            const existingItem = cart.find(item => item.id == currentProduct.id);
+            const maxStock = currentProduct.stock_quantity || 0;
+            
+            if (existingItem) {
+                existingItem.quantity = Math.min(existingItem.quantity + selectedQuantity, maxStock);
+            } else {
+                cart.push({ id: currentProduct.id, quantity: Math.min(selectedQuantity, maxStock) });
+            }
+            
+            localStorage.setItem('spider_cart', JSON.stringify(cart));
+            updateCartCount();
+            const finalQty = existingItem ? existingItem.quantity : Math.min(selectedQuantity, maxStock);
+            showToast(`تم تحديث السلة (الحد الأقصى للمخزون: ${maxStock})`, 'success');
+            
+            // نرجع الكمية لـ 1 تاني بعد الإضافة
+            selectedQuantity = 1;
+            document.getElementById('qtyDisplay').textContent = selectedQuantity;
+        }
+
+        function showToast(message, type = 'success') {
+            const bgColor = type === 'success' ? 'bg-success-500' : 'bg-error-500';
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-6 py-3 rounded-full shadow-lg font-bold z-50 transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2`;
+            toast.innerHTML = type === 'success' ? `<i class="fas fa-check-circle"></i> ${message}` : `<i class="fas fa-exclamation-circle"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.classList.add('translate-y-10', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 2500);
+        }
+
+        function showError(msg) {
+            document.getElementById('productContainer').innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-exclamation-triangle text-6xl text-gray-300 mb-4"></i>
+                    <h2 class="text-2xl font-bold text-gray-700 mb-2">عذراً!</h2>
+                    <p class="text-gray-500 text-lg">${msg}</p>
+                </div>
+            `;
+        }
+
+        window.addEventListener('load', () => {
+            checkAuth();
+            updateCartCount();
+            fetchProductDetails();
+        });
+    </script>
+</body>
+</html>

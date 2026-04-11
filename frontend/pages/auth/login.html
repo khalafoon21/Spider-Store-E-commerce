@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | تسجيل الدخول</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#ECFEFF', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
+                        secondary: { 50: '#FFFBEB', 500: '#F59E0B' },
+                        error: { 500: '#EF4444' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style> body { background-color: #F9FAFB; } .smooth-transition { transition: all 0.2s ease-out; } </style>
+</head>
+<body class="font-sans text-gray-800 antialiased flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md border border-gray-100">
+        <div class="text-center mb-8">
+            <a href="../../index.html" class="text-3xl font-bold tracking-wider text-primary-600">
+                Spider<span class="text-secondary-500">Store</span>
+            </a>
+            <h2 class="text-xl font-semibold mt-4 text-gray-700">مرحباً بك مجدداً!</h2>
+            <p class="text-gray-500 text-sm mt-1">سجل دخولك لمتابعة التسوق</p>
+        </div>
+
+        <div id="errorMessage" class="hidden bg-error-500 text-white text-sm px-4 py-2 rounded-md mb-4 text-center font-medium"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                <div class="relative">
+                    <input type="email" id="email" required placeholder="example@email.com" 
+                        class="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-left" dir="ltr">
+                    <i class="fas fa-envelope absolute right-3 top-3 text-gray-400"></i>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
+                <div class="relative">
+                    <input type="password" id="password" required placeholder="••••••••" 
+                        class="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-left" dir="ltr">
+                    <i class="fas fa-lock absolute right-3 top-3 text-gray-400"></i>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-2 px-4 rounded-md shadow-sm smooth-transition">
+                تسجيل الدخول
+            </button>
+        </form>
+
+        <div class="mt-6 text-center text-sm text-gray-500">
+            ليس لديك حساب؟ <a href="#" class="text-primary-600 hover:text-primary-700 font-semibold">سجل الآن</a>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:3000/api'; // استخدمنا 127 عشان مشكلة الـ DNS
+
+        async function handleLogin(event) {
+            event.preventDefault(); // نمنع الصفحة إنها تعمل ريفريش
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorMessage');
+            const btn = document.getElementById('submitBtn');
+
+            // تغيير شكل الزرار وقت التحميل
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
+            btn.disabled = true;
+            errorDiv.classList.add('hidden');
+
+            try {
+                // نبعت البيانات للباك اند
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.token) {
+                    // السطر الأهم: حفظ التوكن في خزنة المتصفح!
+                    localStorage.setItem('spider_token', data.token);
+                    
+                    // تحويل المستخدم للصفحة الرئيسية
+                    window.location.href = '../../index.html';
+                } else {
+                    // لو الباسورد غلط
+                    errorDiv.textContent = data.message || 'خطأ في البريد الإلكتروني أو كلمة المرور';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'خطأ في الاتصال بالسيرفر';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                // نرجع الزرار لشكله الطبيعي
+                btn.innerHTML = 'تسجيل الدخول';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
