@@ -24,6 +24,9 @@ function loadAdminSidebar(activePage) {
                 <a href="add-product.html" class="block px-4 py-3 rounded-md transition ${activePage === 'add-product' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
                     <i class="fas fa-plus-circle ml-2"></i> إضافة منتج
                 </a>
+                <a href="manage-products.html" class="block px-4 py-3 rounded-md transition ${activePage === 'manage-products' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
+                    <i class="fas fa-pen-to-square ml-2"></i> تعديل وحذف المنتجات
+                </a>
                 <a href="users.html" class="block px-4 py-3 rounded-md transition ${activePage === 'users' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
                     <i class="fas fa-users ml-2"></i> إدارة المستخدمين
                 </a>

@@ -110,4 +110,24 @@ async function updateUserRole(req, res) {
     }
 }
 
-module.exports = { addCategory, getAllUsers, updateUserRole };
+async function getCategories(req, res) {
+    try {
+        const db = getDb();
+        const categories = await db.all(`SELECT id, name FROM categories ORDER BY name ASC`);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: true,
+            data: categories
+        }));
+    } catch (error) {
+        console.error(error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: false,
+            message: 'An error occurred while fetching categories'
+        }));
+    }
+}
+
+module.exports = { addCategory, getCategories, getAllUsers, updateUserRole };

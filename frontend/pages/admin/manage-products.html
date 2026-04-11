@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spider Store | تعديل وحذف المنتجات</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body id="admin-layout" class="font-sans text-gray-800 antialiased flex flex-col md:flex-row min-h-screen bg-gray-100">
+
+    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full">
+        <header class="mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold">تعديل وحذف المنتجات</h1>
+            <p class="text-gray-500 mt-2">إدارة كل المنتجات من مكان واحد.</p>
+        </header>
+
+        <div id="messageBox" class="hidden px-5 py-3 rounded-md mb-5 font-bold text-center"></div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-right">المنتج</th>
+                            <th class="px-4 py-3 text-right">السعر</th>
+                            <th class="px-4 py-3 text-right">المخزون</th>
+                            <th class="px-4 py-3 text-right">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                        <tr>
+                            <td colspan="4" class="text-center py-8 text-gray-500">
+                                <i class="fas fa-spinner fa-spin"></i> جاري تحميل المنتجات...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="editModal" class="fixed inset-0 bg-black/50 hidden z-50 p-4">
+        <div class="max-w-xl mx-auto mt-12 bg-white rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">تعديل المنتج</h2>
+            <form id="editProductForm" class="space-y-4">
+                <input type="hidden" id="editProductId" />
+                <div>
+                    <label class="block mb-1 font-bold text-sm">اسم المنتج</label>
+                    <input id="editTitle" class="w-full border rounded-md px-3 py-2" required />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-1 font-bold text-sm">السعر</label>
+                        <input type="number" id="editPrice" min="1" class="w-full border rounded-md px-3 py-2" required />
+                    </div>
+                    <div>
+                        <label class="block mb-1 font-bold text-sm">المخزون</label>
+                        <input type="number" id="editStock" min="0" class="w-full border rounded-md px-3 py-2" required />
+                    </div>
+                </div>
+                <div>
+                    <label class="block mb-1 font-bold text-sm">الوصف</label>
+                    <textarea id="editDescription" class="w-full border rounded-md px-3 py-2"></textarea>
+                </div>
+                <div>
+                    <label class="block mb-1 font-bold text-sm">تغيير الصورة</label>
+                    <input type="file" id="editImage" accept="image/*" class="w-full border rounded-md px-3 py-2 bg-white" />
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="bg-cyan-600 text-white px-5 py-2 rounded-md font-bold">حفظ التعديلات</button>
+                    <button type="button" onclick="closeEditModal()" class="bg-gray-100 px-5 py-2 rounded-md font-bold">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../components/admin-sidebar.js"></script>
+    <script>
+        loadAdminSidebar('manage-products');
+        const API_URL = 'http://127.0.0.1:3000/api';
+        let productsCache = [];
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '<', '>': '>', "'": '&#39;', '"': '"'
+            }[tag] || tag));
+        }
+
+        function showMessage(msg, type = 'success') {
+            const box = document.getElementById('messageBox');
+            box.className = `px-5 py-3 rounded-md mb-5 font-bold text-center block ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+            box.textContent = msg;
+        }
+
+        async function fetchProducts() {
+            const token = localStorage.getItem('spider_token');
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/admin/products`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    productsCache = data.data || [];
+                    renderProducts(productsCache);
+                } else {
+                    showMessage(data.message || 'فشل تحميل المنتجات', 'error');
+                }
+            } catch {
+                showMessage('خطأ في الاتصال بالسيرفر', 'error');
+            }
+        }
+
+        function renderProducts(products) {
+            const tbody = document.getElementById('productsTableBody');
+            if (!products.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد منتجات حالياً</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = products.map(p => `
+                <tr class="border-t">
+                    <td class="px-4 py-3">
+                        <div class="font-bold">${escapeHTML(p.title)}</div>
+                        <div class="text-gray-500 text-xs">#${p.id}</div>
+                    </td>
+                    <td class="px-4 py-3">${Number(p.price || 0)} ج.م</td>
+                    <td class="px-4 py-3">${Number(p.stock_quantity || 0)}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex gap-2">
+                            <button onclick="openEditModal(${p.id})" class="px-3 py-1 rounded bg-cyan-50 text-cyan-700 font-bold">تعديل</button>
+                            <button onclick="deleteProduct(${p.id})" class="px-3 py-1 rounded bg-red-50 text-red-700 font-bold">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openEditModal(productId) {
+            const p = productsCache.find(x => x.id === productId);
+            if (!p) return;
+            document.getElementById('editProductId').value = p.id;
+            document.getElementById('editTitle').value = p.title || '';
+            document.getElementById('editPrice').value = p.price || 0;
+            document.getElementById('editStock').value = p.stock_quantity || 0;
+            document.getElementById('editDescription').value = p.description || '';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editProductForm').reset();
+        }
+
+        document.getElementById('editProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('spider_token');
+            const productId = document.getElementById('editProductId').value;
+
+            const formData = new FormData();
+            formData.append('title', document.getElementById('editTitle').value);
+            formData.append('price', document.getElementById('editPrice').value);
+            formData.append('stock_quantity', document.getElementById('editStock').value);
+            formData.append('description', document.getElementById('editDescription').value);
+
+            const imageFile = document.getElementById('editImage').files[0];
+            if (imageFile) formData.append('image', imageFile);
+
+            try {
+                const response = await fetch(`${API_URL}/products/${productId}`, {
+                    method: 'PUT',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    showMessage('تم تحديث المنتج بنجاح');
+                    closeEditModal();
+                    fetchProducts();
+                } else {
+                    showMessage(data.message || 'فشل تحديث المنتج', 'error');
+                }
+            } catch {
+                showMessage('خطأ في الاتصال بالسيرفر', 'error');
+            }
+        });
+
+        async function deleteProduct(productId) {
+            if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+
+            const token = localStorage.getItem('spider_token');
+            try {
+                const response = await fetch(`${API_URL}/products/${productId}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    showMessage('تم حذف المنتج بنجاح');
+                    fetchProducts();
+                } else {
+                    showMessage(data.message || 'فشل حذف المنتج', 'error');
+                }
+            } catch {
+                showMessage('خطأ في الاتصال بالسيرفر', 'error');
+            }
+        }
+
+        window.addEventListener('load', fetchProducts);
+
+        function logout() {
+            localStorage.removeItem('spider_token');
+            window.location.href = '../../index.html';
+        }
+    </script>
+</body>
+</html>

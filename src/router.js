@@ -3,13 +3,13 @@ const sysPath = require('path');
 const url = require('url');
 
 const { isAdmin } = require('./middleware/role.middleware');
-const { addCategory, getAllUsers, updateUserRole } = require('./controllers/admin.controller');
+const { addCategory, getCategories, getAllUsers, updateUserRole } = require('./controllers/admin.controller');
 // التعديل هنا: ضفنا getAllOrdersAdmin
 const { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin } = require('./controllers/order.controller'); 
 const { addToCart, viewCart } = require('./controllers/cart.controller');
-const { getProducts, createProduct } = require('./controllers/product.controller');
+const { getProducts, createProduct, getMyProducts, updateProduct, deleteProduct } = require('./controllers/product.controller');
 const { authenticate } = require('./middleware/auth.middleware');
-const { getProfile } = require('./controllers/user.controller');
+const { getProfile, updateProfile } = require('./controllers/user.controller');
 const { registerUser, loginUser } = require('./controllers/auth.controller');
 const { createReview, getReviews, replyToReview } = require('./controllers/review.controller');
 
@@ -56,6 +56,17 @@ const router = async (req, res) => {
         } catch (error) { return; }
     }
 
+    if (path === '/api/profile' && method === 'PUT') {
+        try {
+            await authenticate(req, res);
+            return updateProfile(req, res);
+        } catch (error) { return; }
+    }
+
+    if (path === '/api/categories' && method === 'GET') {
+        return getCategories(req, res);
+    }
+
     // ======= 4. مسارات المنتجات =======
     if (path === '/api/products' && method === 'GET') {
         return getProducts(req, res);
@@ -65,6 +76,29 @@ const router = async (req, res) => {
         try {
             await authenticate(req, res); 
             return createProduct(req, res);
+        } catch (error) { return; }
+    }
+
+    if (path === '/api/admin/products' && method === 'GET') {
+        try {
+            await authenticate(req, res);
+            return getMyProducts(req, res);
+        } catch (error) { return; }
+    }
+
+    if (path.startsWith('/api/products/') && method === 'PUT') {
+        try {
+            await authenticate(req, res);
+            const productId = path.split('/').pop();
+            return updateProduct(req, res, Number(productId));
+        } catch (error) { return; }
+    }
+
+    if (path.startsWith('/api/products/') && method === 'DELETE') {
+        try {
+            await authenticate(req, res);
+            const productId = path.split('/').pop();
+            return deleteProduct(req, res, Number(productId));
         } catch (error) { return; }
     }
 
