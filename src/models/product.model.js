@@ -1,27 +1,31 @@
 const getDb = require('../config/database');
 
 class ProductModel {
-static async ensureDb() {
+    static async ensureDb() {
         let db = getDb();
         if (!db) {
             db = await getDb.init();
         }
 
-        // ✨ كود تحديث قاعدة البيانات تلقائياً (سيتم تنفيذه وتجاهل الخطأ إذا كانت الأعمدة موجودة بالفعل)
-        try {
-            await db.run("ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0");
-            await db.run("ALTER TABLE products ADD COLUMN brand TEXT");
-            await db.run("ALTER TABLE products ADD COLUMN tags TEXT");
-            await db.run("ALTER TABLE products ADD COLUMN images TEXT");
-            console.log("✅ تم إضافة الأعمدة الجديدة لقاعدة البيانات بنجاح!");
-        } catch (e) {
-            // تجاهل الخطأ لأن معناه إن الأعمدة متضافة جاهزة قبل كده
+        // ✨ التعديل السحري: فحص وإضافة كل عمود لوحده عشان لو واحد موجود ميعطلش الباقي
+        const alterQueries = [
+            "ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN brand TEXT",
+            "ALTER TABLE products ADD COLUMN tags TEXT",
+            "ALTER TABLE products ADD COLUMN images TEXT"
+        ];
+
+        for (let query of alterQueries) {
+            try {
+                await db.run(query);
+            } catch (e) {
+                // لو العمود ده بالذات موجود، تجاهل الخطأ وكمل للي بعده
+            }
         }
 
         return db;
     }
 
-    // ✨ دالة مساعدة لتحويل النصوص إلى مصفوفات عند جلب الداتا
     static processRows(rows) {
         return rows.map(row => {
             if (row.images) {
@@ -41,7 +45,6 @@ static async ensureDb() {
             discount = 0, brand = '', tags = '', additional_images = []
         } = productData;
         
-        // تحويل مصفوفة الصور لنص (JSON) عشان تتخزن في الداتا بيز
         const imagesJson = JSON.stringify(additional_images);
 
         const result = await db.run(
@@ -81,7 +84,7 @@ static async ensureDb() {
         query += ` ORDER BY p.created_at DESC`;
         
         const rows = await db.all(query, params);
-        return this.processRows(rows); // إرجاع البيانات بعد معالجة الصور
+        return this.processRows(rows);
     }
 
     static async getAllForSeller(sellerId) {
@@ -94,7 +97,7 @@ static async ensureDb() {
              ORDER BY p.created_at DESC`,
             [sellerId]
         );
-        return this.processRows(rows); // إرجاع البيانات بعد معالجة الصور
+        return this.processRows(rows);
     }
 
     static async updateById(productId, productData) {
@@ -103,7 +106,6 @@ static async ensureDb() {
             title, description, price, stock_quantity, image_url, category_id = null
         } = productData;
 
-        // لتحديث الأساسيات حالياً (يمكنك تطويرها لاحقاً لتشمل تعديل الصور المتعددة)
         await db.run(
             `UPDATE products
              SET title = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, category_id = ?
@@ -121,7 +123,7 @@ static async ensureDb() {
         const db = await ProductModel.ensureDb();
         const row = await db.get(`SELECT * FROM products WHERE id = ?`, [productId]);
         if(row) {
-            return this.processRows([row])[0]; // فك تشفير الصور لو المنتج موجود
+            return this.processRows([row])[0]; 
         }
         return row;
     }
