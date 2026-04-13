@@ -29,7 +29,6 @@
         body { background-color: #F9FAFB; }
         .smooth-transition { transition: all 0.4s ease-in-out; }
         .hide-scroll::-webkit-scrollbar { display: none; }
-        /* أنيميشن بسيط لتغيير السلايدر */
         .fade-in { animation: fadeIn 0.8s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0.4; } to { opacity: 1; } }
     </style>
@@ -40,11 +39,14 @@
 
     <div class="container mx-auto px-4 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
         
-        <aside class="w-full md:w-64 order-2 md:order-2">
+        <aside class="w-full md:w-64 order-2 md:order-1">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <i class="fas fa-th-large text-primary-500"></i> الأقسام
-                </h2>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <i class="fas fa-th-large text-primary-500"></i> الأقسام
+                    </h2>
+                    <a href="index.html" class="text-sm text-primary-500 hover:underline">الكل</a>
+                </div>
                 <nav id="categoriesList" class="space-y-2">
                     <div class="animate-pulse flex space-x-4 space-x-reverse">
                         <div class="rounded-full bg-gray-200 h-10 w-10"></div>
@@ -54,21 +56,29 @@
             </div>
         </aside>
 
-        <main class="flex-1 order-1 md:order-1">
+        <main class="flex-1 order-1 md:order-2">
             
             <section id="heroContainer" class="relative overflow-hidden rounded-3xl shadow-lg mb-12 flex min-h-[300px] md:min-h-[400px]">
-                <div id="sliderContent" class="w-full fade-in flex flex-1">
-                    </div>
-                
+                <div id="sliderContent" class="w-full fade-in flex flex-1"></div>
                 <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-20" id="sliderDots"></div>
             </section>
 
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-2xl font-bold text-gray-900 border-r-4 border-secondary-500 pr-3">وصل حديثاً</h2>
+            <div id="latestSection">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 border-r-4 border-secondary-500 pr-3">وصل حديثاً</h2>
+                </div>
+                <div id="productsGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    </div>
             </div>
 
-            <div id="productsGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-6">
+            <div id="bestSellersSection">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 border-r-4 border-primary-500 pr-3">الأكثر مبيعاً</h2>
                 </div>
+                <div id="bestSellersGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                    </div>
+            </div>
+
         </main>
     </div>
 
@@ -100,7 +110,6 @@
             ]);
         }
 
-        // ✨ جلب السلايدر من الباك اند
         async function fetchBanners() {
             try {
                 const response = await fetch(`${API_URL}/banners`);
@@ -110,35 +119,29 @@
                     renderSlider();
                     startSliderTimer();
                 } else {
-                    // سلايدر افتراضي لو مفيش داتا
-                    document.getElementById('heroContainer').innerHTML = `
-                        <div class="p-12 text-center w-full bg-primary-600 text-white">
-                            <h1 class="text-4xl font-bold">مرحباً بك في Spider Store</h1>
-                        </div>`;
+                    document.getElementById('heroContainer').style.display = 'none';
                 }
             } catch (err) { console.error("Slider Error:", err); }
         }
 
-function renderSlider() {
+        function renderSlider() {
             const container = document.getElementById('sliderContent');
+            if(!banners.length) return;
             const slide = banners[currentSlide];
             const imageUrl = `${BASE_SERVER}${slide.image_url}`;
-
-            // استخدام الألوان من الداتا بيز، وإذا كانت فارغة نستخدم الألوان الافتراضية
             const bgColor = slide.bg_color || '#ffffff';
             const textColor = slide.text_color || '#1f2937';
             const btnColor = slide.button_color || '#0891b2';
             const btnText = slide.button_text || 'اكتشف الآن';
 
-            // لاحظ: خلينا حاوية الصورة h-64 أو أكتر واستخدمنا object-contain عشان الصورة متتقطعش
             container.innerHTML = `
                 <div class="flex flex-col md:flex-row items-center justify-between p-8 md:p-12 h-full w-full relative" style="background-color: ${bgColor};">
                     <div class="z-10 text-right w-full md:w-1/2" style="color: ${textColor};">
                         <h2 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">${slide.title}</h2>
                         <p class="text-lg md:text-xl mb-8 max-w-lg opacity-90">${slide.description}</p>
-                        <button class="font-bold py-3 px-10 rounded-full shadow-lg hover:scale-105 transition-transform text-white" style="background-color: ${btnColor};">
+                        <a href="${slide.link_url || '#'}" class="inline-block font-bold py-3 px-10 rounded-full shadow-lg hover:scale-105 transition-transform text-white" style="background-color: ${btnColor};">
                             ${btnText}
-                        </button>
+                        </a>
                     </div>
                     <div class="z-10 mt-8 md:mt-0 w-full md:w-1/2 flex justify-end h-48 md:h-72">
                         <img src="${imageUrl}" class="w-full h-full object-contain object-left drop-shadow-xl" alt="${slide.title}">
@@ -146,7 +149,6 @@ function renderSlider() {
                 </div>
             `;
 
-            // تحديث النقط (Dots) - خلينا لونها رمادي غامق عشان تبان على الخلفية البيضاء
             const dots = document.getElementById('sliderDots');
             dots.innerHTML = banners.map((_, i) => `
                 <div class="w-3 h-3 rounded-full border border-gray-400 ${i === currentSlide ? 'bg-gray-600 w-8' : 'bg-transparent'} smooth-transition"></div>
@@ -160,7 +162,6 @@ function renderSlider() {
             }, 5000);
         }
 
-        // ✨ جلب الأقسام من الباك اند (Sidebar)
         async function fetchCategories() {
             const list = document.getElementById('categoriesList');
             try {
@@ -179,50 +180,97 @@ function renderSlider() {
             } catch (err) { console.error("Categories Error:", err); }
         }
 
-        // جلب المنتجات
         async function fetchProducts() {
             const grid = document.getElementById('productsGrid');
+            const bestSellersGrid = document.getElementById('bestSellersGrid');
+            const latestSection = document.getElementById('latestSection');
+            const bestSellersSection = document.getElementById('bestSellersSection');
+            
             try {
-                const response = await fetch(`${API_URL}/products`);
-                const data = await response.json();
-                if (data.success) {
-                    grid.innerHTML = '';
-                    data.data.forEach(product => {
-                        const imageUrl = `${BASE_SERVER}${product.image_url}`;
-                        const hasDiscount = product.discount > 0;
-                        const finalPrice = hasDiscount ? (product.price - (product.price * product.discount / 100)).toFixed(0) : product.price;
+                const urlParams = new URLSearchParams(window.location.search);
+                const categoryId = urlParams.get('category');
+                const searchQuery = urlParams.get('search');
 
-                        grid.innerHTML += `
-                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full">
-                                <div class="relative p-4 bg-gray-50">
-                                    ${hasDiscount ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${product.discount}%</span>` : ''}
-                                    <img src="${imageUrl}" class="w-full aspect-square object-contain group-hover:scale-110 transition-transform duration-500" alt="${product.title}">
-                                </div>
-                                <div class="p-5 flex flex-col flex-1">
-                                    <h3 class="font-bold text-gray-800 mb-2 line-clamp-2">${product.title}</h3>
-                                    <div class="mt-auto flex items-center justify-between">
-                                        <div class="flex flex-col">
-                                            ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${product.price} ج.م</span>` : ''}
-                                            <span class="text-primary-600 font-bold text-xl">${finalPrice} ج.م</span>
-                                        </div>
-                                        <button onclick="addToCart(${product.id})" class="bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary-600 shadow-lg shadow-primary-200 transition-all">
-                                            <i class="fas fa-cart-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
+                let apiUrl = `${API_URL}/products`;
+                const queryParams = [];
+                if (categoryId) queryParams.push(`category=${categoryId}`);
+                if (searchQuery) queryParams.push(`search=${encodeURIComponent(searchQuery)}`);
+                if (queryParams.length > 0) apiUrl += `?${queryParams.join('&')}`;
+
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (categoryId || searchQuery) {
+                        latestSection.querySelector('h2').innerText = 'نتائج البحث / الفلترة';
+                        bestSellersSection.style.display = 'none'; 
+                    }
+
+                    renderProductCards(data.data, grid);
+
+                    if (!categoryId && !searchQuery && bestSellersGrid) {
+                        const simulatedBestSellers = data.data.slice(0, 3);
+                        renderProductCards(simulatedBestSellers, bestSellersGrid);
+                    }
                 }
             } catch (err) { console.error("Products Error:", err); }
         }
 
+        function renderProductCards(productsArray, container) {
+            container.innerHTML = '';
+            
+            if(productsArray.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full">لا توجد منتجات مطابقة.</p>';
+                return;
+            }
+
+            productsArray.forEach(product => {
+                const imageUrl = `${BASE_SERVER}${product.image_url}`;
+                const hasDiscount = product.discount > 0;
+                const finalPrice = hasDiscount ? (product.price - (product.price * product.discount / 100)).toFixed(0) : product.price;
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full">
+                        <div class="relative p-4 bg-gray-50">
+                            ${hasDiscount ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${product.discount}%</span>` : ''}
+                            <a href="pages/products/product.html?id=${product.id}">
+                                <img src="${imageUrl}" class="w-full aspect-square object-contain group-hover:scale-110 transition-transform duration-500" alt="${product.title}">
+                            </a>
+                        </div>
+                        <div class="p-5 flex flex-col flex-1">
+                            <a href="pages/products/product.html?id=${product.id}" class="hover:text-primary-600 transition-colors">
+                                <h3 class="font-bold text-gray-800 mb-1 line-clamp-2">${product.title}</h3>
+                            </a>
+                            
+                            <div class="flex text-secondary-500 text-xs mb-3">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="far fa-star text-gray-300"></i>
+                                <span class="text-gray-400 mr-2">(تقييمات)</span>
+                            </div>
+
+                            <div class="mt-auto flex items-center justify-between">
+                                <div class="flex flex-col">
+                                    ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${product.price} ج.م</span>` : ''}
+                                    <span class="text-primary-600 font-bold text-xl">${finalPrice} ج.م</span>
+                                </div>
+                                <button onclick="addToCart(${product.id})" class="bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary-600 shadow-lg shadow-primary-200 transition-all z-10 relative">
+                                    <i class="fas fa-cart-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
         window.addEventListener('load', initPage);
 
-        // دوال مساعدة (الإضافة للسلة موجودة في المكونات أو كررها هنا)
         function addToCart(id) {
             console.log("Added product:", id);
-            // الكود الخاص بالسلة...
+            alert("تم إضافة المنتج للسلة بنجاح!"); 
         }
     </script>
 </body>

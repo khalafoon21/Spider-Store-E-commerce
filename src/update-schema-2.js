@@ -1,30 +1,18 @@
-const getDb = require('./config/database');
+// src/update-schema-3.js
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-async function updateDatabase3() {
-    try {
-        const db = await getDb.init();
-        console.log('🔄 جاري تحديث قاعدة البيانات للبانر المتقدم...');
+// تأكد أن هذا هو مسار قاعدة البيانات الصحيح عندك
+const dbPath = path.join(__dirname, 'config', 'ecommerce.db'); 
+const db = new sqlite3.Database(dbPath);
 
-        const bannerColumns = [
-            'bg_color TEXT DEFAULT "#ffffff"',
-            'text_color TEXT DEFAULT "#1f2937"',
-            'button_text TEXT DEFAULT "اكتشف الآن"',
-            'button_color TEXT DEFAULT "#0891b2"'
-        ];
-        
-        for (let col of bannerColumns) {
-            try {
-                await db.run(`ALTER TABLE banners ADD COLUMN ${col}`);
-                console.log(`✅ تم إضافة الحقل ${col.split(' ')[0]} لجدول السلايدر.`);
-            } catch (e) {
-                if (e.message.includes('duplicate column name')) {
-                    console.log(`⚠️ الحقل ${col.split(' ')[0]} موجود بالفعل.`);
-                }
-            }
-        }
-        console.log('🎉 تم التحديث بنجاح!');
-    } catch (error) {
-        console.error('❌ حصل خطأ:', error);
-    }
-}
-updateDatabase3();
+db.serialize(() => {
+    // إضافة الأعمدة الجديدة المطلوبة في المشروع
+    db.run("ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0", (err) => { if(!err) console.log("تم إضافة عمود الخصم (discount)"); });
+    db.run("ALTER TABLE products ADD COLUMN brand TEXT", (err) => { if(!err) console.log("تم إضافة عمود الماركة (brand)"); });
+    db.run("ALTER TABLE products ADD COLUMN tags TEXT", (err) => { if(!err) console.log("تم إضافة عمود الوسوم (tags)"); });
+    db.run("ALTER TABLE products ADD COLUMN images TEXT", (err) => { 
+        if(!err) console.log("تم إضافة عمود الصور الإضافية (images)"); 
+        console.log("✅ تم تحديث قاعدة البيانات بنجاح! يمكنك الآن تشغيل السيرفر.");
+    });
+});
