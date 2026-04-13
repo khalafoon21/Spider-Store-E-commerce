@@ -28,84 +28,84 @@ async function getProducts(req, res) {
 
 async function createProduct(req, res) {
     try {
-
         if (req.user.role !== 'seller' && req.user.role !== 'admin') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ 
-                success: false, 
-                message: 'You are not authorized to add products' 
-            }));
+            return res.end(JSON.stringify({ success: false, message: 'You are not authorized to add products' }));
         }
 
-
         const uploadFolder = path.join(__dirname, '../../uploads/products');
-
 
         const form = formidable({
             uploadDir: uploadFolder, 
             keepExtensions: true,    
-            maxFileSize: 5 * 1024 * 1024, 
+            maxFileSize: 10 * 1024 * 1024, // زودنا المساحة لـ 10 ميجا عشان لو صور كتير
+            multiples: true // ✨ السماح برفع أكثر من ملف
         });
 
         form.parse(req, async (err, fields, files) => {
             if (err) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ 
-                    success: false, 
-                    message: 'An error occurred while uploading the image' 
-                }));
+                return res.end(JSON.stringify({ success: false, message: 'خطأ أثناء رفع الصور' }));
             }
 
-
+            // استخراج النصوص (Formidable v3 بيحط القيم في مصفوفات)
             const title = fields.title ? fields.title[0] : null;
             const description = fields.description ? fields.description[0] : '';
             const price = fields.price ? fields.price[0] : null;
+            const discount = fields.discount ? fields.discount[0] : 0;
             const stock_quantity = fields.stock_quantity ? fields.stock_quantity[0] : 0;
             const category_id = fields.category_id ? fields.category_id[0] : null;
+            const brand = fields.brand ? fields.brand[0] : '';
+            const tags = fields.tags ? fields.tags[0] : '';
 
             if (!title || !price) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ 
-                    success: false, 
-                    message: 'Title and price are required' 
-                }));
+                return res.end(JSON.stringify({ success: false, message: 'الاسم والسعر مطلوبان' }));
             }
 
-
+            // 1. معالجة الصورة الأساسية
             let image_url = '';
-            if (files.image) {
-                const uploadedFile = Array.isArray(files.image) ? files.image[0] : files.image;
-                const fileName = path.basename(uploadedFile.filepath); 
+            if (files.main_image) {
+                const mainFile = Array.isArray(files.main_image) ? files.main_image[0] : files.main_image;
+                const fileName = path.basename(mainFile.filepath); 
                 image_url = `/uploads/products/${fileName}`;
             }
 
+            // 2. معالجة الصور الإضافية (السلايدر)
+            let additional_images = [];
+            if (files.additional_images) {
+                // لو صورة واحدة هتكون Object، لو كذا صورة هتكون Array
+                const addFiles = Array.isArray(files.additional_images) ? files.additional_images : [files.additional_images];
+                additional_images = addFiles.map(file => `/uploads/products/${path.basename(file.filepath)}`);
+            }
 
+            // إرسال البيانات للمودل (اللي إحنا حدثناه قبل كده عشان يقبل المصفوفة)
             const newProductId = await ProductModel.create({
                 seller_id: req.user.userId,
                 title,
                 description,
                 price: parseFloat(price),
+                discount: parseFloat(discount),
                 stock_quantity: parseInt(stock_quantity),
+                category_id: category_id ? parseInt(category_id) : null,
+                brand,
+                tags,
                 image_url,
-                category_id: category_id ? parseInt(category_id) : null
+                additional_images // مصفوفة الروابط المحلية الجديدة
             });
 
             res.writeHead(201, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ 
                 success: true, 
-                message: 'Product added successfully!', 
-                productId: newProductId,
-                image_url: image_url
+                message: 'تم إضافة المنتج والصور بنجاح!', 
+                productId: newProductId
             }));
         });
 
     } catch (error) {
         console.error(error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-            success: false, 
-            message: 'An error occurred while processing the request' 
-        }));
+        res.end(JSON.stringify({ success: false, message: 'حدث خطأ في السيرفر' }));
     }
 }
 

@@ -19,10 +19,6 @@
                         secondary: { 50: '#FFFBEB', 500: '#F59E0B' },
                         success: { 500: '#22C55E' },
                         error: { 500: '#EF4444' }
-                    },
-                    boxShadow: {
-                        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)'
                     }
                 }
             }
@@ -31,165 +27,203 @@
     
     <style>
         body { background-color: #F9FAFB; }
-        .smooth-transition { transition: all 0.2s ease-out; }
+        .smooth-transition { transition: all 0.4s ease-in-out; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        /* أنيميشن بسيط لتغيير السلايدر */
+        .fade-in { animation: fadeIn 0.8s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0.4; } to { opacity: 1; } }
     </style>
 </head>
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
     <script src="components/main-navbar.js"></script>
 
-    <header class="container mx-auto px-4 lg:px-8 mt-8">
-        <div class="bg-primary-50 rounded-xl p-8 md:p-12 shadow-sm flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
-            <div class="mb-6 md:mb-0 z-10">
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">أفضل أجهزة التحكم الاحترافية</h1>
-                <p class="text-gray-600 mb-6 max-w-md">اكتشف تشكيلتنا الجديدة من المنتجات وارفع مستوى لعبك للقمة مع أقوى العروض.</p>
-                <button class="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 px-6 rounded-md shadow-sm smooth-transition">
-                    تسوق الآن
-                </button>
+    <div class="container mx-auto px-4 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
+        
+        <aside class="w-full md:w-64 order-2 md:order-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
+                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i class="fas fa-th-large text-primary-500"></i> الأقسام
+                </h2>
+                <nav id="categoriesList" class="space-y-2">
+                    <div class="animate-pulse flex space-x-4 space-x-reverse">
+                        <div class="rounded-full bg-gray-200 h-10 w-10"></div>
+                        <div class="h-4 bg-gray-200 rounded w-3/4 mt-3"></div>
+                    </div>
+                </nav>
             </div>
-            <div class="text-primary-500 text-8xl opacity-20 absolute left-8 top-1/2 transform -translate-y-1/2 z-0">
-                <i class="fas fa-gamepad"></i>
-            </div>
-        </div>
-    </header>
+        </aside>
 
-    <main class="container mx-auto px-4 lg:px-8 py-12 flex-1">
-        <div class="flex justify-between items-center mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 border-r-4 border-secondary-500 pr-3">وصل حديثاً</h2>
-        </div>
+        <main class="flex-1 order-1 md:order-1">
+            
+            <section id="heroContainer" class="relative overflow-hidden rounded-3xl shadow-lg mb-12 flex min-h-[300px] md:min-h-[400px]">
+                <div id="sliderContent" class="w-full fade-in flex flex-1">
+                    </div>
+                
+                <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-20" id="sliderDots"></div>
+            </section>
 
-        <div id="productsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <div class="col-span-full text-center py-12 text-gray-500">
-                <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
-                <p>جاري جلب المنتجات من السيرفر...</p>
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 border-r-4 border-secondary-500 pr-3">وصل حديثاً</h2>
             </div>
+
+            <div id="productsGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+        </main>
+    </div>
+
+    <footer class="bg-gray-900 text-white py-12 text-center mt-auto">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl font-bold text-primary-500 mb-4">Spider Store</h2>
+            <p class="text-gray-400 mb-8 max-w-md mx-auto">وجهتك الأولى لأفضل إكسسوارات الألعاب في مصر.</p>
+            <div class="flex justify-center gap-6 mb-8 text-2xl">
+                <a href="#" class="hover:text-primary-500 transition-colors"><i class="fab fa-facebook"></i></a>
+                <a href="#" class="hover:text-primary-500 transition-colors"><i class="fab fa-instagram"></i></a>
+                <a href="#" class="hover:text-primary-500 transition-colors"><i class="fab fa-whatsapp"></i></a>
+            </div>
+            <p class="text-gray-500 text-sm">© 2026 Spider Store. جميع الحقوق محفوظة.</p>
         </div>
-    </main>
+    </footer>
 
     <script>
         const API_URL = 'http://127.0.0.1:3000/api';
+        const BASE_SERVER = 'http://127.0.0.1:3000';
 
-        // دالة الحماية من ثغرات XSS
-        function escapeHTML(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>'"]/g, tag => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[tag] || tag));
+        let banners = [];
+        let currentSlide = 0;
+
+        async function initPage() {
+            await Promise.all([
+                fetchBanners(),
+                fetchCategories(),
+                fetchProducts()
+            ]);
         }
 
-        async function fetchProducts(searchQuery = '') {
+        // ✨ جلب السلايدر من الباك اند
+        async function fetchBanners() {
+            try {
+                const response = await fetch(`${API_URL}/banners`);
+                const data = await response.json();
+                if (data.success && data.data.length > 0) {
+                    banners = data.data;
+                    renderSlider();
+                    startSliderTimer();
+                } else {
+                    // سلايدر افتراضي لو مفيش داتا
+                    document.getElementById('heroContainer').innerHTML = `
+                        <div class="p-12 text-center w-full bg-primary-600 text-white">
+                            <h1 class="text-4xl font-bold">مرحباً بك في Spider Store</h1>
+                        </div>`;
+                }
+            } catch (err) { console.error("Slider Error:", err); }
+        }
+
+function renderSlider() {
+            const container = document.getElementById('sliderContent');
+            const slide = banners[currentSlide];
+            const imageUrl = `${BASE_SERVER}${slide.image_url}`;
+
+            // استخدام الألوان من الداتا بيز، وإذا كانت فارغة نستخدم الألوان الافتراضية
+            const bgColor = slide.bg_color || '#ffffff';
+            const textColor = slide.text_color || '#1f2937';
+            const btnColor = slide.button_color || '#0891b2';
+            const btnText = slide.button_text || 'اكتشف الآن';
+
+            // لاحظ: خلينا حاوية الصورة h-64 أو أكتر واستخدمنا object-contain عشان الصورة متتقطعش
+            container.innerHTML = `
+                <div class="flex flex-col md:flex-row items-center justify-between p-8 md:p-12 h-full w-full relative" style="background-color: ${bgColor};">
+                    <div class="z-10 text-right w-full md:w-1/2" style="color: ${textColor};">
+                        <h2 class="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">${slide.title}</h2>
+                        <p class="text-lg md:text-xl mb-8 max-w-lg opacity-90">${slide.description}</p>
+                        <button class="font-bold py-3 px-10 rounded-full shadow-lg hover:scale-105 transition-transform text-white" style="background-color: ${btnColor};">
+                            ${btnText}
+                        </button>
+                    </div>
+                    <div class="z-10 mt-8 md:mt-0 w-full md:w-1/2 flex justify-end h-48 md:h-72">
+                        <img src="${imageUrl}" class="w-full h-full object-contain object-left drop-shadow-xl" alt="${slide.title}">
+                    </div>
+                </div>
+            `;
+
+            // تحديث النقط (Dots) - خلينا لونها رمادي غامق عشان تبان على الخلفية البيضاء
+            const dots = document.getElementById('sliderDots');
+            dots.innerHTML = banners.map((_, i) => `
+                <div class="w-3 h-3 rounded-full border border-gray-400 ${i === currentSlide ? 'bg-gray-600 w-8' : 'bg-transparent'} smooth-transition"></div>
+            `).join('');
+        }
+
+        function startSliderTimer() {
+            setInterval(() => {
+                currentSlide = (currentSlide + 1) % banners.length;
+                renderSlider();
+            }, 5000);
+        }
+
+        // ✨ جلب الأقسام من الباك اند (Sidebar)
+        async function fetchCategories() {
+            const list = document.getElementById('categoriesList');
+            try {
+                const response = await fetch(`${API_URL}/categories`);
+                const data = await response.json();
+                if (data.success) {
+                    list.innerHTML = data.data.map(cat => `
+                        <a href="?category=${cat.id}" class="flex items-center gap-3 p-3 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all group border border-transparent hover:border-primary-100">
+                            <span class="w-10 h-10 bg-gray-50 group-hover:bg-white rounded-lg flex items-center justify-center text-gray-500 group-hover:text-primary-500 shadow-sm transition-all">
+                                <i class="fas ${cat.icon || 'fa-tags'}"></i>
+                            </span>
+                            <span class="font-bold text-gray-700">${cat.name}</span>
+                        </a>
+                    `).join('');
+                }
+            } catch (err) { console.error("Categories Error:", err); }
+        }
+
+        // جلب المنتجات
+        async function fetchProducts() {
             const grid = document.getElementById('productsGrid');
             try {
-                const noCache = `t=${new Date().getTime()}`;
-                const url = searchQuery 
-                    ? `${API_URL}/products?search=${searchQuery}&${noCache}` 
-                    : `${API_URL}/products?${noCache}`;
-
-                const response = await fetch(url);
+                const response = await fetch(`${API_URL}/products`);
                 const data = await response.json();
-
                 if (data.success) {
-                    const productsArray = data.data || data.products || [];
-                    displayProducts(productsArray);
-                } else {
-                    grid.innerHTML = `<p class="col-span-full text-center text-error-500">خطأ: ${escapeHTML(data.message)}</p>`;
-                }
-            } catch (error) {
-                grid.innerHTML = `<p class="col-span-full text-center text-error-500 font-bold py-8">تأكد من تشغيل سيرفر الباك اند 🔌</p>`;
-            }
-        }
+                    grid.innerHTML = '';
+                    data.data.forEach(product => {
+                        const imageUrl = `${BASE_SERVER}${product.image_url}`;
+                        const hasDiscount = product.discount > 0;
+                        const finalPrice = hasDiscount ? (product.price - (product.price * product.discount / 100)).toFixed(0) : product.price;
 
-        function displayProducts(products) {
-            const grid = document.getElementById('productsGrid');
-            grid.innerHTML = ''; 
-
-            if (!products || products.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm border border-gray-100">
-                        <i class="fas fa-box-open text-5xl mb-3 text-gray-300"></i>
-                        <p class="text-lg">لا توجد منتجات مطابقة لبحثك حالياً.</p>
-                    </div>`;
-                return;
-            }
-
-            products.forEach(product => {
-                const imageUrl = (product.image_url && product.image_url.trim() !== '') 
-                    ? `http://127.0.0.1:3000${product.image_url}` 
-                    : 'https://via.placeholder.com/300?text=No+Image';
-                
-                // تطبيق الحماية عند رسم الكروت
-                const safeTitle = escapeHTML(product.title);
-                const safeDesc = escapeHTML(product.description);
-
-                const card = `
-                    <div class="bg-white rounded-lg shadow-sm hover:shadow-md smooth-transition flex flex-col overflow-hidden group border border-gray-100 relative">
-                        <a href="pages/products/product.html?id=${product.id}" class="block aspect-square bg-gray-50 overflow-hidden relative cursor-pointer">
-                            <img src="${imageUrl}" alt="${safeTitle}" class="w-full h-full object-cover group-hover:scale-105 smooth-transition">
-                            ${product.stock_quantity > 0 ? 
-                                `<span class="absolute top-3 right-3 bg-success-500 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">متوفر</span>` : 
-                                `<span class="absolute top-3 right-3 bg-error-500 text-white text-xs font-bold px-2.5 py-1 rounded shadow-sm">نفذت</span>`
-                            }
-                        </a>
-                        
-                        <div class="p-4 flex flex-col flex-1">
-                            <a href="pages/products/product.html?id=${product.id}" class="hover:text-primary-600 transition-colors">
-                                <h3 class="text-gray-900 font-bold text-lg mb-1 line-clamp-1">${safeTitle}</h3>
-                            </a>
-                            <p class="text-sm text-gray-500 mb-4 line-clamp-2">${safeDesc || 'لا يوجد وصف متاح'}</p>
-                            
-                            <div class="mt-auto flex items-center justify-between pt-2 border-t border-gray-50">
-                                <span class="text-primary-700 font-bold text-xl">${product.price} ج.م</span>
-                                <button onclick="addToCart(${product.id})" class="bg-primary-50 text-primary-600 hover:bg-primary-500 hover:text-white rounded-full w-9 h-9 flex items-center justify-center smooth-transition shadow-sm z-10 relative">
-                                    <i class="fas fa-plus"></i>
-                                </button>
+                        grid.innerHTML += `
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full">
+                                <div class="relative p-4 bg-gray-50">
+                                    ${hasDiscount ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${product.discount}%</span>` : ''}
+                                    <img src="${imageUrl}" class="w-full aspect-square object-contain group-hover:scale-110 transition-transform duration-500" alt="${product.title}">
+                                </div>
+                                <div class="p-5 flex flex-col flex-1">
+                                    <h3 class="font-bold text-gray-800 mb-2 line-clamp-2">${product.title}</h3>
+                                    <div class="mt-auto flex items-center justify-between">
+                                        <div class="flex flex-col">
+                                            ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${product.price} ج.م</span>` : ''}
+                                            <span class="text-primary-600 font-bold text-xl">${finalPrice} ج.م</span>
+                                        </div>
+                                        <button onclick="addToCart(${product.id})" class="bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary-600 shadow-lg shadow-primary-200 transition-all">
+                                            <i class="fas fa-cart-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                `;
-                grid.innerHTML += card;
-            });
+                        `;
+                    });
+                }
+            } catch (err) { console.error("Products Error:", err); }
         }
 
-        function addToCart(productId) {
-            const token = localStorage.getItem('spider_token');
-            if (!token) {
-                showToast('يجب تسجيل الدخول أولاً لإضافة منتجات!', 'error');
-                setTimeout(() => window.location.href = 'pages/auth/login.html', 1500);
-                return;
-            }
-            let cart = JSON.parse(localStorage.getItem('spider_cart')) || [];
-            const existingItem = cart.find(item => item.id === productId);
-            if (existingItem) {
-                existingItem.quantity += 1;
-            } else {
-                cart.push({ id: productId, quantity: 1 });
-            }
-            localStorage.setItem('spider_cart', JSON.stringify(cart));
-            if (typeof updateGlobalCartCount === 'function') updateGlobalCartCount();
-            showToast('تمت الإضافة للسلة بنجاح! 🛒', 'success');
-        }
+        window.addEventListener('load', initPage);
 
-        function showToast(message, type = 'success') {
-            const bgColor = type === 'success' ? 'bg-success-500' : 'bg-error-500';
-            const toast = document.createElement('div');
-            toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-6 py-3 rounded-full shadow-lg font-bold z-50 transition-all duration-300 translate-y-0 opacity-100 flex items-center gap-2`;
-            toast.innerHTML = type === 'success' ? `<i class="fas fa-check-circle"></i> ${escapeHTML(message)}` : `<i class="fas fa-exclamation-circle"></i> ${escapeHTML(message)}`;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('translate-y-10', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 2500);
+        // دوال مساعدة (الإضافة للسلة موجودة في المكونات أو كررها هنا)
+        function addToCart(id) {
+            console.log("Added product:", id);
+            // الكود الخاص بالسلة...
         }
-
-        function searchProducts() {
-            const query = document.getElementById('searchInput').value;
-            fetchProducts(query);
-        }
-
-        // تحديث الـ TODO: استخدام addEventListener بدل onload
-        window.addEventListener('load', () => {
-            fetchProducts();
-        });
     </script>
 </body>
 </html>

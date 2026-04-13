@@ -27,6 +27,14 @@ function loadAdminSidebar(activePage) {
                 <a href="manage-products.html" class="block px-4 py-3 rounded-md transition ${activePage === 'manage-products' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
                     <i class="fas fa-pen-to-square ml-2"></i> تعديل وحذف المنتجات
                 </a>
+                
+                <a href="add-category.html" class="block px-4 py-3 rounded-md transition ${activePage === 'add-category' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
+                    <i class="fas fa-tags ml-2"></i> إضافة قسم
+                </a>
+                <a href="add-banner.html" class="block px-4 py-3 rounded-md transition ${activePage === 'add-banner' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
+                    <i class="fas fa-images ml-2"></i> إضافة سلايدر
+                </a>
+                
                 <a href="users.html" class="block px-4 py-3 rounded-md transition ${activePage === 'users' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
                     <i class="fas fa-users ml-2"></i> إدارة المستخدمين
                 </a>

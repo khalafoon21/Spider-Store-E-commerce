@@ -14,7 +14,7 @@ async function initDB() {
             driver: sqlite3.Database
         });
 
-        await db.exec(`
+       await db.exec(`
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 first_name TEXT NOT NULL,
@@ -23,6 +23,10 @@ async function initDB() {
                 password_hash TEXT NOT NULL,
                 phone TEXT,
                 role TEXT DEFAULT 'customer',
+                address TEXT,         /* ✨ جديد: العنوان */
+                birthdate DATE,       /* ✨ جديد: تاريخ الميلاد */
+                city TEXT,            /* ✨ جديد: المدينة */
+                country TEXT,         /* ✨ جديد: البلد */
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -37,10 +41,23 @@ async function initDB() {
                 title TEXT NOT NULL,
                 description TEXT,
                 price REAL NOT NULL,
+                discount REAL DEFAULT 0,    /* ✨ جديد: نسبة الخصم الاختيارية */
                 stock_quantity INTEGER NOT NULL DEFAULT 0,
-                image_url TEXT,
+                image_url TEXT,             /* الصورة الأساسية */
+                category_id INTEGER,
+                brand TEXT,                 /* ✨ جديد: العلامة التجارية */
+                tags TEXT,                  /* ✨ جديد: الكلمات المفتاحية */
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (seller_id) REFERENCES users(id)
+                FOREIGN KEY (seller_id) REFERENCES users(id),
+                FOREIGN KEY (category_id) REFERENCES categories(id)
+            );
+
+            /* ✨ جديد: جدول لصور المنتج الإضافية (عشان السلايدر Slider) */
+            CREATE TABLE IF NOT EXISTS product_images (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                image_url TEXT NOT NULL,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS cart_items (

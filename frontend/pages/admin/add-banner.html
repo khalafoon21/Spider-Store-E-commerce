@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | إدارة السلايدر</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style> body { background-color: #F3F4F6; font-family: 'Cairo', sans-serif; } input[type="color"] { cursor: pointer; height: 38px; padding: 0; border: none; } </style>
+</head>
+<body id="admin-layout" class="text-gray-800 antialiased flex flex-col md:flex-row min-h-screen">
+
+    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full overflow-hidden">
+        <header class="mb-8">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">إدارة السلايدر (Banners)</h1>
+        </header>
+
+        <div id="messageBox" class="hidden px-6 py-3 rounded-md mb-6 font-bold text-center transition-all"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-fit">
+                <h2 class="text-xl font-bold mb-4 border-b pb-2">إضافة عرض جديد</h2>
+                <form id="addBannerForm" onsubmit="handleAddBanner(event)">
+                    <div class="mb-3">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">العنوان</label>
+                        <input type="text" id="title" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 outline-none">
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">الوصف</label>
+                        <input type="text" id="description" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">لون النص</label>
+                            <input type="color" id="text_color" value="#1f2937" class="w-full rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">لون الخلفية</label>
+                            <input type="color" id="bg_color" value="#ffffff" class="w-full rounded-md">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">نص الزر</label>
+                            <input type="text" id="button_text" value="اكتشف الآن" class="w-full px-3 py-2 border rounded-md outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">لون الزر</label>
+                            <input type="color" id="button_color" value="#06B6D4" class="w-full rounded-md">
+                        </div>
+                    </div>
+                    <div class="mb-6 p-3 bg-gray-50 rounded border">
+                        <label class="block text-xs font-bold text-gray-700 mb-2">صورة العرض <span class="text-red-500">*</span></label>
+                        <input type="file" id="image" accept="image/*" required class="w-full text-sm">
+                    </div>
+                    <button type="submit" id="submitBtn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-md shadow-sm flex justify-center gap-2">
+                        <i class="fas fa-plus"></i> إضافة السلايدر
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table class="w-full text-right border-collapse">
+                    <thead class="bg-gray-50 border-b border-gray-200 text-gray-600">
+                        <tr>
+                            <th class="p-4">الصورة</th>
+                            <th class="p-4">العنوان</th>
+                            <th class="p-4 text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bannersTableBody" class="divide-y divide-gray-100">
+                        <tr><td colspan="3" class="p-8 text-center text-gray-500"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="editModal" class="fixed inset-0 bg-black/50 hidden z-50 p-4 flex items-center justify-center">
+        <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-lg">
+            <h2 class="text-xl font-bold mb-4 border-b pb-2">تعديل نصوص وألوان البانر</h2>
+            <p class="text-xs text-gray-500 mb-4">لتغيير الصورة، قم بحذف هذا البانر وإضافته من جديد.</p>
+            <form id="editBannerForm">
+                <input type="hidden" id="editId">
+                <div class="mb-3">
+                    <label class="block mb-1 text-sm font-bold">العنوان</label>
+                    <input id="editTitle" class="w-full border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500" />
+                </div>
+                <div class="mb-3">
+                    <label class="block mb-1 text-sm font-bold">الوصف</label>
+                    <input id="editDesc" class="w-full border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500" />
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                        <label class="block mb-1 text-sm font-bold">لون النص</label>
+                        <input type="color" id="editTextColor" class="w-full border rounded-md h-10">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-bold">لون الخلفية</label>
+                        <input type="color" id="editBgColor" class="w-full border rounded-md h-10">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block mb-1 text-sm font-bold">نص الزر</label>
+                        <input id="editBtnText" class="w-full border rounded-md px-3 py-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-bold">لون الزر</label>
+                        <input type="color" id="editBtnColor" class="w-full border rounded-md h-10">
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 bg-cyan-600 text-white py-2 rounded-md font-bold">حفظ التعديلات</button>
+                    <button type="button" onclick="closeEditModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-md font-bold">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../components/admin-sidebar.js"></script>
+    <script>
+        if(typeof loadAdminSidebar === 'function') loadAdminSidebar('add-banner');
+        const API_URL = 'http://127.0.0.1:3000/api';
+        const BASE_SERVER = 'http://127.0.0.1:3000';
+        let bannersCache = [];
+
+        function showMessage(msg, type = 'success') {
+            const box = document.getElementById('messageBox');
+            box.className = `px-6 py-3 rounded-md mb-6 font-bold text-center block ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+            box.textContent = msg;
+            setTimeout(() => box.classList.add('hidden'), 3000);
+        }
+
+        async function fetchBanners() {
+            try {
+                const res = await fetch(`${API_URL}/banners`);
+                const data = await res.json();
+                if (data.success) {
+                    bannersCache = data.data || [];
+                    renderBanners();
+                }
+            } catch (e) {
+                document.getElementById('bannersTableBody').innerHTML = `<tr><td colspan="3" class="text-center p-4 text-red-500">خطأ في الاتصال</td></tr>`;
+            }
+        }
+
+        function renderBanners() {
+            const tbody = document.getElementById('bannersTableBody');
+            if (!bannersCache.length) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-500">لا توجد عروض حالياً.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = bannersCache.map(banner => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="p-4 w-32">
+                        <div class="w-24 h-16 rounded overflow-hidden shadow-sm" style="background-color:${banner.bg_color || '#fff'}">
+                            <img src="${BASE_SERVER}${banner.image_url}" class="w-full h-full object-contain object-left">
+                        </div>
+                    </td>
+                    <td class="p-4 font-bold text-gray-800">${banner.title || 'بدون عنوان'}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="openEditModal(${banner.id})" class="text-blue-500 hover:bg-blue-50 p-2 rounded-md mx-1"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteBanner(${banner.id})" class="text-red-500 hover:bg-red-50 p-2 rounded-md mx-1"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function handleAddBanner(event) {
+            event.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const token = localStorage.getItem('spider_token');
+
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('bg_color', document.getElementById('bg_color').value);
+            formData.append('text_color', document.getElementById('text_color').value);
+            formData.append('button_text', document.getElementById('button_text').value);
+            formData.append('button_color', document.getElementById('button_color').value);
+            formData.append('image', document.getElementById('image').files[0]);
+
+            btn.disabled = true;
+            try {
+                const response = await fetch(`${API_URL}/banners`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok || data.success) {
+                    showMessage('تم إضافة البانر بنجاح!');
+                    document.getElementById('addBannerForm').reset();
+                    fetchBanners();
+                } else showMessage(data.message, 'error');
+            } catch (e) { showMessage('خطأ في الاتصال', 'error'); } finally { btn.disabled = false; }
+        }
+
+        function openEditModal(id) {
+            const banner = bannersCache.find(b => b.id === id);
+            if (!banner) return;
+            document.getElementById('editId').value = banner.id;
+            document.getElementById('editTitle').value = banner.title || '';
+            document.getElementById('editDesc').value = banner.description || '';
+            document.getElementById('editTextColor').value = banner.text_color || '#1f2937';
+            document.getElementById('editBgColor').value = banner.bg_color || '#ffffff';
+            document.getElementById('editBtnText').value = banner.button_text || 'اكتشف الآن';
+            document.getElementById('editBtnColor').value = banner.button_color || '#0891b2';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
+
+        document.getElementById('editBannerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const data = {
+                title: document.getElementById('editTitle').value,
+                description: document.getElementById('editDesc').value,
+                text_color: document.getElementById('editTextColor').value,
+                bg_color: document.getElementById('editBgColor').value,
+                button_text: document.getElementById('editBtnText').value,
+                button_color: document.getElementById('editBtnColor').value
+            };
+            const token = localStorage.getItem('spider_token');
+            try {
+                const response = await fetch(`${API_URL}/banners/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    showMessage('تم تحديث البانر بنجاح!');
+                    closeEditModal();
+                    fetchBanners();
+                }
+            } catch (error) { showMessage('خطأ في الاتصال', 'error'); }
+        });
+
+        async function deleteBanner(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا البانر؟')) return;
+            const token = localStorage.getItem('spider_token');
+            try {
+                const response = await fetch(`${API_URL}/banners/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    showMessage('تم الحذف بنجاح!');
+                    fetchBanners();
+                }
+            } catch (error) { showMessage('خطأ في الاتصال', 'error'); }
+        }
+
+        window.addEventListener('load', fetchBanners);
+    </script>
+</body>
+</html>
