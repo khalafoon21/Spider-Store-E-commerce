@@ -21,21 +21,22 @@ async function getProducts(req, res) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
             success: false, 
-            message: 'An error occurred while fetching products' 
+            message: 'حدث خطأ أثناء جلب المنتجات' 
         }));
     }
 }
 
 async function createProduct(req, res) {
     try {
+        // التحقق من الصلاحيات
         if (req.user.role !== 'seller' && req.user.role !== 'admin') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ success: false, message: 'You are not authorized to add products' }));
+            return res.end(JSON.stringify({ success: false, message: 'غير مصرح لك بإضافة منتجات' }));
         }
 
         const uploadFolder = path.join(__dirname, '../../uploads/products');
 
-        // ✨ التأكد من إنشاء مجلد الصور تلقائياً لو مش موجود عشان السيرفر ميقعش
+        // ✨ التأكد من إنشاء مجلد الصور تلقائياً
         if (!fs.existsSync(uploadFolder)) {
             fs.mkdirSync(uploadFolder, { recursive: true });
         }
@@ -43,12 +44,11 @@ async function createProduct(req, res) {
         const form = formidable({
             uploadDir: uploadFolder, 
             keepExtensions: true,    
-            maxFileSize: 10 * 1024 * 1024, // 10 ميجا
+            maxFileSize: 10 * 1024 * 1024, // 10 ميجا للصور
             multiples: true // السماح برفع أكثر من ملف
         });
 
         form.parse(req, async (err, fields, files) => {
-            // ✨ إضافة try...catch داخلية لاحتواء أي خطأ يخص الداتا بيز
             try {
                 if (err) {
                     console.error('Formidable Error:', err);
@@ -56,6 +56,7 @@ async function createProduct(req, res) {
                     return res.end(JSON.stringify({ success: false, message: 'خطأ أثناء رفع الصور' }));
                 }
 
+                // استخراج البيانات النصية
                 const title = fields.title ? fields.title[0] : null;
                 const description = fields.description ? fields.description[0] : '';
                 const price = fields.price ? fields.price[0] : null;
@@ -70,23 +71,30 @@ async function createProduct(req, res) {
                     return res.end(JSON.stringify({ success: false, message: 'الاسم والسعر مطلوبان' }));
                 }
 
+                // ✨ معالجة الصور (أول صورة أساسية، والباقي إضافي)
                 let image_url = '';
-                if (files.main_image) {
-                    const mainFile = Array.isArray(files.main_image) ? files.main_image[0] : files.main_image;
-                    // دعم لنسخ formidable المختلفة
-                    const fileName = path.basename(mainFile.filepath || mainFile.newFilename || ''); 
-                    if (fileName) image_url = `/uploads/products/${fileName}`;
-                }
-
                 let additional_images = [];
-                if (files.additional_images) {
-                    const addFiles = Array.isArray(files.additional_images) ? files.additional_images : [files.additional_images];
-                    additional_images = addFiles.map(file => {
-                        const fName = path.basename(file.filepath || file.newFilename || '');
-                        return `/uploads/products/${fName}`;
-                    });
+
+                // Frontend بيبعت الصور في حقل اسمه images
+                if (files.images) {
+                    const uploadedFiles = Array.isArray(files.images) ? files.images : [files.images];
+                    
+                    if (uploadedFiles.length > 0) {
+                        // الصورة الأولى هي الأساسية
+                        const mainFile = uploadedFiles[0];
+                        const mainFileName = path.basename(mainFile.filepath || mainFile.newFilename || '');
+                        if (mainFileName) image_url = `/uploads/products/${mainFileName}`;
+
+                        // باقي الصور تنزل كصور إضافية
+                        for (let i = 1; i < uploadedFiles.length; i++) {
+                            const addFile = uploadedFiles[i];
+                            const addFileName = path.basename(addFile.filepath || addFile.newFilename || '');
+                            if (addFileName) additional_images.push(`/uploads/products/${addFileName}`);
+                        }
+                    }
                 }
 
+                // تسجيل المنتج في قاعدة البيانات
                 const newProductId = await ProductModel.create({
                     seller_id: req.user.userId,
                     title,
@@ -109,7 +117,6 @@ async function createProduct(req, res) {
                 }));
 
             } catch (innerError) {
-                // لو حصل خطأ في الداتا بيز (زي إن عمود ناقص)، السيرفر مش هيقع وهيطبع الخطأ
                 console.error("Database Error inside form.parse:", innerError);
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: false, message: 'خطأ في قاعدة البيانات: ' + innerError.message }));
@@ -129,7 +136,7 @@ async function getMyProducts(req, res) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'You are not authorized to view these products'
+                message: 'غير مصرح لك بعرض هذه المنتجات'
             }));
         }
 
@@ -144,7 +151,7 @@ async function getMyProducts(req, res) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,
-            message: 'An error occurred while fetching your products'
+            message: 'حدث خطأ أثناء جلب منتجاتك'
         }));
     }
 }
@@ -155,7 +162,7 @@ async function updateProduct(req, res, productId) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'You are not authorized to update products'
+                message: 'غير مصرح لك بتعديل المنتجات'
             }));
         }
 
@@ -164,7 +171,7 @@ async function updateProduct(req, res, productId) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'Product not found'
+                message: 'المنتج غير موجود'
             }));
         }
 
@@ -172,7 +179,7 @@ async function updateProduct(req, res, productId) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'You can only edit your own products'
+                message: 'يمكنك فقط تعديل منتجاتك الخاصة'
             }));
         }
 
@@ -188,19 +195,26 @@ async function updateProduct(req, res, productId) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({
                     success: false,
-                    message: 'An error occurred while uploading the image'
+                    message: 'حدث خطأ أثناء رفع الصورة'
                 }));
             }
 
+            // تحديث الحقول الأساسية مع دعم الحقول الجديدة (الخصم والماركة)
             const title = fields.title ? fields.title[0] : existing.title;
             const description = fields.description ? fields.description[0] : existing.description;
             const price = fields.price ? parseFloat(fields.price[0]) : existing.price;
+            const discount = fields.discount ? parseFloat(fields.discount[0]) : (existing.discount || 0);
             const stock_quantity = fields.stock_quantity ? parseInt(fields.stock_quantity[0]) : existing.stock_quantity;
             const category_id = fields.category_id ? parseInt(fields.category_id[0]) : existing.category_id;
+            const brand = fields.brand ? fields.brand[0] : (existing.brand || '');
+            const tags = fields.tags ? fields.tags[0] : (existing.tags || '');
 
             let image_url = existing.image_url || '';
-            if (files.image) {
-                const uploadedFile = Array.isArray(files.image) ? files.image[0] : files.image;
+            
+            // لو رفع صورة جديدة (الاسم جاي من الفورم بـ images)
+            if (files.images || files.image) {
+                const uploadedFileField = files.images || files.image;
+                const uploadedFile = Array.isArray(uploadedFileField) ? uploadedFileField[0] : uploadedFileField;
                 const fileName = path.basename(uploadedFile.filepath || uploadedFile.newFilename || '');
                 if (fileName) image_url = `/uploads/products/${fileName}`;
             }
@@ -209,15 +223,18 @@ async function updateProduct(req, res, productId) {
                 title,
                 description,
                 price,
+                discount,
                 stock_quantity,
                 image_url,
-                category_id
+                category_id,
+                brand,
+                tags
             });
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({
                 success: true,
-                message: 'Product updated successfully'
+                message: 'تم تحديث المنتج بنجاح'
             }));
         });
     } catch (error) {
@@ -225,7 +242,7 @@ async function updateProduct(req, res, productId) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,
-            message: 'An error occurred while updating the product'
+            message: 'حدث خطأ أثناء تحديث المنتج'
         }));
     }
 }
@@ -236,7 +253,7 @@ async function deleteProduct(req, res, productId) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'You are not authorized to delete products'
+                message: 'غير مصرح لك بحذف المنتجات'
             }));
         }
 
@@ -245,7 +262,7 @@ async function deleteProduct(req, res, productId) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'Product not found'
+                message: 'المنتج غير موجود'
             }));
         }
 
@@ -253,7 +270,7 @@ async function deleteProduct(req, res, productId) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'You can only delete your own products'
+                message: 'يمكنك فقط حذف منتجاتك الخاصة'
             }));
         }
 
@@ -262,14 +279,14 @@ async function deleteProduct(req, res, productId) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: true,
-            message: 'Product deleted successfully'
+            message: 'تم حذف المنتج بنجاح'
         }));
     } catch (error) {
         console.error(error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,
-            message: 'An error occurred while deleting the product'
+            message: 'حدث خطأ أثناء حذف المنتج'
         }));
     }
 }

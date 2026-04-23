@@ -30,27 +30,28 @@
 
     <main class="flex-1 p-4 md:p-8 md:mr-64 w-full overflow-hidden">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">إدارة الطلبات</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">إدارة الطلبات المباشرة</h1>
             <div id="toast" class="hidden bg-success-500 text-white px-6 py-2 rounded-full shadow-md transition-opacity font-bold text-sm md:text-base w-full md:w-auto text-center">
                 <i class="fas fa-check-circle ml-1"></i> تم تحديث الحالة بنجاح
             </div>
         </header>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 w-full">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 w-full overflow-hidden">
             <div class="overflow-x-auto w-full">
-                <table class="w-full text-right border-collapse min-w-[600px]">
-                    <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm md:text-base">
+                <table class="w-full text-right border-collapse min-w-[900px]">
+                    <thead class="bg-gray-100 border-b border-gray-200 text-gray-700 text-sm font-bold">
                         <tr>
-                            <th class="p-3 md:p-4 whitespace-nowrap">رقم الطلب</th>
-                            <th class="p-3 md:p-4 whitespace-nowrap">التاريخ</th>
-                            <th class="p-3 md:p-4 whitespace-nowrap">عنوان الشحن</th>
-                            <th class="p-3 md:p-4 whitespace-nowrap">الإجمالي</th>
-                            <th class="p-3 md:p-4 whitespace-nowrap">تحديث الحالة</th>
+                            <th class="p-4 whitespace-nowrap">رقم الطلب</th>
+                            <th class="p-4 whitespace-nowrap">العميل</th>
+                            <th class="p-4 whitespace-nowrap">رقم الهاتف</th>
+                            <th class="p-4 whitespace-nowrap">العنوان</th>
+                            <th class="p-4 whitespace-nowrap">الإجمالي</th>
+                            <th class="p-4 whitespace-nowrap text-center">تحديث الحالة</th>
                         </tr>
                     </thead>
                     <tbody id="adminOrdersContainer" class="divide-y divide-gray-100 text-sm md:text-base">
                         <tr>
-                            <td colspan="5" class="p-8 text-center text-gray-500">
+                            <td colspan="6" class="p-8 text-center text-gray-500">
                                 <i class="fas fa-spinner fa-spin text-3xl mb-2"></i> جاري تحميل الطلبات...
                             </td>
                         </tr>
@@ -63,9 +64,7 @@
     <script src="../../components/admin-sidebar.js"></script>
 
     <script>
-        // السطر ده بيرسم القائمة وينور زرار "إدارة الطلبات"
         loadAdminSidebar('dashboard');
-
         const API_URL = 'http://127.0.0.1:3000/api';
 
         async function fetchAllOrders() {
@@ -86,10 +85,10 @@
                 if (response.ok || data.success) {
                     renderAdminOrders(data.data || []);
                 } else {
-                    document.getElementById('adminOrdersContainer').innerHTML = `<tr><td colspan="5" class="text-center text-error-500 p-8 font-bold"><i class="fas fa-lock text-2xl mb-2 block"></i> خطأ: ${data.message || 'لست بصلاحية أدمن'}</td></tr>`;
+                    document.getElementById('adminOrdersContainer').innerHTML = `<tr><td colspan="6" class="text-center text-error-500 p-8 font-bold"><i class="fas fa-lock text-2xl mb-2 block"></i> خطأ: ${data.message || 'لست بصلاحية أدمن'}</td></tr>`;
                 }
             } catch (error) {
-                document.getElementById('adminOrdersContainer').innerHTML = '<tr><td colspan="5" class="text-center text-error-500 p-8 font-bold">خطأ في الاتصال بالسيرفر</td></tr>';
+                document.getElementById('adminOrdersContainer').innerHTML = '<tr><td colspan="6" class="text-center text-error-500 p-8 font-bold">خطأ في الاتصال بالسيرفر</td></tr>';
             }
         }
 
@@ -97,35 +96,50 @@
             const container = document.getElementById('adminOrdersContainer');
 
             if (orders.length === 0) {
-                container.innerHTML = `<tr><td colspan="5" class="p-12 text-center text-gray-500"><i class="fas fa-box-open text-4xl mb-3"></i><br>لا توجد طلبات في المتجر حالياً.</td></tr>`;
+                container.innerHTML = `<tr><td colspan="6" class="p-12 text-center text-gray-500"><i class="fas fa-box-open text-4xl mb-3"></i><br>لا توجد طلبات في المتجر حالياً.</td></tr>`;
                 return;
             }
 
             let html = '';
             orders.forEach(order => {
-                const orderDate = new Date(order.created_at).toLocaleDateString('ar-EG');
-                
                 const isPending = order.status === 'Pending' ? 'selected' : '';
                 const isProcessing = order.status === 'Processing' ? 'selected' : '';
                 const isShipped = order.status === 'Shipped' ? 'selected' : '';
                 const isDelivered = order.status === 'Delivered' ? 'selected' : '';
 
+                // عرض الاسم والهاتف ولو كانوا مش موجودين نعرض "غير مسجل"
+                const customerName = order.full_name || 'غير مسجل';
+                const customerPhone = order.phone || 'غير مسجل';
+
+                // تنسيق الحالة بلون مختلف لتسهيل الرؤية
+                let statusBadge = '';
+                if(order.status === 'Pending') statusBadge = 'bg-yellow-100 text-yellow-700 border-yellow-200';
+                else if(order.status === 'Processing') statusBadge = 'bg-blue-100 text-blue-700 border-blue-200';
+                else if(order.status === 'Shipped') statusBadge = 'bg-purple-100 text-purple-700 border-purple-200';
+                else if(order.status === 'Delivered') statusBadge = 'bg-green-100 text-green-700 border-green-200';
+
                 html += `
                     <tr class="hover:bg-gray-50 transition">
-                        <td class="p-3 md:p-4 font-bold text-gray-800">#${order.id}</td>
-                        <td class="p-3 md:p-4 text-gray-600">${orderDate}</td>
-                        <td class="p-3 md:p-4 text-gray-600 max-w-[150px] md:max-w-xs truncate" title="${order.shipping_address}">${order.shipping_address}</td>
-                        <td class="p-3 md:p-4 font-bold text-primary-600">${order.total_amount || 0} ج.م</td>
-                        <td class="p-3 md:p-4">
-                            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                                <select id="status-${order.id}" class="border border-gray-300 rounded px-2 md:px-3 py-1.5 outline-none focus:border-primary-500 bg-white text-xs md:text-sm font-medium w-full sm:w-auto">
-                                    <option value="Pending" ${isPending}>قيد المراجعة</option>
-                                    <option value="Processing" ${isProcessing}>جاري التجهيز</option>
-                                    <option value="Shipped" ${isShipped}>تم الشحن</option>
-                                    <option value="Delivered" ${isDelivered}>تم التوصيل</option>
+                        <td class="p-4 font-bold text-gray-800">
+                            <span class="bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs">#${order.id}</span>
+                        </td>
+                        <td class="p-4 font-semibold text-gray-700 flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-xs"><i class="fas fa-user"></i></div>
+                            ${customerName}
+                        </td>
+                        <td class="p-4 text-gray-600" dir="ltr">${customerPhone}</td>
+                        <td class="p-4 text-gray-600 max-w-[200px] truncate" title="${order.shipping_address}">${order.shipping_address}</td>
+                        <td class="p-4 font-bold text-primary-600">${order.total_amount || 0} ج.م</td>
+                        <td class="p-4">
+                            <div class="flex items-center justify-center gap-2 border p-1 rounded bg-white">
+                                <select id="status-${order.id}" class="outline-none bg-transparent text-sm font-medium w-full text-gray-700 ${statusBadge} px-2 py-1 rounded">
+                                    <option value="Pending" ${isPending} class="text-gray-800 bg-white">قيد المراجعة</option>
+                                    <option value="Processing" ${isProcessing} class="text-gray-800 bg-white">جاري التجهيز</option>
+                                    <option value="Shipped" ${isShipped} class="text-gray-800 bg-white">تم الشحن</option>
+                                    <option value="Delivered" ${isDelivered} class="text-gray-800 bg-white">تم التوصيل</option>
                                 </select>
-                                <button onclick="updateStatus(${order.id})" class="bg-primary-500 hover:bg-primary-600 text-white px-3 md:px-4 py-1.5 rounded shadow-sm transition text-xs md:text-sm font-bold w-full sm:w-auto">
-                                    حفظ
+                                <button onclick="updateStatus(${order.id})" class="text-primary-600 hover:text-primary-800 hover:bg-primary-50 p-2 rounded transition" title="حفظ التعديل">
+                                    <i class="fas fa-save text-lg"></i>
                                 </button>
                             </div>
                         </td>
@@ -154,6 +168,7 @@
 
                 if (response.ok || data.success) {
                     showToast();
+                    fetchAllOrders(); // إعادة تحميل الطلبات عشان الألوان تتحدث
                 } else {
                     alert('خطأ: ' + (data.message || 'غير مصرح لك'));
                 }
@@ -166,11 +181,6 @@
             const toast = document.getElementById('toast');
             toast.classList.remove('hidden');
             setTimeout(() => toast.classList.add('hidden'), 3000);
-        }
-
-        function logout() {
-            localStorage.removeItem('spider_token');
-            window.location.href = '../../index.html';
         }
 
         window.onload = fetchAllOrders;
