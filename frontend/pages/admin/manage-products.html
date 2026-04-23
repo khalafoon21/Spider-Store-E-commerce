@@ -1,39 +1,81 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spider Store | تعديل وحذف المنتجات</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | لوحة التحكم - إدارة المنتجات</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#ECFEFF', 100: '#CFFAFE', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
+                        secondary: { 500: '#F59E0B' },
+                        success: { 50: '#F0FDF4', 500: '#22C55E', 700: '#15803D' },
+                        error: { 50: '#FEF2F2', 500: '#EF4444', 700: '#B91C1C' },
+                        warning: { 50: '#FFFBEB', 500: '#F59E0B', 700: '#B45309' },
+                        info: { 50: '#EFF6FF', 500: '#3B82F6', 700: '#1D4ED8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style> 
+        body { background-color: #F8FAFC; } 
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
 </head>
-<body id="admin-layout" class="font-sans text-gray-800 antialiased flex flex-col md:flex-row min-h-screen bg-gray-100">
+<body id="admin-layout" class="font-sans text-gray-800 antialiased flex flex-col md:flex-row min-h-screen">
 
-    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full">
-        <header class="mb-6">
-            <h1 class="text-2xl md:text-3xl font-bold">تعديل وحذف المنتجات</h1>
-            <p class="text-gray-500 mt-2">إدارة كل المنتجات من مكان واحد.</p>
+    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full overflow-hidden transition-all duration-300 relative custom-scrollbar">
+        
+        <div id="toast" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 px-6 py-3 rounded-lg shadow-lg font-bold text-sm md:text-base transition-all duration-300 opacity-0 pointer-events-none -translate-y-4">
+            <i id="toastIcon" class="fas"></i>
+            <span id="toastMessage">رسالة الإشعار هنا</span>
+        </div>
+
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-gray-200 pb-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900">إدارة المنتجات</h1>
+                <p class="text-gray-500 mt-1 text-sm md:text-base">تعديل وحذف ومتابعة حالة مخزون المنتجات.</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="add-product.html" class="bg-primary-600 text-white hover:bg-primary-700 px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 shadow-sm">
+                    <i class="fas fa-plus"></i> منتج جديد
+                </a>
+                <button onclick="fetchProducts()" class="bg-primary-50 text-primary-600 hover:bg-primary-100 px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> تحديث
+                </button>
+            </div>
         </header>
 
-        <div id="messageBox" class="hidden px-5 py-3 rounded-md mb-5 font-bold text-center"></div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-gray-50">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 w-full overflow-hidden">
+            <div class="overflow-x-auto w-full custom-scrollbar">
+                <table class="w-full text-right border-collapse min-w-[900px]">
+                    <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm font-bold uppercase tracking-wider">
                         <tr>
-                            <th class="px-4 py-3 text-right">المنتج</th>
-                            <th class="px-4 py-3 text-right">السعر</th>
-                            <th class="px-4 py-3 text-right">المخزون</th>
-                            <th class="px-4 py-3 text-right">إجراءات</th>
+                            <th class="p-5 whitespace-nowrap w-20">الصورة</th>
+                            <th class="p-5 whitespace-nowrap">اسم المنتج</th>
+                            <th class="p-5 whitespace-nowrap">القسم</th>
+                            <th class="p-5 whitespace-nowrap">السعر</th>
+                            <th class="p-5 whitespace-nowrap">المخزون</th>
+                            <th class="p-5 whitespace-nowrap text-center">الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody id="productsTableBody">
+                    <tbody id="productsContainer" class="divide-y divide-gray-100 text-sm md:text-base">
                         <tr>
-                            <td colspan="4" class="text-center py-8 text-gray-500">
-                                <i class="fas fa-spinner fa-spin"></i> جاري تحميل المنتجات...
+                            <td colspan="6" class="p-12 text-center text-primary-600">
+                                <i class="fas fa-circle-notch fa-spin text-4xl mb-3"></i>
+                                <p class="font-semibold">جاري تحميل المنتجات...</p>
                             </td>
                         </tr>
                     </tbody>
@@ -42,184 +84,193 @@
         </div>
     </main>
 
-    <div id="editModal" class="fixed inset-0 bg-black/50 hidden z-50 p-4">
-        <div class="max-w-xl mx-auto mt-12 bg-white rounded-xl p-6">
-            <h2 class="text-xl font-bold mb-4">تعديل المنتج</h2>
-            <form id="editProductForm" class="space-y-4">
-                <input type="hidden" id="editProductId" />
-                <div>
-                    <label class="block mb-1 font-bold text-sm">اسم المنتج</label>
-                    <input id="editTitle" class="w-full border rounded-md px-3 py-2" required />
+    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300" id="deleteModalContent">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 rounded-full bg-error-50 text-error-500 flex items-center justify-center text-3xl mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle"></i>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block mb-1 font-bold text-sm">السعر</label>
-                        <input type="number" id="editPrice" min="1" class="w-full border rounded-md px-3 py-2" required />
-                    </div>
-                    <div>
-                        <label class="block mb-1 font-bold text-sm">المخزون</label>
-                        <input type="number" id="editStock" min="0" class="w-full border rounded-md px-3 py-2" required />
-                    </div>
-                </div>
-                <div>
-                    <label class="block mb-1 font-bold text-sm">الوصف</label>
-                    <textarea id="editDescription" class="w-full border rounded-md px-3 py-2"></textarea>
-                </div>
-                <div>
-                    <label class="block mb-1 font-bold text-sm">تغيير الصورة</label>
-                    <input type="file" id="editImage" accept="image/*" class="w-full border rounded-md px-3 py-2 bg-white" />
-                </div>
-                <div class="flex gap-3 pt-2">
-                    <button type="submit" class="bg-cyan-600 text-white px-5 py-2 rounded-md font-bold">حفظ التعديلات</button>
-                    <button type="button" onclick="closeEditModal()" class="bg-gray-100 px-5 py-2 rounded-md font-bold">إلغاء</button>
-                </div>
-            </form>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">تأكيد الحذف</h3>
+                <p class="text-gray-500">هل أنت متأكد من رغبتك في حذف هذا المنتج نهائياً؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="confirmDeleteBtn" class="flex-1 bg-error-500 hover:bg-error-600 text-white font-bold py-2 px-4 rounded-lg transition">نعم، احذف</button>
+                <button onclick="closeDeleteModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg transition">إلغاء</button>
+            </div>
         </div>
     </div>
 
     <script src="../../components/admin-sidebar.js"></script>
     <script>
-        loadAdminSidebar('manage-products');
+        if(typeof loadAdminSidebar === 'function') loadAdminSidebar('manage-products');
         const API_URL = 'http://127.0.0.1:3000/api';
-        let productsCache = [];
+        let productToDelete = null;
 
-        function escapeHTML(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>'"]/g, tag => ({
-                '&': '&amp;', '<': '<', '>': '>', "'": '&#39;', '"': '"'
-            }[tag] || tag));
+        function logout() {
+            localStorage.removeItem('spider_token');
+            window.location.href = '../auth/login.html';
         }
 
-        function showMessage(msg, type = 'success') {
-            const box = document.getElementById('messageBox');
-            box.className = `px-5 py-3 rounded-md mb-5 font-bold text-center block ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
-            box.textContent = msg;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+
+            toast.className = 'absolute top-4 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 px-6 py-3 rounded-lg shadow-lg font-bold text-sm md:text-base transition-all duration-300';
+            toastIcon.className = 'fas text-lg';
+
+            if (type === 'success') {
+                toast.classList.add('bg-success-50', 'text-success-700', 'border', 'border-success-200');
+                toastIcon.classList.add('fa-check-circle');
+            } else if (type === 'error') {
+                toast.classList.add('bg-error-50', 'text-error-700', 'border', 'border-error-200');
+                toastIcon.classList.add('fa-exclamation-circle');
+            }
+
+            toastMessage.textContent = message;
+            
+            toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
+            }, 3000);
         }
 
         async function fetchProducts() {
-            const token = localStorage.getItem('spider_token');
-            if (!token) {
-                window.location.href = '../auth/login.html';
-                return;
-            }
+            const container = document.getElementById('productsContainer');
+            container.innerHTML = `<tr><td colspan="6" class="p-12 text-center text-primary-600"><i class="fas fa-circle-notch fa-spin text-4xl mb-3"></i><p class="font-semibold">جاري تحديث المنتجات...</p></td></tr>`;
 
             try {
-                const response = await fetch(`${API_URL}/admin/products`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await fetch(`${API_URL}/products`);
                 const data = await response.json();
-                if (response.ok && data.success) {
-                    productsCache = data.data || [];
-                    renderProducts(productsCache);
+
+                if (response.ok || data.success) {
+                    renderProducts(data.data || []);
                 } else {
-                    showMessage(data.message || 'فشل تحميل المنتجات', 'error');
+                    container.innerHTML = `<tr><td colspan="6" class="text-center text-error-500 p-12 bg-error-50 font-bold rounded-lg"><i class="fas fa-exclamation-circle text-3xl mb-3 block"></i> خطأ: ${data.message || 'فشل تحميل المنتجات'}</td></tr>`;
                 }
-            } catch {
-                showMessage('خطأ في الاتصال بالسيرفر', 'error');
+            } catch (error) {
+                container.innerHTML = `<tr><td colspan="6" class="text-center text-error-500 p-12 bg-error-50 font-bold rounded-lg"><i class="fas fa-wifi text-3xl mb-3 block"></i> حدث خطأ في الاتصال بالسيرفر</td></tr>`;
             }
         }
 
         function renderProducts(products) {
-            const tbody = document.getElementById('productsTableBody');
-            if (!products.length) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد منتجات حالياً</td></tr>`;
+            const container = document.getElementById('productsContainer');
+
+            if (products.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" class="p-16 text-center text-gray-400 bg-gray-50"><i class="fas fa-box-open text-5xl mb-4"></i><br><p class="text-lg font-semibold">لا توجد منتجات في المتجر حالياً.</p></td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = products.map(p => `
-                <tr class="border-t">
-                    <td class="px-4 py-3">
-                        <div class="font-bold">${escapeHTML(p.title)}</div>
-                        <div class="text-gray-500 text-xs">#${p.id}</div>
-                    </td>
-                    <td class="px-4 py-3">${Number(p.price || 0)} ج.م</td>
-                    <td class="px-4 py-3">${Number(p.stock_quantity || 0)}</td>
-                    <td class="px-4 py-3">
-                        <div class="flex gap-2">
-                            <button onclick="openEditModal(${p.id})" class="px-3 py-1 rounded bg-cyan-50 text-cyan-700 font-bold">تعديل</button>
-                            <button onclick="deleteProduct(${p.id})" class="px-3 py-1 rounded bg-red-50 text-red-700 font-bold">حذف</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            let html = '';
+            products.forEach(product => {
+                const imageUrl = product.main_image ? `http://127.0.0.1:3000/uploads/${product.main_image}` : 'https://via.placeholder.com/150?text=No+Image';
+                const stockClass = product.stock_quantity > 10 ? 'text-success-600 bg-success-50' : (product.stock_quantity > 0 ? 'text-warning-600 bg-warning-50' : 'text-error-600 bg-error-50');
+                const stockText = product.stock_quantity > 0 ? `${product.stock_quantity} قطعة` : 'نفذت الكمية';
+
+                html += `
+                    <tr class="hover:bg-gray-50 transition duration-150 group">
+                        <td class="p-4">
+                            <div class="w-16 h-16 rounded-lg bg-white border border-gray-200 overflow-hidden shadow-sm flex items-center justify-center">
+                                <img src="${imageUrl}" alt="${product.title}" class="object-cover w-full h-full" onerror="this.src='https://via.placeholder.com/150?text=Error'">
+                            </div>
+                        </td>
+                        <td class="p-5 font-bold text-gray-800">
+                            ${product.title}
+                            <span class="block text-xs text-gray-400 font-normal mt-1">#${product.id} ${product.brand ? '| ' + product.brand : ''}</span>
+                        </td>
+                        <td class="p-5 text-gray-600 font-medium">
+                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-sm">${product.category_name || 'غير محدد'}</span>
+                        </td>
+                        <td class="p-5 font-extrabold text-primary-600">
+                            ${parseFloat(product.price).toFixed(2)} <span class="text-xs font-semibold text-gray-500">ج.م</span>
+                        </td>
+                        <td class="p-5 font-bold">
+                            <span class="px-3 py-1 rounded-full text-sm ${stockClass}">${stockText}</span>
+                        </td>
+                        <td class="p-5 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <button onclick="editProduct(${product.id})" class="text-blue-500 hover:text-white hover:bg-blue-500 bg-blue-50 border border-blue-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل المنتج">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="openDeleteModal(${product.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حذف المنتج">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            container.innerHTML = html;
         }
 
-        function openEditModal(productId) {
-            const p = productsCache.find(x => x.id === productId);
-            if (!p) return;
-            document.getElementById('editProductId').value = p.id;
-            document.getElementById('editTitle').value = p.title || '';
-            document.getElementById('editPrice').value = p.price || 0;
-            document.getElementById('editStock').value = p.stock_quantity || 0;
-            document.getElementById('editDescription').value = p.description || '';
-            document.getElementById('editModal').classList.remove('hidden');
+        // --- نظام الحذف المطور (Modal) ---
+        function openDeleteModal(id) {
+            productToDelete = id;
+            const modal = document.getElementById('deleteModal');
+            const modalContent = document.getElementById('deleteModalContent');
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
         }
 
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-            document.getElementById('editProductForm').reset();
+        function closeDeleteModal() {
+            productToDelete = null;
+            const modal = document.getElementById('deleteModal');
+            const modalContent = document.getElementById('deleteModalContent');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            
+            setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        document.getElementById('editProductForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+            if (!productToDelete) return;
+            
             const token = localStorage.getItem('spider_token');
-            const productId = document.getElementById('editProductId').value;
-
-            const formData = new FormData();
-            formData.append('title', document.getElementById('editTitle').value);
-            formData.append('price', document.getElementById('editPrice').value);
-            formData.append('stock_quantity', document.getElementById('editStock').value);
-            formData.append('description', document.getElementById('editDescription').value);
-
-            const imageFile = document.getElementById('editImage').files[0];
-            if (imageFile) formData.append('image', imageFile);
+            const btn = document.getElementById('confirmDeleteBtn');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحذف...';
+            btn.disabled = true;
 
             try {
-                const response = await fetch(`${API_URL}/products/${productId}`, {
-                    method: 'PUT',
-                    headers: { Authorization: `Bearer ${token}` },
-                    body: formData
+                const response = await fetch(`${API_URL}/products/${productToDelete}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
+
                 const data = await response.json();
-                if (response.ok && data.success) {
-                    showMessage('تم تحديث المنتج بنجاح');
-                    closeEditModal();
+
+                if (response.ok || data.success) {
+                    showToast('تم حذف المنتج بنجاح', 'success');
                     fetchProducts();
                 } else {
-                    showMessage(data.message || 'فشل تحديث المنتج', 'error');
+                    showToast(data.message || 'غير مصرح لك بالحذف', 'error');
                 }
-            } catch {
-                showMessage('خطأ في الاتصال بالسيرفر', 'error');
+            } catch (error) {
+                showToast('خطأ في الاتصال بالسيرفر', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                closeDeleteModal();
             }
         });
 
-        async function deleteProduct(productId) {
-            if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
-
-            const token = localStorage.getItem('spider_token');
-            try {
-                const response = await fetch(`${API_URL}/products/${productId}`, {
-                    method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    showMessage('تم حذف المنتج بنجاح');
-                    fetchProducts();
-                } else {
-                    showMessage(data.message || 'فشل حذف المنتج', 'error');
-                }
-            } catch {
-                showMessage('خطأ في الاتصال بالسيرفر', 'error');
-            }
+        // دالة التعديل (في حالة عمل صفحة edit-product.html لاحقاً)
+        function editProduct(id) {
+            // مؤقتاً سيظهر إشعار حتى يتم إنشاء صفحة التعديل
+            showToast('سيتم توجيهك لصفحة التعديل قريباً', 'info');
+            // window.location.href = `edit-product.html?id=${id}`;
         }
 
-        window.addEventListener('load', fetchProducts);
-
-        function logout() {
-            localStorage.removeItem('spider_token');
-            window.location.href = '../../index.html';
-        }
+        window.onload = fetchProducts;
     </script>
 </body>
 </html>
