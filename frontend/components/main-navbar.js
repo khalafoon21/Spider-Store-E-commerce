@@ -1,13 +1,44 @@
+// دالة لتحديث عداد السلة من السيرفر مباشرة
+async function updateGlobalCartCount() {
+    const badge = document.getElementById('cartCountBadge');
+    const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+    
+    if (!badge) return;
+
+    if (!token) {
+        badge.textContent = '0';
+        return;
+    }
+
+    try {
+        // بنسأل الباك اند عن السلة
+        const res = await fetch('http://127.0.0.1:3000/api/cart', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            const items = data.data || data.cart || [];
+            // بنحسب مجموع الكميات
+            const totalItems = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            badge.textContent = totalItems;
+        } else {
+            badge.textContent = '0';
+        }
+    } catch (error) {
+        console.error('خطأ في جلب عدد السلة:', error);
+        badge.textContent = '0';
+    }
+}
+
 function loadMainNavbar() {
-    // 1. تحديد مستوى الفولدر عشان نظبط المسارات (../)
-    // لو إحنا في الصفحة الرئيسية، المسار فاضي. لو جوه صفحات، بنرجع لورا.
     const isHomePage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('frontend/');
     const pathPrefix = isHomePage ? '' : '../../';
     const authPathPrefix = isHomePage ? 'pages/auth/' : '../auth/';
     const cartPathPrefix = isHomePage ? 'pages/cart/' : '../cart/';
     const profilePathPrefix = isHomePage ? 'pages/profile/' : '../profile/';
 
-    const token = localStorage.getItem('spider_token');
+    const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
 
     const navbarHTML = `
     <nav class="bg-primary-600 text-white shadow-md sticky top-0 z-50">
@@ -38,18 +69,10 @@ function loadMainNavbar() {
     </nav>
     `;
 
-    // حقن الناف بار في أول الـ body
     document.body.insertAdjacentHTML('afterbegin', navbarHTML);
     
-    // تحديث رقم السلة فوراً
+    // تحديث العداد بعد تحميل الناف بار
     updateGlobalCartCount();
-}
-
-function updateGlobalCartCount() {
-    let cart = JSON.parse(localStorage.getItem('spider_cart')) || [];
-    let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const badge = document.getElementById('cartCountBadge');
-    if (badge) badge.textContent = totalItems;
 }
 
 // تشغيل الدالة تلقائياً

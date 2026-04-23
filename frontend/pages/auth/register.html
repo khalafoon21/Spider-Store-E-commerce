@@ -111,87 +111,80 @@
     </div>
 
     <script>
-const API_URL = 'http://127.0.0.1:3000/api';
+        const API_URL = 'http://127.0.0.1:3000/api';
 
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag] || tag));
-}
-
-async function handleRegister(event) {
-    event.preventDefault();
-    
-    const btn = document.getElementById('submitBtn');
-    const msgBox = document.getElementById('messageBox');
-    
-    const firstName = document.getElementById('firstName').value.trim();
-    const lastName = document.getElementById('lastName').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-
-    // التأكد من تطابق كلمتي المرور
-    if (password !== confirmPassword) {
-        msgBox.className = 'block bg-error-50 text-error-600 border border-error-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
-        msgBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> كلمتا المرور غير متطابقتين!';
-        return;
-    }
-
-    const userData = { first_name: firstName, last_name: lastName, email: email, phone: phone, password: password };
-
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
-    btn.disabled = true;
-    msgBox.classList.add('hidden');
-
-    try {
-        // 1. إرسال طلب التسجيل
-        const response = await fetch(`${API_URL}/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(userData)
+        // 1. فحص هل المستخدم مسجل دخول بالفعل أم لا
+        window.addEventListener('DOMContentLoaded', () => {
+            if(localStorage.getItem('spider_token')) {
+                window.location.replace('../../index.html');
+            }
         });
 
-        const data = await response.json();
-        console.log('Response status:', response.status);
-        console.log('Response data:', data);
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
 
-        // لو التسجيل نجح
-        if (response.ok || data.success) {
-            msgBox.className = 'block bg-success-50 text-success-600 border border-success-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
-            msgBox.innerHTML = '<i class="fas fa-check-circle"></i> تم الإنشاء! جاري دخولك للمتجر...';
+        async function handleRegister(event) {
+            event.preventDefault();
             
-            // حفظ التوكن من التسجيل
-            if (data.token) {
-                console.log('Token received:', data.token);
-                localStorage.setItem('spider_token', data.token);
-                
-                // توجيه العميل للصفحة الرئيسية
-                console.log('Redirecting to index.html');
-                window.location.replace('../../index.html');
-            } else {
-                console.log('No token in response');
-                // لو مفيش توكن، يروح لصفحة الدخول
-                window.location.replace('login.html');
+            const btn = document.getElementById('submitBtn');
+            const msgBox = document.getElementById('messageBox');
+            
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                msgBox.className = 'block bg-error-50 text-error-600 border border-error-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
+                msgBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> كلمتا المرور غير متطابقتين!';
+                return;
             }
 
-        } else {
-            // لو التسجيل فشل (مثلاً الإيميل متسجل قبل كده)
-            msgBox.className = 'block bg-error-50 text-error-600 border border-error-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
-            msgBox.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${escapeHTML(data.message) || 'حدث خطأ أثناء التسجيل'}`;
-            btn.innerHTML = '<i class="fas fa-user-plus"></i> إنشاء الحساب';
-            btn.disabled = false;
+            const userData = { first_name: firstName, last_name: lastName, email: email, phone: phone, password: password };
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
+            btn.disabled = true;
+            msgBox.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok || data.success) {
+                    msgBox.className = 'block bg-success-50 text-success-600 border border-success-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
+                    msgBox.innerHTML = '<i class="fas fa-check-circle"></i> تم الإنشاء! جاري دخولك للمتجر...';
+                    
+                    if (data.token) {
+                        localStorage.setItem('spider_token', data.token);
+                        window.location.replace('../../index.html');
+                    } else {
+                        window.location.replace('login.html');
+                    }
+
+                } else {
+                    msgBox.className = 'block bg-error-50 text-error-600 border border-error-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
+                    msgBox.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${escapeHTML(data.message) || 'حدث خطأ أثناء التسجيل'}`;
+                    btn.innerHTML = '<i class="fas fa-user-plus"></i> إنشاء الحساب';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                msgBox.className = 'block bg-error-50 text-error-600 border border-error-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
+                msgBox.innerHTML = '<i class="fas fa-plug"></i> خطأ في الاتصال بالسيرفر';
+                btn.innerHTML = '<i class="fas fa-user-plus"></i> إنشاء الحساب';
+                btn.disabled = false;
+            }
         }
-    } catch (error) {
-        msgBox.className = 'block bg-error-50 text-error-600 border border-error-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
-        msgBox.innerHTML = '<i class="fas fa-plug"></i> خطأ في الاتصال بالسيرفر';
-        btn.innerHTML = '<i class="fas fa-user-plus"></i> إنشاء الحساب';
-        btn.disabled = false;
-        console.error(error);
-    }
-}
     </script>
 </body>
 </html>

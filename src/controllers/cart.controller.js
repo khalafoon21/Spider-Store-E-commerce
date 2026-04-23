@@ -3,20 +3,19 @@ const { getPostData } = require('../utils/helpers');
 
 async function addToCart(req, res) {
     try {
-
         const userId = req.user.userId; 
-        
         const body = await getPostData(req);
-        const { product_id, quantity } = body;
+        
+        // تحويل القيم لأرقام لضمان عدم حدوث تعارض (Type Mismatch)
+        const product_id = parseInt(body.product_id);
+        const quantity = parseInt(body.quantity) || 1;
 
-        if (!product_id) {
+        if (!product_id || isNaN(product_id)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ success: false, message: 'رقم المنتج مطلوب' }));
+            return res.end(JSON.stringify({ success: false, message: 'رقم المنتج مطلوب وغير صالح' }));
         }
 
-        const qty = quantity || 1;
-
-        await CartModel.addItem(userId, product_id, qty);
+        await CartModel.addItem(userId, product_id, quantity);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, message: 'تم إضافة المنتج للسلة بنجاح!' }));
@@ -26,7 +25,7 @@ async function addToCart(req, res) {
 
         if (error.code === 'INVALID_JSON') {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ success: false, message: 'Invalid JSON payload' }));
+            return res.end(JSON.stringify({ success: false, message: 'بيانات غير صالحة' }));
         }
 
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -38,22 +37,10 @@ async function viewCart(req, res) {
     try {
         const userId = req.user.userId;
         const cartItems = await CartModel.getCart(userId);
-
-
-        let cartTotal = 0;
-        cartItems.forEach(item => {
-            cartTotal += item.total_price;
-        });
-
+        
+        // التعديل هنا: إرسال البيانات بشكل صحيح للفرونت اند
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-            success: true, 
-            data: cartItems,
-            summary: {
-                total_items: cartItems.length,
-                total_price: cartTotal
-            }
-        }));
+        res.end(JSON.stringify({ success: true, data: cartItems }));
 
     } catch (error) {
         console.error(error);
@@ -62,4 +49,62 @@ async function viewCart(req, res) {
     }
 }
 
-module.exports = { addToCart, viewCart };
+async function updateCartItem(req, res) {
+    try {
+        const userId = req.user.userId;
+        const body = await getPostData(req);
+        
+        const product_id = parseInt(body.product_id);
+        const quantity = parseInt(body.quantity);
+
+        if (isNaN(product_id) || isNaN(quantity)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'رقم المنتج والكمية مطلوبين بصيغة أرقام' }));
+        }
+
+        await CartModel.setItemQuantity(userId, product_id, quantity);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'تم تحديث الكمية بنجاح' }));
+    } catch (error) {
+        console.error(error);
+
+        if (error.code === 'INVALID_JSON') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'بيانات غير صالحة' }));
+        }
+
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'حدث خطأ أثناء تحديث السلة' }));
+    }
+}
+
+async function removeCartItem(req, res) {
+    try {
+        const userId = req.user.userId;
+        const body = await getPostData(req);
+        const product_id = parseInt(body.product_id);
+
+        if (isNaN(product_id)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'رقم المنتج مطلوب' }));
+        }
+
+        await CartModel.removeItem(userId, product_id);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'تم حذف المنتج من السلة' }));
+    } catch (error) {
+        console.error(error);
+
+        if (error.code === 'INVALID_JSON') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'بيانات غير صالحة' }));
+        }
+
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'حدث خطأ أثناء حذف المنتج من السلة' }));
+    }
+}
+
+module.exports = { addToCart, viewCart, updateCartItem, removeCartItem };

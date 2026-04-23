@@ -5,7 +5,7 @@ const url = require('url');
 const { isAdmin } = require('./middleware/role.middleware');
 const { getAllUsers, updateUserRole } = require('./controllers/admin.controller');
 const { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin } = require('./controllers/order.controller'); 
-const { addToCart, viewCart } = require('./controllers/cart.controller');
+const { addToCart, viewCart, updateCartItem, removeCartItem } = require('./controllers/cart.controller');
 const { getProducts, createProduct, getMyProducts, updateProduct, deleteProduct } = require('./controllers/product.controller');
 const { authenticate } = require('./middleware/auth.middleware');
 const { getProfile, updateProfile } = require('./controllers/user.controller');
@@ -64,6 +64,8 @@ const router = async (req, res) => {
 
     if (path === '/api/cart' && method === 'POST') { try { await authenticate(req, res); return addToCart(req, res); } catch (e) { return; } }
     if (path === '/api/cart' && method === 'GET') { try { await authenticate(req, res); return viewCart(req, res); } catch (e) { return; } }
+    if (path === '/api/cart/update' && method === 'POST') { try { await authenticate(req, res); return updateCartItem(req, res); } catch (e) { return; } }
+    if (path === '/api/cart/remove' && method === 'POST') { try { await authenticate(req, res); return removeCartItem(req, res); } catch (e) { return; } }
 
     if (path === '/api/orders/checkout' && method === 'POST') { try { await authenticate(req, res); return checkout(req, res); } catch (e) { return; } }
     if (path === '/api/orders/history' && method === 'GET') { try { await authenticate(req, res); return getOrderHistory(req, res); } catch (e) { return; } }

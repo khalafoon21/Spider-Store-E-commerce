@@ -74,7 +74,13 @@
     <script>
         const API_URL = 'http://127.0.0.1:3000/api';
 
-        // دالة الحماية الموحدة
+        // 1. فحص هل المستخدم مسجل دخول بالفعل أم لا
+        window.addEventListener('DOMContentLoaded', () => {
+            if(localStorage.getItem('spider_token')) {
+                window.location.replace('../../index.html');
+            }
+        });
+
         function escapeHTML(str) {
             if (!str) return '';
             return String(str).replace(/[&<>'"]/g, tag => ({
@@ -104,19 +110,15 @@
                 const data = await response.json();
 
                 if (response.ok && data.token) {
-                    // حفظ التوكن
                     localStorage.setItem('spider_token', data.token);
                     
-                    // رسالة نجاح خضراء
                     msgBox.className = 'block bg-success-50 text-success-600 border border-success-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
                     msgBox.innerHTML = '<i class="fas fa-check-circle"></i> تم تسجيل الدخول بنجاح!';
                     
-                    // تحويل المستخدم للصفحة الرئيسية بعد ثانية
                     setTimeout(() => {
                         window.location.href = '../../index.html';
                     }, 1000);
                 } else {
-                    // رسالة خطأ حمراء
                     msgBox.className = 'block bg-error-50 text-error-600 border border-error-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
                     msgBox.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${escapeHTML(data.message) || 'خطأ في البريد أو كلمة المرور'}`;
                     

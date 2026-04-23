@@ -23,10 +23,10 @@ async function initDB() {
                 password_hash TEXT NOT NULL,
                 phone TEXT,
                 role TEXT DEFAULT 'customer',
-                address TEXT,         /* ✨ جديد: العنوان */
-                birthdate DATE,       /* ✨ جديد: تاريخ الميلاد */
-                city TEXT,            /* ✨ جديد: المدينة */
-                country TEXT,         /* ✨ جديد: البلد */
+                address TEXT,        /* ✨ جديد: العنوان */
+                birthdate DATE,      /* ✨ جديد: تاريخ الميلاد */
+                city TEXT,           /* ✨ جديد: المدينة */
+                country TEXT,        /* ✨ جديد: البلد */
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -76,6 +76,8 @@ async function initDB() {
                 total_amount REAL NOT NULL,
                 status TEXT DEFAULT 'Pending', 
                 shipping_address TEXT NOT NULL,
+                phone TEXT NOT NULL,          /* ✨ جديد: رقم الهاتف */
+                full_name TEXT NOT NULL,      /* ✨ جديد: الاسم بالكامل */
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );

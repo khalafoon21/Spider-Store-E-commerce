@@ -1,28 +1,31 @@
 const OrderModel = require('../models/order.model');
 const { getPostData } = require('../utils/helpers');
 
-
 async function checkout(req, res) {
     try {
         const userId = req.user.userId; 
         
         const body = await getPostData(req);
-        const { shipping_address } = body;
+        // التعديل الأول: استقبال كل البيانات اللي بيبعتها الفرونت اند
+        const { shipping_address, phone, full_name } = body;
 
-        if (!shipping_address) {
+        // التحقق من إن كل البيانات المهمة موجودة
+        if (!shipping_address || !phone || !full_name) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ 
                 success: false, 
-                message: 'Shipping address is required to complete the order' 
+                message: 'يرجى إدخال العنوان، رقم الهاتف، والاسم بالكامل لإتمام الطلب' 
             }));
         }
 
-        const orderId = await OrderModel.createOrder(userId, shipping_address);
+        // تمرير البيانات كاملة لنموذج قاعدة البيانات (Model)
+        // ملاحظة: تأكد إن OrderModel.createOrder متعدلة عشان تستقبل المتغيرات دي
+        const orderId = await OrderModel.createOrder(userId, shipping_address, phone, full_name);
 
         res.writeHead(201, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: true, 
-            message: 'Your order has been successfully placed!', 
+            message: 'تم تسجيل طلبك بنجاح!', 
             orderId: orderId 
         }));
 
@@ -33,18 +36,19 @@ async function checkout(req, res) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'Invalid JSON payload'
+                message: 'بيانات غير صالحة'
             }));
         }
 
-        res.writeHead(400, { 'Content-Type': 'application/json' });
+        // التعديل: إرجاع كود 500 أو رسالة الموديل لو السلة فاضية
+        const statusCode = error.message.includes('empty') ? 400 : 500;
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
             success: false, 
-            message: error.message || 'An error occurred while processing your order' 
+            message: error.message || 'حدث خطأ أثناء معالجة طلبك' 
         }));
     }
 } 
-
 
 async function getOrderHistory(req, res) {
     try {
@@ -58,13 +62,13 @@ async function getOrderHistory(req, res) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
             success: false, 
-            message: 'An error occurred while fetching order history' 
+            message: 'حدث خطأ أثناء جلب سجل الطلبات' 
         }));
     }
 }
+
 async function getAllOrdersAdmin(req, res) {
     try {
-        // 1. نتأكد إنه أدمن أو بائع
         if (req.user.role !== 'seller' && req.user.role !== 'admin') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ 
@@ -73,10 +77,8 @@ async function getAllOrdersAdmin(req, res) {
             }));
         }
 
-        // 2. نجيب كل الطلبات من الموديل
         const orders = await OrderModel.getAllOrders();
 
-        // 3. نبعتها للفرونت اند
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, data: orders }));
 
@@ -96,7 +98,7 @@ async function updateOrderStatus(req, res) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ 
                 success: false, 
-                message: 'You are not authorized to update order status' 
+                message: 'غير مصرح لك بتحديث حالة الطلب' 
             }));
         }
 
@@ -109,7 +111,7 @@ async function updateOrderStatus(req, res) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ 
                 success: false, 
-                message: 'Invalid order ID or status' 
+                message: 'رقم الطلب أو الحالة غير صالحة' 
             }));
         }
 
@@ -118,7 +120,7 @@ async function updateOrderStatus(req, res) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
             success: true, 
-            message: `Order status updated successfully to: ${status}` 
+            message: `تم تحديث حالة الطلب بنجاح إلى: ${status}` 
         }));
 
     } catch (error) {
@@ -128,16 +130,16 @@ async function updateOrderStatus(req, res) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
                 success: false,
-                message: 'Invalid JSON payload'
+                message: 'بيانات غير صالحة'
             }));
         }
 
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
             success: false, 
-            message: 'An error occurred while updating order status' 
+            message: 'حدث خطأ أثناء تحديث حالة الطلب' 
         }));
     }
 } 
 
-module.exports = { checkout, getOrderHistory, updateOrderStatus,getAllOrdersAdmin };
+module.exports = { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin };

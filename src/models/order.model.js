@@ -2,32 +2,43 @@ const getDb = require('../config/database');
 const CartModel = require('./cart.model');
 
 class OrderModel {
-    static async createOrder(userId, shippingAddress) {
+    // التعديل 1: إضافة phone و fullName للدالة
+    static async createOrder(userId, shippingAddress, phone, fullName) {
         const db = getDb();
         const cartItems = await CartModel.getCart(userId);
         
         if (cartItems.length === 0) {
-            throw new Error('Your cart is empty. You cannot complete the order.');
+            throw new Error('سلة المشتريات فارغة. لا يمكن إتمام الطلب.');
         }
 
         let totalAmount = 0;
         cartItems.forEach(item => {
+            // total_price جاية من الـ CartModel محسوبة وجاهزة (الكمية × السعر بعد الخصم)
             totalAmount += item.total_price;
         });
 
+        // التعديل 2: إضافة مصاريف الشحن للإجمالي عشان يتطابق مع اللي اليوزر شافه في الـ Checkout
+        totalAmount += 50; 
+
+        // التعديل 3: إدخال البيانات الجديدة (phone, full_name) في جدول الطلبات
         const orderResult = await db.run(
-            `INSERT INTO orders (user_id, total_amount, shipping_address) VALUES (?, ?, ?)`,
-            [userId, totalAmount, shippingAddress]
+            `INSERT INTO orders (user_id, total_amount, shipping_address, phone, full_name) VALUES (?, ?, ?, ?, ?)`,
+            [userId, totalAmount, shippingAddress, phone, fullName]
         );
         const orderId = orderResult.lastID;
 
+        // تسجيل المنتجات داخل الطلب
         for (const item of cartItems) {
+            // حساب سعر القطعة الواحدة لحظة الشراء (لتسجيلها في الفاتورة التاريخية بشكل صحيح)
+            const finalPrice = item.discount > 0 ? item.price - (item.price * item.discount / 100) : item.price;
+            
             await db.run(
                 `INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)`,
-                [orderId, item.product_id, item.quantity, item.price]
+                [orderId, item.product_id, item.quantity, finalPrice]
             );
         }
 
+        // مسح السلة بعد نجاح الطلب 100%
         await db.run(`DELETE FROM cart_items WHERE user_id = ?`, [userId]);
 
         return orderId;
@@ -35,7 +46,7 @@ class OrderModel {
 
     static async getUserOrders(userId) {
         const db = getDb();
-        // بنجيب الطلبات الأساسية لليوزر ده بس
+        // جلب الطلبات الخاصة باليوزر فقط
         const orders = await db.all(
             `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC`, 
             [userId]
@@ -55,16 +66,14 @@ class OrderModel {
         return orders;
     }
 
-    // 🔥 دي الدالة الجديدة الخاصة بالأدمن (بتجيب كل الطلبات في المتجر) 🔥
+    // دالة الأدمن لجلب جميع الطلبات
     static async getAllOrders() {
         const db = getDb();
         
-        // بنجيب كل الطلبات من غير ما نحدد يوزر معين
         const orders = await db.all(
             `SELECT * FROM orders ORDER BY created_at DESC`
         );
 
-        // بنجيب محتويات كل طلب (إضافة احترافية عشان لو حبيت تعرضها)
         for (let order of orders) {
             const items = await db.all(`
                 SELECT oi.quantity, oi.price_at_purchase, p.title, p.image_url
