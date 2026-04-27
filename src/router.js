@@ -9,9 +9,10 @@ const { addToCart, viewCart, updateCartItem, removeCartItem } = require('./contr
 const { getProducts, getProductById, createProduct, getMyProducts, updateProduct, deleteProduct } = require('./controllers/product.controller');
 const { authenticate } = require('./middleware/auth.middleware');
 const { getProfile, updateProfile } = require('./controllers/user.controller');
-const { registerUser, loginUser } = require('./controllers/auth.controller');
+const { registerUser, loginUser, activateEmail, forgotPassword, resetPassword } = require('./controllers/auth.controller');
 const { createReview, getReviews, replyToReview } = require('./controllers/review.controller');
 const { getAllCategories, createCategory, updateCategory, deleteCategory } = require('./controllers/category.controller');
+const { getWishlist, addWishlist, removeWishlist } = require('./controllers/wishlist.controller');
 
 // ✨ تم إضافة updateBanner و deleteBanner
 const { getAllBanners, createBanner, updateBanner, deleteBanner } = require('./controllers/banner.controller');
@@ -50,6 +51,9 @@ const router = async (req, res) => {
 
     if (path === '/api/register' && method === 'POST') return registerUser(req, res);
     if (path === '/api/login' && method === 'POST') return loginUser(req, res);
+    if (path === '/api/auth/activate' && method === 'GET') return activateEmail(req, res);
+    if (path === '/api/auth/forgot-password' && method === 'POST') return forgotPassword(req, res);
+    if (path === '/api/auth/reset-password' && method === 'POST') return resetPassword(req, res);
 
     if (path === '/api/profile' && method === 'GET') { try { await authenticate(req, res); return getProfile(req, res); } catch (e) { return; } }
     if (path === '/api/profile' && method === 'PUT') { try { await authenticate(req, res); return updateProfile(req, res); } catch (e) { return; } }
@@ -76,6 +80,10 @@ const router = async (req, res) => {
     if (path === '/api/cart' && method === 'GET') { try { await authenticate(req, res); return viewCart(req, res); } catch (e) { return; } }
     if (path === '/api/cart/update' && method === 'POST') { try { await authenticate(req, res); return updateCartItem(req, res); } catch (e) { return; } }
     if (path === '/api/cart/remove' && method === 'POST') { try { await authenticate(req, res); return removeCartItem(req, res); } catch (e) { return; } }
+
+    if (path === '/api/wishlist' && method === 'GET') { try { await authenticate(req, res); return getWishlist(req, res); } catch (e) { return; } }
+    if (path === '/api/wishlist' && method === 'POST') { try { await authenticate(req, res); return addWishlist(req, res); } catch (e) { return; } }
+    if (path === '/api/wishlist/remove' && method === 'POST') { try { await authenticate(req, res); return removeWishlist(req, res); } catch (e) { return; } }
 
     if (path === '/api/orders/checkout' && method === 'POST') { try { await authenticate(req, res); return checkout(req, res); } catch (e) { return; } }
     if (path === '/api/orders/history' && method === 'GET') { try { await authenticate(req, res); return getOrderHistory(req, res); } catch (e) { return; } }

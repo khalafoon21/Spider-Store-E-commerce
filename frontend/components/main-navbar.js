@@ -53,7 +53,7 @@ function loadMainNavbar() {
             <div class="hidden md:flex flex-1 mx-12 relative">
                 <input type="text" id="searchInput" placeholder="ابحث عن المنتجات..." 
                     class="w-full pl-10 pr-4 py-2 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-secondary-500 border-none shadow-sm">
-                <button onclick="typeof searchProducts === 'function' ? searchProducts() : window.location.href='${pathPrefix}index.html'" class="absolute left-0 top-0 h-full px-4 bg-secondary-500 text-white rounded-l-md hover:bg-yellow-500 smooth-transition">
+                <button type="button" onclick="typeof searchProducts === 'function' ? searchProducts() : window.location.href='${pathPrefix}index.html'" class="absolute left-0 top-0 h-full px-4 bg-secondary-500 text-white rounded-l-md hover:bg-yellow-500 smooth-transition">
                     <i class="fas fa-search"></i>
                 </button>
             </div>

@@ -205,12 +205,15 @@
                         ${isAvailable ? `
                             <div class="flex flex-col sm:flex-row gap-4 mt-auto border-t pt-8 border-gray-200">
                                 <div class="flex items-center justify-between border border-gray-300 rounded-md w-full sm:w-32 bg-white">
-                                    <button onclick="changeQty(1)" class="w-10 h-12 text-gray-600 hover:text-primary-600"><i class="fas fa-plus"></i></button>
+                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); changeQty(1)" class="w-10 h-12 text-gray-600 hover:text-primary-600"><i class="fas fa-plus"></i></button>
                                     <span id="qtyDisplay" class="font-bold text-lg">1</span>
-                                    <button onclick="changeQty(-1)" class="w-10 h-12 text-gray-600 hover:text-error-500"><i class="fas fa-minus"></i></button>
+                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); changeQty(-1)" class="w-10 h-12 text-gray-600 hover:text-error-500"><i class="fas fa-minus"></i></button>
                                 </div>
-                                <button onclick="addToCartFromDetails(this)" class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-md transition-colors text-lg flex items-center justify-center gap-2 shadow-lg shadow-primary-200">
+                                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); addToCartFromDetails(this)" class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-md transition-colors text-lg flex items-center justify-center gap-2 shadow-lg shadow-primary-200">
                                     <i class="fas fa-cart-plus pointer-events-none"></i> إضافة للسلة
+                                </button>
+                                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); addToWishlist()" class="bg-white hover:bg-red-50 text-error-500 border border-error-100 font-bold py-3 px-4 rounded-md transition-colors text-lg flex items-center justify-center">
+                                    <i class="fas fa-heart"></i>
                                 </button>
                             </div>
                         ` : `
@@ -436,6 +439,25 @@
                 showToast('خطأ في الاتصال بالخادم 🔌', 'error');
             } finally {
                 if (button) button.disabled = false;
+            }
+        }
+
+        async function addToWishlist() {
+            const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+            if (!token) {
+                showToast('يجب تسجيل الدخول لإضافة المنتج لقائمة الأمنيات', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/wishlist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ product_id: Number(currentProduct.id) })
+                });
+                const data = await res.json();
+                showToast(data.message || (res.ok ? 'تمت الإضافة لقائمة الأمنيات' : 'تعذر إضافة المنتج'), res.ok ? 'success' : 'error');
+            } catch (error) {
+                showToast('تعذر الاتصال بالسيرفر', 'error');
             }
         }
 

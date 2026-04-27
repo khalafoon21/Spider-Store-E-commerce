@@ -226,7 +226,7 @@
             `;
 
             document.getElementById('sliderDots').innerHTML = banners.map((_, i) => `
-                <button onclick="window.goToSlide(${i})" class="w-3 h-3 rounded-full border border-gray-400 ${i === currentSlide ? 'bg-gray-600 w-8' : 'bg-transparent'} smooth-transition"></button>
+                <button type="button" onclick="window.goToSlide(${i})" class="w-3 h-3 rounded-full border border-gray-400 ${i === currentSlide ? 'bg-gray-600 w-8' : 'bg-transparent'} smooth-transition"></button>
             `).join('');
         }
 
@@ -333,7 +333,7 @@
                                 ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${price.toFixed(0)} ج.م</span>` : ''}
                                 <span class="text-primary-600 font-bold text-xl">${calcFinalPrice(price, discount)} ج.م</span>
                             </div>
-                            <button type="button" onclick="event.preventDefault(); window.addToCart(this, '${productId}');" class="add-to-cart-btn bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary-600 shadow-lg shadow-primary-200 transition-all z-10">
+                            <button type="button" data-action="add-to-cart" data-product-id="${productId}" class="add-to-cart-btn bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary-600 shadow-lg shadow-primary-200 transition-all z-20">
                                 <i class="fas fa-cart-plus pointer-events-none"></i>
                             </button>
                         </div>
@@ -354,6 +354,7 @@
             }
 
             if (button) {
+                button.dataset.busy = '1';
                 button.style.opacity = '0.5';
                 button.disabled = true;
             }
@@ -384,11 +385,51 @@
                 showToast("خطأ في الاتصال بالخادم", "error");
             } finally {
                 if (button) {
+                    button.dataset.busy = '0';
                     button.style.opacity = '1';
                     button.disabled = false;
                 }
             }
         };
+
+        window.handleProductCardCartClick = function(event, button) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+            }
+            if (!button || button.dataset.busy === '1') return false;
+            window.addToCart(button, button.dataset.productId);
+            return false;
+        };
+
+        ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(eventName => {
+            document.addEventListener(eventName, event => {
+                const button = event.target.closest('[data-action="add-to-cart"]');
+                if (!button) return;
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+                if (eventName === 'click') window.handleProductCardCartClick(event, button);
+            }, true);
+        });
+
+        document.addEventListener('submit', event => {
+            if (event.target && event.target.closest('#productsGrid, #bestSellersGrid')) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+            }
+        }, true);
+
+        document.addEventListener('click', event => {
+            const button = event.target.closest('[data-action="add-to-cart"]');
+            if (!button) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+            window.handleProductCardCartClick(event, button);
+        }, true);
 
         function showToast(message, type = 'success') {
             if (window.AppUI) return window.AppUI.toast(message, type);
@@ -406,7 +447,7 @@
                     <h4 class="font-bold text-gray-800 text-sm">${isSuccess ? 'تم بنجاح' : 'تنبيه'}</h4>
                     <p class="text-xs text-gray-500 font-medium mt-0.5 leading-relaxed">${escapeHTML(message)}</p>
                 </div>
-                <button class="flex-shrink-0 text-gray-400 hover:text-gray-700" onclick="this.parentElement.remove()">
+                <button type="button" class="flex-shrink-0 text-gray-400 hover:text-gray-700" onclick="this.parentElement.remove()">
                     <i class="fas fa-times"></i>
                 </button>
                 <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-100">

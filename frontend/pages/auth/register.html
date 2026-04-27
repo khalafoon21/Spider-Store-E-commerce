@@ -166,9 +166,17 @@
                     msgBox.className = 'block bg-success-50 text-success-600 border border-success-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
                     msgBox.innerHTML = '<i class="fas fa-check-circle"></i> تم الإنشاء! جاري دخولك للمتجر...';
                     
-                    if (data.token) {
-                        localStorage.setItem('spider_token', data.token);
-                        window.location.replace('../../index.html');
+                    if (data.activationUrl) {
+                        if (window.AppUI) {
+                            await window.AppUI.modal({
+                                type: 'success',
+                                title: 'تم إنشاء الحساب',
+                                message: 'تم إرسال رابط التفعيل. في نسخة المشروع الحالية الرابط مطبوع في السيرفر ومتاح مباشرة للاختبار.',
+                                confirmText: 'فتح رابط التفعيل'
+                            });
+                        }
+                        await fetch(data.activationUrl);
+                        window.location.replace('login.html');
                     } else {
                         window.location.replace('login.html');
                     }

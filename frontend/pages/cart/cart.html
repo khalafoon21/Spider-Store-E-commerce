@@ -184,11 +184,11 @@
                             <p class="text-primary-600 font-bold mt-1">${price.toFixed(0)} ج.م</p>
                         </div>
                         <div class="flex items-center gap-3 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-                            <button onclick="updateQuantity(${pId}, ${quantity}, 1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-primary-600"><i class="fas fa-plus text-xs"></i></button>
+                            <button type="button" onclick="event.preventDefault(); event.stopPropagation(); updateQuantity(${pId}, ${quantity}, 1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-primary-600"><i class="fas fa-plus text-xs"></i></button>
                             <span class="font-bold w-4 text-center text-sm">${quantity}</span>
-                            <button onclick="updateQuantity(${pId}, ${quantity}, -1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-error-500"><i class="fas fa-minus text-xs"></i></button>
+                            <button type="button" onclick="event.preventDefault(); event.stopPropagation(); updateQuantity(${pId}, ${quantity}, -1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-error-500"><i class="fas fa-minus text-xs"></i></button>
                         </div>
-                        <button onclick="removeItem(${pId})" class="text-gray-400 hover:text-error-500 p-2 smooth-transition ml-2 text-lg">
+                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); removeItem(${pId})" class="text-gray-400 hover:text-error-500 p-2 smooth-transition ml-2 text-lg">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>

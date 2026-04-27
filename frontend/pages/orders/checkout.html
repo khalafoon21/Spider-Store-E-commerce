@@ -59,7 +59,7 @@
 
                 <h2 class="text-xl font-bold text-gray-900 mb-6 border-b pb-4">بيانات الشحن</h2>
                 
-                <form id="checkoutForm">
+                <form id="checkoutForm" onsubmit="return false;">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">الاسم بالكامل <span class="text-error-500">*</span></label>
@@ -77,7 +77,7 @@
                     </div>
 
                     <div class="mt-8 border-t pt-6">
-                        <button type="submit" id="submitBtn" class="w-full bg-success-500 hover:bg-success-600 text-white font-bold py-3 px-4 rounded-md shadow-md smooth-transition text-lg flex justify-center items-center gap-2">
+                        <button type="button" id="submitBtn" class="w-full bg-success-500 hover:bg-success-600 text-white font-bold py-3 px-4 rounded-md shadow-md smooth-transition text-lg flex justify-center items-center gap-2">
                             <i class="fas fa-check-circle"></i> تأكيد الطلب
                         </button>
                     </div>
@@ -136,6 +136,7 @@
                 
                 let responseData = await res.json();
                 let cartItems = responseData.data || responseData.cart || [];
+                const orderJustCompleted = sessionStorage.getItem('spider_order_completed') === '1';
 
                 // 2. لو السلة فاضية على السيرفر، نحاول نجيبها من localStorage مرة واحدة
                 // وبعدين نجبر إعادة القراءة من السيرفر لضمان التطابق
@@ -158,11 +159,16 @@
                     res = await fetch(`${API_URL}/cart`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
-                                        responseData = await res.json();
+                    responseData = await res.json();
                     cartItems = responseData.data || responseData.cart || [];
                 }
 
                 if (!res.ok || cartItems.length === 0) {
+                    if (orderJustCompleted) {
+                        sessionStorage.removeItem('spider_order_completed');
+                        window.location.replace('../../index.html');
+                        return;
+                    }
                     showToast('\u0633\u0644\u0629 \u0627\u0644\u0645\u0634\u062a\u0631\u064a\u0627\u062a \u0641\u0627\u0631\u063a\u0629!', 'error');
                     if (window.AppUI) {
                         await window.AppUI.modal({
@@ -215,8 +221,13 @@
         // ==============================================================
         let isProcessing = false;
 
+        document.getElementById('submitBtn').addEventListener('click', () => {
+            document.getElementById('checkoutForm').requestSubmit();
+        });
+
         document.getElementById('checkoutForm').addEventListener('submit', async function(event) {
-            event.preventDefault(); 
+            event.preventDefault();
+            event.stopImmediatePropagation();
             
             if (isProcessing) return; 
             isProcessing = true;
@@ -252,6 +263,7 @@
                 const data = await response.json();
 
                 if (response.ok && data.success !== false) {
+                    sessionStorage.setItem('spider_order_completed', '1');
                     localStorage.removeItem('spider_cart'); 
                     if (typeof updateGlobalCartCount === 'function') updateGlobalCartCount();
                     overlay.classList.add('hidden');

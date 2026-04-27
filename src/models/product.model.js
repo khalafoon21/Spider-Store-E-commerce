@@ -12,6 +12,8 @@ class ProductModel {
             "ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0",
             "ALTER TABLE products ADD COLUMN brand TEXT",
             "ALTER TABLE products ADD COLUMN tags TEXT",
+            "ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'approved'",
+            "ALTER TABLE products ADD COLUMN featured INTEGER DEFAULT 0",
             "ALTER TABLE products ADD COLUMN images TEXT"
         ];
 
@@ -42,20 +44,20 @@ class ProductModel {
         const db = await ProductModel.ensureDb();
         const { 
             seller_id, title, description, price, stock_quantity, image_url, category_id = null,
-            discount = 0, brand = '', tags = '', additional_images = []
+            discount = 0, brand = '', tags = '', additional_images = [], status = 'approved', featured = 0
         } = productData;
         
         const imagesJson = JSON.stringify(additional_images);
 
         const result = await db.run(
-            `INSERT INTO products (seller_id, title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, images) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [seller_id, title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, imagesJson]
+            `INSERT INTO products (seller_id, title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, status, featured, images) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [seller_id, title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, status, featured ? 1 : 0, imagesJson]
         );
         return result.lastID;
     }
 
-    static async getAll(searchQuery = '', categoryId = null) {
+    static async getAll(searchQuery = '', categoryId = null, options = {}) {
         const db = await ProductModel.ensureDb();
         
         let query = `
@@ -67,9 +69,17 @@ class ProductModel {
         const params = [];
         const conditions = [];
 
+        if (options.publicOnly !== false) {
+            conditions.push(`COALESCE(p.status, 'approved') = 'approved'`);
+        }
+
+        if (options.featuredOnly) {
+            conditions.push(`COALESCE(p.featured, 0) = 1`);
+        }
+
         if (searchQuery) {
-            conditions.push(`(p.title LIKE ? OR p.description LIKE ?)`);
-            params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+            conditions.push(`(p.title LIKE ? OR p.description LIKE ? OR p.brand LIKE ? OR p.tags LIKE ?)`);
+            params.push(`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`);
         }
 
         if (categoryId) {
@@ -104,14 +114,14 @@ class ProductModel {
         const db = await ProductModel.ensureDb();
         const {
             title, description, price, stock_quantity, image_url, category_id = null,
-            discount = 0, brand = '', tags = ''
+            discount = 0, brand = '', tags = '', status = 'approved', featured = 0
         } = productData;
 
         await db.run(
             `UPDATE products
-             SET title = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, category_id = ?, discount = ?, brand = ?, tags = ?
+             SET title = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, category_id = ?, discount = ?, brand = ?, tags = ?, status = ?, featured = ?
              WHERE id = ?`,
-            [title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, productId]
+            [title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, status, featured ? 1 : 0, productId]
         );
     }
 

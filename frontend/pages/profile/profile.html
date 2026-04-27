@@ -40,6 +40,27 @@
             </button>
         </div>
 
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">بيانات الحساب</h2>
+            <form id="profileForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="first_name" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الاسم الأول">
+                <input id="last_name" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الاسم الأخير">
+                <input id="phone" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="رقم الهاتف">
+                <input id="birthdate" type="date" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
+                <input id="city" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="المدينة">
+                <input id="country" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الدولة">
+                <textarea id="address" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="العنوان"></textarea>
+                <button type="submit" class="md:col-span-2 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg transition">حفظ البيانات</button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">قائمة الأمنيات</h2>
+            <div id="wishlistContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p class="text-gray-500">جاري تحميل قائمة الأمنيات...</p>
+            </div>
+        </div>
+
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div id="ordersContainer" class="space-y-6">
                 <div class="text-center py-8 text-gray-500">
@@ -60,6 +81,69 @@
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             }[tag] || tag));
         }
+
+        function getToken() {
+            return localStorage.getItem('spider_token');
+        }
+
+        async function fetchProfile() {
+            const token = getToken();
+            if (!token) return;
+            try {
+                const response = await fetch(`${API_URL}/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await response.json();
+                if (!response.ok || !data.success) return;
+                const user = data.data || {};
+                ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'].forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) element.value = user[id] || '';
+                });
+            } catch (error) {}
+        }
+
+        async function fetchWishlist() {
+            const token = getToken();
+            const container = document.getElementById('wishlistContainer');
+            if (!token) return;
+            try {
+                const response = await fetch(`${API_URL}/wishlist`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await response.json();
+                const items = data.data || [];
+                if (items.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500">لا توجد منتجات في قائمة الأمنيات حتى الآن.</p>';
+                    return;
+                }
+                container.innerHTML = items.map(item => `
+                    <div class="border border-gray-100 rounded-lg p-4 flex gap-3 items-center">
+                        <img src="${item.image_url ? 'http://127.0.0.1:3000' + item.image_url : 'https://via.placeholder.com/80'}" class="w-16 h-16 object-contain bg-gray-50 rounded">
+                        <div class="flex-1 min-w-0">
+                            <a href="../products/product.html?id=${item.id}" class="font-bold text-gray-800 hover:text-primary-600 line-clamp-1">${escapeHTML(item.title)}</a>
+                            <p class="text-primary-600 font-bold">${item.price || 0} ج.م</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = '<p class="text-error-500">تعذر تحميل قائمة الأمنيات.</p>';
+            }
+        }
+
+        document.getElementById('profileForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const token = getToken();
+            const body = {};
+            ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'].forEach(id => body[id] = document.getElementById(id).value.trim());
+            try {
+                const response = await fetch(`${API_URL}/profile`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                if (window.AppUI) window.AppUI.toast(data.message || (response.ok ? 'تم حفظ البيانات' : 'تعذر حفظ البيانات'), response.ok ? 'success' : 'error');
+            } catch (error) {
+                if (window.AppUI) window.AppUI.toast('تعذر الاتصال بالسيرفر', 'error');
+            }
+        });
 
         async function fetchMyOrders() {
             const token = localStorage.getItem('spider_token');
@@ -155,7 +239,11 @@
         }
 
         // حل مشكلة الـ TODO: استخدام addEventListener
-        window.addEventListener('load', fetchMyOrders);
+        window.addEventListener('load', () => {
+            fetchProfile();
+            fetchWishlist();
+            fetchMyOrders();
+        });
     </script>
 </body>
 </html>

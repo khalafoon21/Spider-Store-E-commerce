@@ -175,7 +175,8 @@
             container.innerHTML = `<tr><td colspan="6" class="p-12 text-center text-primary-600"><i class="fas fa-circle-notch fa-spin text-4xl mb-3"></i><p class="font-semibold">جاري تحديث المنتجات...</p></td></tr>`;
 
             try {
-                const response = await fetch(`${API_URL}/products`);
+                const token = localStorage.getItem('spider_token');
+                const response = await fetch(`${API_URL}/admin/products`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const data = await response.json();
 
                 if (response.ok || data.success) {
@@ -226,6 +227,14 @@
                         </td>
                         <td class="p-5 text-center">
                             <div class="flex items-center justify-center gap-2">
+                                <select onchange="updateProductMeta(${safeNumber(product.id)}, this.value, ${product.featured ? 1 : 0})" class="text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white">
+                                    <option value="approved" ${product.status === 'approved' ? 'selected' : ''}>معتمد</option>
+                                    <option value="pending" ${product.status === 'pending' ? 'selected' : ''}>مراجعة</option>
+                                    <option value="rejected" ${product.status === 'rejected' ? 'selected' : ''}>مرفوض</option>
+                                </select>
+                                <button onclick="updateProductMeta(${safeNumber(product.id)}, product.status || 'approved', ${product.featured ? 0 : 1})" class="${product.featured ? 'text-secondary-500 bg-secondary-50' : 'text-gray-400 bg-gray-50'} hover:text-secondary-500 border border-gray-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تمييز المنتج">
+                                    <i class="fas fa-star"></i>
+                                </button>
                                 <button onclick="editProduct(${safeNumber(product.id)})" class="text-blue-500 hover:text-white hover:bg-blue-500 bg-blue-50 border border-blue-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل المنتج">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -356,6 +365,37 @@
                 modalContent.classList.remove('scale-95');
                 modalContent.classList.add('scale-100');
             }, 10);
+        }
+
+        async function updateProductMeta(id, status, featured) {
+            const product = productsCache.find(item => Number(item.id) === Number(id));
+            if (!product) return;
+
+            const token = localStorage.getItem('spider_token');
+            const formData = new FormData();
+            formData.append('title', product.title || '');
+            formData.append('price', product.price || 0);
+            formData.append('discount', product.discount || 0);
+            formData.append('stock_quantity', product.stock_quantity || 0);
+            formData.append('brand', product.brand || '');
+            formData.append('category_id', product.category_id || '');
+            formData.append('tags', product.tags || '');
+            formData.append('description', product.description || '');
+            formData.append('status', status || 'approved');
+            formData.append('featured', featured ? 1 : 0);
+
+            try {
+                const response = await fetch(`${API_URL}/products/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await response.json();
+                showToast(data.message || (response.ok ? 'تم تحديث حالة المنتج' : 'تعذر تحديث حالة المنتج'), response.ok ? 'success' : 'error');
+                await fetchProducts();
+            } catch (error) {
+                showToast('خطأ في الاتصال بالسيرفر', 'error');
+            }
         }
 
         function closeEditModal() {

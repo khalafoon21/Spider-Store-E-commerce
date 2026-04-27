@@ -11,8 +11,9 @@ async function getProducts(req, res) {
         const parsedUrl = new URL(req.url, baseURL);
         const searchQuery = parsedUrl.searchParams.get('search') || '';
         const categoryId = parsedUrl.searchParams.get('category_id') || parsedUrl.searchParams.get('category') || null;
+        const featuredOnly = parsedUrl.searchParams.get('featured') === '1' || parsedUrl.searchParams.get('featured') === 'true';
 
-        const products = await ProductModel.getAll(searchQuery, categoryId);
+        const products = await ProductModel.getAll(searchQuery, categoryId, { featuredOnly });
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, data: products }));
@@ -83,6 +84,7 @@ async function createProduct(req, res) {
                 const category_id = fields.category_id ? fields.category_id[0] : null;
                 const brand = fields.brand ? fields.brand[0] : '';
                 const tags = fields.tags ? fields.tags[0] : '';
+                const featured = fields.featured ? Number(fields.featured[0]) : 0;
 
                 const parsedPrice = Number(price);
                 const parsedDiscount = Number(discount);
@@ -141,6 +143,8 @@ async function createProduct(req, res) {
                     category_id: parsedCategoryId,
                     brand,
                     tags,
+                    status: req.user.role === 'admin' ? 'approved' : 'pending',
+                    featured: req.user.role === 'admin' ? featured : 0,
                     image_url,
                     additional_images 
                 });
@@ -177,7 +181,7 @@ async function getMyProducts(req, res) {
         }
 
         const products = req.user.role === 'admin'
-            ? await ProductModel.getAll()
+            ? await ProductModel.getAll('', null, { publicOnly: false })
             : await ProductModel.getAllForSeller(req.user.userId);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -249,6 +253,8 @@ async function updateProduct(req, res, productId) {
                 : existing.category_id;
             const brand = fields.brand ? fields.brand[0] : (existing.brand || '');
             const tags = fields.tags ? fields.tags[0] : (existing.tags || '');
+            const status = req.user.role === 'admin' && fields.status ? fields.status[0] : (existing.status || 'approved');
+            const featured = req.user.role === 'admin' && fields.featured ? Number(fields.featured[0]) : Number(existing.featured || 0);
 
             if (
                 !title ||
@@ -291,7 +297,9 @@ async function updateProduct(req, res, productId) {
                 image_url,
                 category_id,
                 brand,
-                tags
+                tags,
+                status,
+                featured
             });
 
             res.writeHead(200, { 'Content-Type': 'application/json' });

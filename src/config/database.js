@@ -23,6 +23,12 @@ async function initDB() {
                 password_hash TEXT NOT NULL,
                 phone TEXT,
                 role TEXT DEFAULT 'customer',
+                profile_picture TEXT,
+                email_verified INTEGER DEFAULT 1,
+                activation_token TEXT,
+                activation_expires DATETIME,
+                reset_token TEXT,
+                reset_expires DATETIME,
                 address TEXT,        /* ✨ جديد: العنوان */
                 birthdate DATE,      /* ✨ جديد: تاريخ الميلاد */
                 city TEXT,           /* ✨ جديد: المدينة */
@@ -48,6 +54,8 @@ async function initDB() {
                 category_id INTEGER,
                 brand TEXT,                 /* ✨ جديد: العلامة التجارية */
                 tags TEXT,                  /* ✨ جديد: الكلمات المفتاحية */
+                status TEXT DEFAULT 'approved',
+                featured INTEGER DEFAULT 0,
                 images TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (seller_id) REFERENCES users(id),
@@ -82,6 +90,16 @@ async function initDB() {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 FOREIGN KEY (product_id) REFERENCES products(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS wishlist_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, product_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS orders (
@@ -125,7 +143,15 @@ async function initDB() {
             "ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0",
             "ALTER TABLE products ADD COLUMN brand TEXT",
             "ALTER TABLE products ADD COLUMN tags TEXT",
+            "ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'approved'",
+            "ALTER TABLE products ADD COLUMN featured INTEGER DEFAULT 0",
             "ALTER TABLE products ADD COLUMN images TEXT",
+            "ALTER TABLE users ADD COLUMN profile_picture TEXT",
+            "ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 1",
+            "ALTER TABLE users ADD COLUMN activation_token TEXT",
+            "ALTER TABLE users ADD COLUMN activation_expires DATETIME",
+            "ALTER TABLE users ADD COLUMN reset_token TEXT",
+            "ALTER TABLE users ADD COLUMN reset_expires DATETIME",
             "ALTER TABLE users ADD COLUMN address TEXT",
             "ALTER TABLE users ADD COLUMN birthdate DATE",
             "ALTER TABLE users ADD COLUMN city TEXT",
@@ -143,6 +169,18 @@ async function initDB() {
                 }
             }
         }
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS wishlist_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, product_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            );
+        `);
 
         dbInstance = db;
         return db;
