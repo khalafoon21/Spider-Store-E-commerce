@@ -10,7 +10,7 @@ async function getProducts(req, res) {
         const baseURL = `http://${req.headers.host}`;
         const parsedUrl = new URL(req.url, baseURL);
         const searchQuery = parsedUrl.searchParams.get('search') || '';
-        const categoryId = parsedUrl.searchParams.get('category_id') || null;
+        const categoryId = parsedUrl.searchParams.get('category_id') || parsedUrl.searchParams.get('category') || null;
 
         const products = await ProductModel.getAll(searchQuery, categoryId);
         
@@ -23,6 +23,24 @@ async function getProducts(req, res) {
             success: false, 
             message: 'حدث خطأ أثناء جلب المنتجات' 
         }));
+    }
+}
+
+async function getProductById(req, res, productId) {
+    try {
+        const product = await ProductModel.getById(productId);
+
+        if (!product) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Product not found' }));
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: product }));
+    } catch (error) {
+        console.error(error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Error fetching product' }));
     }
 }
 
@@ -66,7 +84,18 @@ async function createProduct(req, res) {
                 const brand = fields.brand ? fields.brand[0] : '';
                 const tags = fields.tags ? fields.tags[0] : '';
 
-                if (!title || !price) {
+                const parsedPrice = Number(price);
+                const parsedDiscount = Number(discount);
+                const parsedStock = Number(stock_quantity);
+                const parsedCategoryId = category_id ? Number(category_id) : null;
+
+                if (
+                    !title ||
+                    Number.isNaN(parsedPrice) || parsedPrice < 0 ||
+                    Number.isNaN(parsedDiscount) || parsedDiscount < 0 ||
+                    Number.isNaN(parsedStock) || parsedStock < 0 ||
+                    (parsedCategoryId !== null && Number.isNaN(parsedCategoryId))
+                ) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     return res.end(JSON.stringify({ success: false, message: 'الاسم والسعر مطلوبان' }));
                 }
@@ -74,12 +103,19 @@ async function createProduct(req, res) {
                 // ✨ معالجة الصور (أول صورة أساسية، والباقي إضافي)
                 let image_url = '';
                 let additional_images = [];
+                const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
                 // Frontend بيبعت الصور في حقل اسمه images
                 if (files.images) {
                     const uploadedFiles = Array.isArray(files.images) ? files.images : [files.images];
                     
                     if (uploadedFiles.length > 0) {
+                        const invalidFile = uploadedFiles.find(file => !allowedImageTypes.includes(file.mimetype));
+                        if (invalidFile) {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ success: false, message: 'Only image files are allowed' }));
+                        }
+
                         // الصورة الأولى هي الأساسية
                         const mainFile = uploadedFiles[0];
                         const mainFileName = path.basename(mainFile.filepath || mainFile.newFilename || '');
@@ -99,10 +135,10 @@ async function createProduct(req, res) {
                     seller_id: req.user.userId,
                     title,
                     description,
-                    price: parseFloat(price) || 0,
-                    discount: parseFloat(discount) || 0,
-                    stock_quantity: parseInt(stock_quantity) || 0,
-                    category_id: category_id ? parseInt(category_id) : null,
+                    price: parsedPrice,
+                    discount: parsedDiscount,
+                    stock_quantity: Math.floor(parsedStock),
+                    category_id: parsedCategoryId,
                     brand,
                     tags,
                     image_url,
@@ -184,6 +220,9 @@ async function updateProduct(req, res, productId) {
         }
 
         const uploadFolder = path.join(__dirname, '../../uploads/products');
+        if (!fs.existsSync(uploadFolder)) {
+            fs.mkdirSync(uploadFolder, { recursive: true });
+        }
         const form = formidable({
             uploadDir: uploadFolder,
             keepExtensions: true,
@@ -202,12 +241,28 @@ async function updateProduct(req, res, productId) {
             // تحديث الحقول الأساسية مع دعم الحقول الجديدة (الخصم والماركة)
             const title = fields.title ? fields.title[0] : existing.title;
             const description = fields.description ? fields.description[0] : existing.description;
-            const price = fields.price ? parseFloat(fields.price[0]) : existing.price;
-            const discount = fields.discount ? parseFloat(fields.discount[0]) : (existing.discount || 0);
-            const stock_quantity = fields.stock_quantity ? parseInt(fields.stock_quantity[0]) : existing.stock_quantity;
-            const category_id = fields.category_id ? parseInt(fields.category_id[0]) : existing.category_id;
+            const price = fields.price ? Number(fields.price[0]) : Number(existing.price);
+            const discount = fields.discount ? Number(fields.discount[0]) : Number(existing.discount || 0);
+            const stock_quantity = fields.stock_quantity ? Number(fields.stock_quantity[0]) : Number(existing.stock_quantity);
+            const category_id = fields.category_id
+                ? (fields.category_id[0] ? Number(fields.category_id[0]) : null)
+                : existing.category_id;
             const brand = fields.brand ? fields.brand[0] : (existing.brand || '');
             const tags = fields.tags ? fields.tags[0] : (existing.tags || '');
+
+            if (
+                !title ||
+                Number.isNaN(price) || price < 0 ||
+                Number.isNaN(discount) || discount < 0 ||
+                Number.isNaN(stock_quantity) || stock_quantity < 0 ||
+                (category_id !== null && Number.isNaN(category_id))
+            ) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({
+                    success: false,
+                    message: 'Invalid product data'
+                }));
+            }
 
             let image_url = existing.image_url || '';
             
@@ -215,6 +270,14 @@ async function updateProduct(req, res, productId) {
             if (files.images || files.image) {
                 const uploadedFileField = files.images || files.image;
                 const uploadedFile = Array.isArray(uploadedFileField) ? uploadedFileField[0] : uploadedFileField;
+                const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                if (!allowedImageTypes.includes(uploadedFile.mimetype)) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({
+                        success: false,
+                        message: 'Only image files are allowed'
+                    }));
+                }
                 const fileName = path.basename(uploadedFile.filepath || uploadedFile.newFilename || '');
                 if (fileName) image_url = `/uploads/products/${fileName}`;
             }
@@ -224,7 +287,7 @@ async function updateProduct(req, res, productId) {
                 description,
                 price,
                 discount,
-                stock_quantity,
+                stock_quantity: Math.floor(stock_quantity),
                 image_url,
                 category_id,
                 brand,
@@ -291,4 +354,4 @@ async function deleteProduct(req, res, productId) {
     }
 }
 
-module.exports = { getProducts, createProduct, getMyProducts, updateProduct, deleteProduct };
+module.exports = { getProducts, getProductById, createProduct, getMyProducts, updateProduct, deleteProduct };

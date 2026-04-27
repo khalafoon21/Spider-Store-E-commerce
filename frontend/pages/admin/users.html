@@ -94,6 +94,7 @@
 
         // نظام إشعارات مطور
         function showToast(message, type = 'success') {
+            if (window.AppUI) return window.AppUI.toast(message, type);
             const toast = document.getElementById('toast');
             const toastIcon = document.getElementById('toastIcon');
             const toastMessage = document.getElementById('toastMessage');

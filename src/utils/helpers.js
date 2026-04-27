@@ -4,6 +4,12 @@ function getPostData(req) {
 
         req.on('data', (chunk) => {
             body += chunk.toString();
+            if (body.length > 1024 * 1024) {
+                const sizeError = new Error('Request body too large');
+                sizeError.code = 'PAYLOAD_TOO_LARGE';
+                reject(sizeError);
+                req.destroy();
+            }
         });
 
         req.on('end', () => {

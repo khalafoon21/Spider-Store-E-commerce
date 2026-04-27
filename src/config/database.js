@@ -32,7 +32,8 @@ async function initDB() {
 
             CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                icon TEXT DEFAULT 'fa-tags'
             );
 
             CREATE TABLE IF NOT EXISTS products (
@@ -47,6 +48,7 @@ async function initDB() {
                 category_id INTEGER,
                 brand TEXT,                 /* ✨ جديد: العلامة التجارية */
                 tags TEXT,                  /* ✨ جديد: الكلمات المفتاحية */
+                images TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (seller_id) REFERENCES users(id),
                 FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -58,6 +60,18 @@ async function initDB() {
                 product_id INTEGER NOT NULL,
                 image_url TEXT NOT NULL,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS banners (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                description TEXT,
+                image_url TEXT NOT NULL,
+                bg_color TEXT DEFAULT '#ffffff',
+                text_color TEXT DEFAULT '#1f2937',
+                button_text TEXT DEFAULT 'اكتشف الآن',
+                button_color TEXT DEFAULT '#0891b2',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS cart_items (
@@ -106,6 +120,30 @@ async function initDB() {
         `);
         
         console.log('✅ تم الاتصال بقاعدة البيانات وتجهيز الجداول بنجاح!');
+        const migrationQueries = [
+            "ALTER TABLE categories ADD COLUMN icon TEXT DEFAULT 'fa-tags'",
+            "ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN brand TEXT",
+            "ALTER TABLE products ADD COLUMN tags TEXT",
+            "ALTER TABLE products ADD COLUMN images TEXT",
+            "ALTER TABLE users ADD COLUMN address TEXT",
+            "ALTER TABLE users ADD COLUMN birthdate DATE",
+            "ALTER TABLE users ADD COLUMN city TEXT",
+            "ALTER TABLE users ADD COLUMN country TEXT",
+            "ALTER TABLE orders ADD COLUMN phone TEXT",
+            "ALTER TABLE orders ADD COLUMN full_name TEXT"
+        ];
+
+        for (const query of migrationQueries) {
+            try {
+                await db.run(query);
+            } catch (error) {
+                if (!error.message.includes('duplicate column name')) {
+                    throw error;
+                }
+            }
+        }
+
         dbInstance = db;
         return db;
     } catch (error) {

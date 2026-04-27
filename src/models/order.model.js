@@ -21,27 +21,51 @@ class OrderModel {
         totalAmount += 50; 
 
         // التعديل 3: إدخال البيانات الجديدة (phone, full_name) في جدول الطلبات
-        const orderResult = await db.run(
-            `INSERT INTO orders (user_id, total_amount, shipping_address, phone, full_name) VALUES (?, ?, ?, ?, ?)`,
-            [userId, totalAmount, shippingAddress, phone, fullName]
-        );
-        const orderId = orderResult.lastID;
+        await db.exec('BEGIN TRANSACTION');
+
+        try {
+            for (const item of cartItems) {
+                const product = await db.get(
+                    `SELECT stock_quantity FROM products WHERE id = ?`,
+                    [item.product_id]
+                );
+
+                if (!product || product.stock_quantity < item.quantity) {
+                    throw new Error(`Product "${item.title}" does not have enough stock.`);
+                }
+            }
+
+            const orderResult = await db.run(
+                `INSERT INTO orders (user_id, total_amount, shipping_address, phone, full_name) VALUES (?, ?, ?, ?, ?)`,
+                [userId, totalAmount, shippingAddress, phone, fullName]
+            );
+            const orderId = orderResult.lastID;
 
         // تسجيل المنتجات داخل الطلب
-        for (const item of cartItems) {
+            for (const item of cartItems) {
             // حساب سعر القطعة الواحدة لحظة الشراء (لتسجيلها في الفاتورة التاريخية بشكل صحيح)
             const finalPrice = item.discount > 0 ? item.price - (item.price * item.discount / 100) : item.price;
             
-            await db.run(
-                `INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)`,
-                [orderId, item.product_id, item.quantity, finalPrice]
-            );
-        }
+                await db.run(
+                    `INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)`,
+                    [orderId, item.product_id, item.quantity, finalPrice]
+                );
+
+                await db.run(
+                    `UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?`,
+                    [item.quantity, item.product_id]
+                );
+            }
 
         // مسح السلة بعد نجاح الطلب 100%
-        await db.run(`DELETE FROM cart_items WHERE user_id = ?`, [userId]);
+            await db.run(`DELETE FROM cart_items WHERE user_id = ?`, [userId]);
+            await db.exec('COMMIT');
 
-        return orderId;
+            return orderId;
+        } catch (error) {
+            await db.exec('ROLLBACK');
+            throw error;
+        }
     }
 
     static async getUserOrders(userId) {

@@ -100,11 +100,45 @@
         </div>
     </div>
 
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl p-6 md:p-8 max-w-3xl w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar" id="editModalContent">
+            <h3 class="text-xl font-bold text-gray-900 mb-6">تعديل المنتج</h3>
+            <form id="editProductForm" class="space-y-4">
+                <input type="hidden" id="editProductId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input id="editTitle" required class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="اسم المنتج">
+                    <input type="number" id="editPrice" required min="0" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="السعر">
+                    <input type="number" id="editDiscount" min="0" max="100" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="الخصم">
+                    <input type="number" id="editStock" required min="0" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="المخزون">
+                    <input id="editBrand" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="العلامة التجارية">
+                    <select id="editCategory" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500"></select>
+                </div>
+                <input id="editTags" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="الكلمات الدلالية">
+                <textarea id="editDescription" rows="4" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="الوصف"></textarea>
+                <input type="file" id="editImage" accept="image/*" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" id="saveEditBtn" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg transition">حفظ التعديل</button>
+                    <button type="button" onclick="closeEditModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-lg transition">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="../../components/admin-sidebar.js"></script>
     <script>
         if(typeof loadAdminSidebar === 'function') loadAdminSidebar('manage-products');
         const API_URL = 'http://127.0.0.1:3000/api';
         let productToDelete = null;
+        let productsCache = [];
+        let categoriesCache = [];
+
+        const escapeHTML = str => String(str || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+        const buildImageUrl = imagePath => {
+            const cleanPath = String(imagePath || '').trim();
+            if (!cleanPath) return 'https://via.placeholder.com/150?text=No+Image';
+            return /^https?:\/\//i.test(cleanPath) ? cleanPath : `http://127.0.0.1:3000${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+        };
 
         function logout() {
             localStorage.removeItem('spider_token');
@@ -112,6 +146,7 @@
         }
 
         function showToast(message, type = 'success') {
+            if (window.AppUI) return window.AppUI.toast(message, type);
             const toast = document.getElementById('toast');
             const toastIcon = document.getElementById('toastIcon');
             const toastMessage = document.getElementById('toastMessage');
@@ -144,7 +179,8 @@
                 const data = await response.json();
 
                 if (response.ok || data.success) {
-                    renderProducts(data.data || []);
+                    productsCache = data.data || [];
+                    renderProducts(productsCache);
                 } else {
                     container.innerHTML = `<tr><td colspan="6" class="text-center text-error-500 p-12 bg-error-50 font-bold rounded-lg"><i class="fas fa-exclamation-circle text-3xl mb-3 block"></i> خطأ: ${data.message || 'فشل تحميل المنتجات'}</td></tr>`;
                 }
@@ -163,36 +199,37 @@
 
             let html = '';
             products.forEach(product => {
-                const imageUrl = product.main_image ? `http://127.0.0.1:3000/uploads/${product.main_image}` : 'https://via.placeholder.com/150?text=No+Image';
-                const stockClass = product.stock_quantity > 10 ? 'text-success-600 bg-success-50' : (product.stock_quantity > 0 ? 'text-warning-600 bg-warning-50' : 'text-error-600 bg-error-50');
-                const stockText = product.stock_quantity > 0 ? `${product.stock_quantity} قطعة` : 'نفذت الكمية';
+                const imageUrl = buildImageUrl(product.image_url);
+                const stock = safeNumber(product.stock_quantity);
+                const stockClass = stock > 10 ? 'text-success-600 bg-success-50' : (stock > 0 ? 'text-warning-600 bg-warning-50' : 'text-error-600 bg-error-50');
+                const stockText = stock > 0 ? `${stock} قطعة` : 'نفذت الكمية';
 
                 html += `
                     <tr class="hover:bg-gray-50 transition duration-150 group">
                         <td class="p-4">
                             <div class="w-16 h-16 rounded-lg bg-white border border-gray-200 overflow-hidden shadow-sm flex items-center justify-center">
-                                <img src="${imageUrl}" alt="${product.title}" class="object-cover w-full h-full" onerror="this.src='https://via.placeholder.com/150?text=Error'">
+                                <img src="${imageUrl}" alt="${escapeHTML(product.title)}" class="object-cover w-full h-full" onerror="this.src='https://via.placeholder.com/150?text=Error'">
                             </div>
                         </td>
                         <td class="p-5 font-bold text-gray-800">
-                            ${product.title}
-                            <span class="block text-xs text-gray-400 font-normal mt-1">#${product.id} ${product.brand ? '| ' + product.brand : ''}</span>
+                            ${escapeHTML(product.title)}
+                            <span class="block text-xs text-gray-400 font-normal mt-1">#${safeNumber(product.id)} ${product.brand ? '| ' + escapeHTML(product.brand) : ''}</span>
                         </td>
                         <td class="p-5 text-gray-600 font-medium">
-                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-sm">${product.category_name || 'غير محدد'}</span>
+                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-sm">${escapeHTML(product.category_name) || 'غير محدد'}</span>
                         </td>
                         <td class="p-5 font-extrabold text-primary-600">
-                            ${parseFloat(product.price).toFixed(2)} <span class="text-xs font-semibold text-gray-500">ج.م</span>
+                            ${safeNumber(product.price).toFixed(2)} <span class="text-xs font-semibold text-gray-500">ج.م</span>
                         </td>
                         <td class="p-5 font-bold">
                             <span class="px-3 py-1 rounded-full text-sm ${stockClass}">${stockText}</span>
                         </td>
                         <td class="p-5 text-center">
                             <div class="flex items-center justify-center gap-2">
-                                <button onclick="editProduct(${product.id})" class="text-blue-500 hover:text-white hover:bg-blue-500 bg-blue-50 border border-blue-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل المنتج">
+                                <button onclick="editProduct(${safeNumber(product.id)})" class="text-blue-500 hover:text-white hover:bg-blue-500 bg-blue-50 border border-blue-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل المنتج">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="openDeleteModal(${product.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حذف المنتج">
+                                <button onclick="openDeleteModal(${safeNumber(product.id)})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حذف المنتج">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
@@ -264,11 +301,118 @@
         });
 
         // دالة التعديل (في حالة عمل صفحة edit-product.html لاحقاً)
-        function editProduct(id) {
+        function oldEditProduct(id) {
             // مؤقتاً سيظهر إشعار حتى يتم إنشاء صفحة التعديل
             showToast('سيتم توجيهك لصفحة التعديل قريباً', 'info');
             // window.location.href = `edit-product.html?id=${id}`;
         }
+
+        async function fetchCategoriesForEdit() {
+            if (categoriesCache.length > 0) return categoriesCache;
+
+            try {
+                const response = await fetch(`${API_URL}/categories`);
+                const data = await response.json();
+                categoriesCache = data.data || [];
+            } catch (error) {
+                categoriesCache = [];
+            }
+
+            return categoriesCache;
+        }
+
+        async function populateCategorySelect(selectedId) {
+            const select = document.getElementById('editCategory');
+            const categories = await fetchCategoriesForEdit();
+
+            select.innerHTML = '<option value="">غير محدد</option>' + categories.map(category => `
+                <option value="${safeNumber(category.id)}" ${String(category.id) === String(selectedId) ? 'selected' : ''}>${escapeHTML(category.name)}</option>
+            `).join('');
+        }
+
+        function editProduct(id) {
+            const product = productsCache.find(item => Number(item.id) === Number(id));
+            if (!product) {
+                showToast('لم يتم العثور على المنتج', 'error');
+                return;
+            }
+
+            document.getElementById('editProductId').value = product.id;
+            document.getElementById('editTitle').value = product.title || '';
+            document.getElementById('editPrice').value = safeNumber(product.price);
+            document.getElementById('editDiscount').value = safeNumber(product.discount);
+            document.getElementById('editStock').value = safeNumber(product.stock_quantity);
+            document.getElementById('editBrand').value = product.brand || '';
+            document.getElementById('editTags').value = product.tags || '';
+            document.getElementById('editDescription').value = product.description || '';
+            document.getElementById('editImage').value = '';
+            populateCategorySelect(product.category_id);
+
+            const modal = document.getElementById('editModal');
+            const modalContent = document.getElementById('editModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editModal');
+            const modalContent = document.getElementById('editModalContent');
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        document.getElementById('editProductForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const id = document.getElementById('editProductId').value;
+            const token = localStorage.getItem('spider_token');
+            const btn = document.getElementById('saveEditBtn');
+            const originalText = btn.innerHTML;
+            const formData = new FormData();
+
+            formData.append('title', document.getElementById('editTitle').value);
+            formData.append('price', document.getElementById('editPrice').value);
+            formData.append('discount', document.getElementById('editDiscount').value || 0);
+            formData.append('stock_quantity', document.getElementById('editStock').value);
+            formData.append('brand', document.getElementById('editBrand').value);
+            formData.append('category_id', document.getElementById('editCategory').value);
+            formData.append('tags', document.getElementById('editTags').value);
+            formData.append('description', document.getElementById('editDescription').value);
+
+            const image = document.getElementById('editImage').files[0];
+            if (image) formData.append('image', image);
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+            try {
+                const response = await fetch(`${API_URL}/products/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok || data.success) {
+                    showToast('تم تحديث المنتج بنجاح', 'success');
+                    closeEditModal();
+                    await fetchProducts();
+                } else {
+                    showToast(data.message || 'فشل تحديث المنتج', 'error');
+                }
+            } catch (error) {
+                showToast('خطأ في الاتصال بالسيرفر', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
 
         window.onload = fetchProducts;
     </script>

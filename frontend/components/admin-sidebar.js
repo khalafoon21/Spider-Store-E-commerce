@@ -1,4 +1,13 @@
+function ensureAdminUiFeedbackScript() {
+    if (window.AppUI || document.querySelector('script[data-ui-feedback]')) return;
+    const script = document.createElement('script');
+    script.src = '../../components/ui-feedback.js';
+    script.dataset.uiFeedback = 'true';
+    document.head.appendChild(script);
+}
+
 function loadAdminSidebar(activePage) {
+    ensureAdminUiFeedbackScript();
     const sidebarHTML = `
         <div class="md:hidden bg-gray-900 text-white flex justify-between items-center p-4 shadow-md sticky top-0 z-40">
             <h2 class="text-xl font-bold text-primary-500">Spider<span class="text-white">Admin</span></h2>

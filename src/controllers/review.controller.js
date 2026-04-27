@@ -50,7 +50,7 @@ async function getReviews(req, res) {
 }
 
 // 3. إضافة رد على تقييم (للبائع أو الأدمن)
-async function replyToReview(req, res) {
+async function replyToReview(req, res, reviewIdFromPath = null) {
     try {
         if (req.user.role !== 'seller' && req.user.role !== 'admin') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
@@ -59,13 +59,14 @@ async function replyToReview(req, res) {
 
         const body = await getPostData(req);
         const { review_id, reply } = body;
+        const reviewId = reviewIdFromPath || review_id;
 
-        if (!review_id || !reply) {
+        if (!reviewId || !reply) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ success: false, message: 'رقم التقييم والرد مطلوبان' }));
         }
 
-        await ReviewModel.addReply(review_id, reply);
+        await ReviewModel.addReply(reviewId, reply);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, message: 'تم إضافة الرد بنجاح' }));
     } catch (error) {

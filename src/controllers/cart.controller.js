@@ -10,7 +10,7 @@ async function addToCart(req, res) {
         const product_id = parseInt(body.product_id);
         const quantity = parseInt(body.quantity) || 1;
 
-        if (!product_id || isNaN(product_id)) {
+        if (!product_id || isNaN(product_id) || quantity < 1) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ success: false, message: 'رقم المنتج مطلوب وغير صالح' }));
         }
@@ -28,7 +28,7 @@ async function addToCart(req, res) {
             return res.end(JSON.stringify({ success: false, message: 'بيانات غير صالحة' }));
         }
 
-        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.writeHead(['Product not found', 'Requested quantity is not available'].includes(error.message) ? 400 : 500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'حدث خطأ أثناء إضافة المنتج للسلة' }));
     }
 }
@@ -44,7 +44,7 @@ async function viewCart(req, res) {
 
     } catch (error) {
         console.error(error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.writeHead(['Product not found', 'Requested quantity is not available'].includes(error.message) ? 400 : 500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'حدث خطأ أثناء جلب محتويات السلة' }));
     }
 }

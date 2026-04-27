@@ -41,7 +41,8 @@ async function checkout(req, res) {
         }
 
         // التعديل: إرجاع كود 500 أو رسالة الموديل لو السلة فاضية
-        const statusCode = error.message.includes('empty') ? 400 : 500;
+        const expectedCheckoutError = /(empty|stock|available|cart|فارغة|مخزون|كمية|سلة)/i.test(error.message || '');
+        const statusCode = expectedCheckoutError ? 400 : 500;
         res.writeHead(statusCode, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
             success: false, 

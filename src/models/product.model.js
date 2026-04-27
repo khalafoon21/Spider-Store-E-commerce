@@ -103,14 +103,15 @@ class ProductModel {
     static async updateById(productId, productData) {
         const db = await ProductModel.ensureDb();
         const {
-            title, description, price, stock_quantity, image_url, category_id = null
+            title, description, price, stock_quantity, image_url, category_id = null,
+            discount = 0, brand = '', tags = ''
         } = productData;
 
         await db.run(
             `UPDATE products
-             SET title = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, category_id = ?
+             SET title = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, category_id = ?, discount = ?, brand = ?, tags = ?
              WHERE id = ?`,
-            [title, description, price, stock_quantity, image_url, category_id, productId]
+            [title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, productId]
         );
     }
 

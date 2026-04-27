@@ -33,6 +33,7 @@
 </head>
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
+    <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/main-navbar.js"></script>
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
@@ -85,6 +86,14 @@
         const API_URL = 'http://127.0.0.1:3000/api';
         const BASE_SERVER = 'http://127.0.0.1:3000';
         let serverCart = [];
+        const escapeHTML = str => String(str || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+        const safeId = value => String(value || '').replace(/[^0-9]/g, '');
+        const buildImageUrl = imagePath => {
+            const cleanPath = String(imagePath || '').trim();
+            if (!cleanPath) return 'https://via.placeholder.com/150?text=No+Image';
+            return /^https?:\/\//i.test(cleanPath) ? cleanPath : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+        };
 
         function getToken() {
             return localStorage.getItem('spider_token') || localStorage.getItem('token');
@@ -150,8 +159,9 @@
 
             serverCart.forEach((item) => {
                 // الباك اند بيبعت الأسعار جاهزة
-                const price = Number(item.price || 0);
-                const itemTotal = Number(item.total_price || (price * item.quantity));
+                const price = safeNumber(item.price);
+                const quantity = Math.max(1, Math.floor(safeNumber(item.quantity)));
+                const itemTotal = safeNumber(item.total_price || (price * quantity));
                 subtotalPrice += itemTotal;
 
                 // معالجة مسار الصورة
@@ -161,21 +171,22 @@
                     : 'https://via.placeholder.com/150?text=No+Image';
 
                 // تحديد الـ ID (بعض الباك اند بيسميه id والبعض product_id)
-                const pId = item.product_id || item.id;
+                const pId = safeId(item.product_id || item.id);
+                if (!pId) return;
 
                 html += `
                     <div class="flex items-center gap-4 border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-                        <img src="${imageUrl}" alt="${item.title || 'Product'}" class="w-24 h-24 object-cover rounded-md bg-gray-50 border border-gray-200">
+                        <img src="${buildImageUrl(item.image_url)}" alt="${escapeHTML(item.title) || 'Product'}" class="w-24 h-24 object-cover rounded-md bg-gray-50 border border-gray-200">
                         <div class="flex-1">
                             <a href="../products/product.html?id=${pId}" class="hover:text-primary-600">
-                                <h3 class="font-bold text-gray-800 text-lg line-clamp-1">${item.title || 'منتج'}</h3>
+                                <h3 class="font-bold text-gray-800 text-lg line-clamp-1">${escapeHTML(item.title) || 'Product'}</h3>
                             </a>
                             <p class="text-primary-600 font-bold mt-1">${price.toFixed(0)} ج.م</p>
                         </div>
                         <div class="flex items-center gap-3 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
-                            <button onclick="updateQuantity(${pId}, ${item.quantity}, 1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-primary-600"><i class="fas fa-plus text-xs"></i></button>
-                            <span class="font-bold w-4 text-center text-sm">${item.quantity}</span>
-                            <button onclick="updateQuantity(${pId}, ${item.quantity}, -1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-error-500"><i class="fas fa-minus text-xs"></i></button>
+                            <button onclick="updateQuantity(${pId}, ${quantity}, 1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-primary-600"><i class="fas fa-plus text-xs"></i></button>
+                            <span class="font-bold w-4 text-center text-sm">${quantity}</span>
+                            <button onclick="updateQuantity(${pId}, ${quantity}, -1)" class="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-error-500"><i class="fas fa-minus text-xs"></i></button>
                         </div>
                         <button onclick="removeItem(${pId})" class="text-gray-400 hover:text-error-500 p-2 smooth-transition ml-2 text-lg">
                             <i class="fas fa-trash-alt"></i>
@@ -259,6 +270,7 @@
         }
 
         function showToast(message, type = 'success') {
+            if (window.AppUI) return window.AppUI.toast(message, type);
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             const isSuccess = type === 'success';
@@ -271,7 +283,7 @@
                 </div>
                 <div class="flex-1">
                     <h4 class="font-bold text-gray-800 text-sm">${isSuccess ? 'تم بنجاح' : 'تنبيه'}</h4>
-                    <p class="text-xs text-gray-500 font-medium mt-0.5 leading-relaxed">${message}</p>
+                    <p class="text-xs text-gray-500 font-medium mt-0.5 leading-relaxed">${escapeHTML(message)}</p>
                 </div>
             `;
             

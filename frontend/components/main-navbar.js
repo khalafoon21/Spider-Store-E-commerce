@@ -37,8 +37,11 @@ function loadMainNavbar() {
     const authPathPrefix = isHomePage ? 'pages/auth/' : '../auth/';
     const cartPathPrefix = isHomePage ? 'pages/cart/' : '../cart/';
     const profilePathPrefix = isHomePage ? 'pages/profile/' : '../profile/';
+    const adminPath = isHomePage ? 'pages/admin/dashboard.html' : '../admin/dashboard.html';
 
     const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+    const isAdmin = decodeUserRole(token) === 'admin';
+    ensureUiFeedbackScript(pathPrefix);
 
     const navbarHTML = `
     <nav class="bg-primary-600 text-white shadow-md sticky top-0 z-50">
@@ -56,6 +59,11 @@ function loadMainNavbar() {
             </div>
 
             <div class="flex items-center gap-6">
+                ${isAdmin ? `
+                <a href="${adminPath}" id="adminDashboardLink" class="hidden sm:inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-2 rounded-md smooth-transition text-sm font-bold">
+                    <i class="fas fa-gauge-high"></i>
+                    <span>لوحة الأدمن</span>
+                </a>` : ''}
                 <a href="${token ? profilePathPrefix + 'profile.html' : authPathPrefix + 'login.html'}" id="authLink" class="hover:text-secondary-500 smooth-transition text-sm font-medium">
                     <i class="fas fa-user ml-1"></i> ${token ? 'حسابي' : 'دخول'}
                 </a> 
@@ -77,3 +85,20 @@ function loadMainNavbar() {
 
 // تشغيل الدالة تلقائياً
 loadMainNavbar();
+function decodeUserRole(token) {
+    if (!token) return null;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.role || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function ensureUiFeedbackScript(pathPrefix) {
+    if (window.AppUI || document.querySelector('script[data-ui-feedback]')) return;
+    const script = document.createElement('script');
+    script.src = `${pathPrefix}components/ui-feedback.js`;
+    script.dataset.uiFeedback = 'true';
+    document.head.appendChild(script);
+}

@@ -174,6 +174,11 @@
                     </div>
                 </div>
                 
+                <div class="mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <label class="block mb-2 text-sm font-bold text-gray-700">تغيير الصورة (اختياري)</label>
+                    <input type="file" id="editImage" accept="image/*" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-100 file:text-primary-700 hover:file:bg-primary-200 cursor-pointer bg-white border border-gray-200 rounded-lg px-2 py-2">
+                </div>
+
                 <div class="flex gap-3">
                     <button type="submit" id="saveEditBtn" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-bold transition shadow-md flex justify-center items-center gap-2">
                         <i class="fas fa-save"></i> حفظ التعديلات
@@ -209,6 +214,14 @@
         const BASE_SERVER = 'http://127.0.0.1:3000';
         let bannersCache = [];
         let bannerToDelete = null;
+        const escapeHTML = value => window.AppUI ? window.AppUI.escapeHTML(value) : String(value || '');
+        const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+        const safeColor = (value, fallback = '#ffffff') => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || '')) ? value : fallback;
+        const buildImageUrl = imagePath => {
+            const cleanPath = String(imagePath || '').trim();
+            if (!cleanPath) return 'https://via.placeholder.com/150?text=No+Image';
+            return /^https?:\/\//i.test(cleanPath) ? cleanPath : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+        };
 
         function logout() {
             localStorage.removeItem('spider_token');
@@ -217,6 +230,7 @@
 
         // نظام الإشعارات (Toast) الموحد
         function showToast(message, type = 'success') {
+            if (window.AppUI) return window.AppUI.toast(message, type);
             const toast = document.getElementById('toast');
             const toastIcon = document.getElementById('toastIcon');
             const toastMessage = document.getElementById('toastMessage');
@@ -265,20 +279,20 @@
             tbody.innerHTML = bannersCache.map(banner => `
                 <tr class="hover:bg-gray-50 transition-colors group">
                     <td class="p-4 flex justify-center">
-                        <div class="w-32 h-16 rounded-lg overflow-hidden shadow-sm border border-gray-200 group-hover:shadow-md transition" style="background-color:${banner.bg_color || '#fff'}">
-                            <img src="${BASE_SERVER}${banner.image_url}" onerror="this.src='https://via.placeholder.com/150'" class="w-full h-full object-contain">
+                        <div class="w-32 h-16 rounded-lg overflow-hidden shadow-sm border border-gray-200 group-hover:shadow-md transition" style="background-color:${safeColor(banner.bg_color, '#fff')}">
+                            <img src="${buildImageUrl(banner.image_url)}" onerror="this.src='https://via.placeholder.com/150'" class="w-full h-full object-contain">
                         </div>
                     </td>
                     <td class="p-4">
-                        <p class="font-bold text-gray-800 text-base">${banner.title || 'بدون عنوان'}</p>
-                        <p class="text-sm text-gray-500 mt-1 truncate max-w-[200px]" title="${banner.description}">${banner.description || 'لا يوجد وصف'}</p>
+                        <p class="font-bold text-gray-800 text-base">${escapeHTML(banner.title) || '\u0628\u062f\u0648\u0646 \u0639\u0646\u0648\u0627\u0646'}</p>
+                        <p class="text-sm text-gray-500 mt-1 truncate max-w-[200px]" title="${escapeHTML(banner.description)}">${escapeHTML(banner.description) || '\u0644\u0627 \u064a\u0648\u062c\u062f \u0648\u0635\u0641'}</p>
                     </td>
                     <td class="p-4 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button onclick="openEditModal(${banner.id})" class="text-primary-600 hover:text-white hover:bg-primary-600 bg-primary-50 border border-primary-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل الألوان والنصوص">
+                            <button onclick="openEditModal(${safeNumber(banner.id)})" class="text-primary-600 hover:text-white hover:bg-primary-600 bg-primary-50 border border-primary-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل الألوان والنصوص">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="openDeleteModal(${banner.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حذف البانر">
+                            <button onclick="openDeleteModal(${safeNumber(banner.id)})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حذف البانر">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -347,6 +361,7 @@
             document.getElementById('editBgColor').value = banner.bg_color || '#ffffff';
             document.getElementById('editBtnText').value = banner.button_text || 'اكتشف الآن';
             document.getElementById('editBtnColor').value = banner.button_color || '#0891b2';
+            document.getElementById('editImage').value = '';
             
             const modal = document.getElementById('editModal');
             const content = document.getElementById('editModalContent');
@@ -372,14 +387,15 @@
             const id = document.getElementById('editId').value;
             const token = localStorage.getItem('spider_token');
             
-            const payload = {
-                title: document.getElementById('editTitle').value,
-                description: document.getElementById('editDesc').value,
-                text_color: document.getElementById('editTextColor').value,
-                bg_color: document.getElementById('editBgColor').value,
-                button_text: document.getElementById('editBtnText').value,
-                button_color: document.getElementById('editBtnColor').value
-            };
+            const formData = new FormData();
+            formData.append('title', document.getElementById('editTitle').value);
+            formData.append('description', document.getElementById('editDesc').value);
+            formData.append('text_color', document.getElementById('editTextColor').value);
+            formData.append('bg_color', document.getElementById('editBgColor').value);
+            formData.append('button_text', document.getElementById('editBtnText').value);
+            formData.append('button_color', document.getElementById('editBtnColor').value);
+            const editImage = document.getElementById('editImage').files[0];
+            if (editImage) formData.append('image', editImage);
             
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
             btn.disabled = true;
@@ -387,8 +403,8 @@
             try {
                 const response = await fetch(`${API_URL}/banners/${id}`, {
                     method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
                 });
                 if (response.ok) {
                     showToast('تم تحديث البانر بنجاح!', 'success');

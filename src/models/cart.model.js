@@ -3,12 +3,29 @@ const getDb = require('../config/database');
 class CartModel {
     static async addItem(userId, productId, quantity) {
         const db = getDb();
+        const product = await db.get(
+            `SELECT id, stock_quantity FROM products WHERE id = ?`,
+            [productId]
+        );
+
+        if (!product) {
+            throw new Error('Product not found');
+        }
+
+        if (quantity > product.stock_quantity) {
+            throw new Error('Requested quantity is not available');
+        }
+
         const existingItem = await db.get(
             `SELECT * FROM cart_items WHERE user_id = ? AND product_id = ?`, 
             [userId, productId]
         );
 
         if (existingItem) {
+            if (existingItem.quantity + quantity > product.stock_quantity) {
+                throw new Error('Requested quantity is not available');
+            }
+
             await db.run(
                 `UPDATE cart_items SET quantity = quantity + ? WHERE id = ?`,
                 [quantity, existingItem.id]
@@ -25,6 +42,19 @@ class CartModel {
 
     static async setItemQuantity(userId, productId, quantity) {
         const db = getDb();
+        const product = await db.get(
+            `SELECT id, stock_quantity FROM products WHERE id = ?`,
+            [productId]
+        );
+
+        if (!product) {
+            throw new Error('Product not found');
+        }
+
+        if (quantity > product.stock_quantity) {
+            throw new Error('Requested quantity is not available');
+        }
+
         const existingItem = await db.get(
             `SELECT id FROM cart_items WHERE user_id = ? AND product_id = ?`,
             [userId, productId]
