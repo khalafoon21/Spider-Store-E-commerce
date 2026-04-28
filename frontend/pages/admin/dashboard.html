@@ -54,6 +54,20 @@
             </button>
         </header>
 
+        <section id="analyticsCards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"><p class="text-gray-500 text-sm">إجمالي المبيعات</p><strong id="totalSales" class="block text-2xl font-extrabold text-primary-600 mt-2">0 ج.م</strong></div>
+            <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"><p class="text-gray-500 text-sm">عدد الطلبات</p><strong id="orderCount" class="block text-2xl font-extrabold text-gray-900 mt-2">0</strong></div>
+            <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"><p class="text-gray-500 text-sm">عدد المنتجات</p><strong id="productCount" class="block text-2xl font-extrabold text-gray-900 mt-2">0</strong></div>
+            <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"><p class="text-gray-500 text-sm">عدد المستخدمين</p><strong id="userCount" class="block text-2xl font-extrabold text-gray-900 mt-2">0</strong></div>
+        </section>
+
+        <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+            <h2 class="font-extrabold text-gray-900 mb-4">أفضل المنتجات مبيعًا</h2>
+            <div id="bestProductsList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                <p class="text-gray-500 text-sm">جاري التحميل...</p>
+            </div>
+        </section>
+
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 w-full overflow-hidden">
             <div class="overflow-x-auto w-full custom-scrollbar">
                 <table class="w-full text-right border-collapse min-w-[900px]">
@@ -150,6 +164,30 @@
             }
         }
 
+        async function fetchAnalytics() {
+            const token = localStorage.getItem('spider_token');
+            try {
+                const response = await fetch(`${API_URL}/admin/analytics`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) return;
+                const data = result.data || {};
+                document.getElementById('totalSales').textContent = `${Number(data.total_sales || 0).toFixed(2)} ج.م`;
+                document.getElementById('orderCount').textContent = data.order_count || 0;
+                document.getElementById('productCount').textContent = data.product_count || 0;
+                document.getElementById('userCount').textContent = data.user_count || 0;
+                const best = data.best_products || [];
+                document.getElementById('bestProductsList').innerHTML = best.length ? best.map(item => `
+                    <div class="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                        <p class="font-bold text-gray-800 line-clamp-1">${item.title || 'منتج'}</p>
+                        <p class="text-sm text-gray-500 mt-1">${item.sold_quantity || 0} قطعة</p>
+                        <p class="text-sm font-bold text-primary-600">${Number(item.sales_total || 0).toFixed(2)} ج.م</p>
+                    </div>
+                `).join('') : '<p class="text-gray-500 text-sm">لا توجد مبيعات بعد.</p>';
+            } catch (error) {}
+        }
+
         function renderAdminOrders(orders) {
             const container = document.getElementById('adminOrdersContainer');
 
@@ -166,6 +204,7 @@
                 const isProcessing = statusStr === 'Processing' ? 'selected' : '';
                 const isShipped = statusStr === 'Shipped' ? 'selected' : '';
                 const isDelivered = statusStr === 'Delivered' ? 'selected' : '';
+                const isCancelled = statusStr === 'Cancelled' ? 'selected' : '';
 
                 const customerName = order.full_name || 'غير مسجل';
                 const customerPhone = order.phone || 'غير مسجل';
@@ -177,6 +216,7 @@
                 else if(statusStr === 'Processing') statusBadgeClasses = 'bg-info-50 text-info-700 border-info-200 focus:ring-info-500';
                 else if(statusStr === 'Shipped') statusBadgeClasses = 'bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500';
                 else if(statusStr === 'Delivered') statusBadgeClasses = 'bg-success-50 text-success-700 border-success-200 focus:ring-success-500';
+                else if(statusStr === 'Cancelled') statusBadgeClasses = 'bg-error-50 text-error-700 border-error-200 focus:ring-error-500';
 
                 html += `
                     <tr class="hover:bg-gray-50 transition duration-150 group">
@@ -205,6 +245,7 @@
                                         <option value="Processing" ${isProcessing}>جاري التجهيز</option>
                                         <option value="Shipped" ${isShipped}>تم الشحن</option>
                                         <option value="Delivered" ${isDelivered}>تم التوصيل</option>
+                                        <option value="Cancelled" ${isCancelled}>ملغي</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-current opacity-70">
                                         <i class="fas fa-chevron-down text-xs"></i>
@@ -213,6 +254,7 @@
                                 <button onclick="updateStatus(${order.id})" class="text-primary-600 hover:text-white hover:bg-primary-600 bg-primary-50 border border-primary-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حفظ التعديل">
                                     <i class="fas fa-save"></i>
                                 </button>
+                                ${statusStr !== 'Cancelled' && statusStr !== 'Delivered' ? `<button onclick="cancelOrder(${order.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="إلغاء الطلب"><i class="fas fa-ban"></i></button>` : ''}
                             </div>
                         </td>
                     </tr>
@@ -249,7 +291,29 @@
             }
         }
 
-        window.onload = fetchAllOrders;
+        async function cancelOrder(orderId) {
+            const ok = window.AppUI ? await window.AppUI.confirmDelete('سيظهر الطلب للعميل كطلب ملغي، وسيتم إرجاع الكمية للمخزون.') : true;
+            if (!ok) return;
+            const token = localStorage.getItem('spider_token');
+            try {
+                const response = await fetch(`${API_URL}/orders/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ order_id: orderId })
+                });
+                const data = await response.json();
+                showToast(data.message || (response.ok ? 'تم إلغاء الطلب' : 'تعذر إلغاء الطلب'), response.ok ? 'success' : 'error');
+                fetchAnalytics();
+                fetchAllOrders();
+            } catch (error) {
+                showToast('خطأ في الاتصال بالسيرفر', 'error');
+            }
+        }
+
+        window.onload = () => {
+            fetchAnalytics();
+            fetchAllOrders();
+        };
     </script>
 </body>
 </html>

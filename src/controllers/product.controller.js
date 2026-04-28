@@ -12,8 +12,10 @@ async function getProducts(req, res) {
         const searchQuery = parsedUrl.searchParams.get('search') || '';
         const categoryId = parsedUrl.searchParams.get('category_id') || parsedUrl.searchParams.get('category') || null;
         const featuredOnly = parsedUrl.searchParams.get('featured') === '1' || parsedUrl.searchParams.get('featured') === 'true';
+        const brand = parsedUrl.searchParams.get('brand') || '';
+        const tag = parsedUrl.searchParams.get('tag') || parsedUrl.searchParams.get('tags') || '';
 
-        const products = await ProductModel.getAll(searchQuery, categoryId, { featuredOnly });
+        const products = await ProductModel.getAll(searchQuery, categoryId, { featuredOnly, brand, tag });
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, data: products }));

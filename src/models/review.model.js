@@ -38,6 +38,19 @@ class ReviewModel {
         const db = getDb();
         await db.run(`UPDATE reviews SET reply = ? WHERE id = ?`, [replyText, reviewId]);
     }
+
+    static async getById(reviewId) {
+        const db = getDb();
+        return db.get(`SELECT * FROM reviews WHERE id = ?`, [reviewId]);
+    }
+
+    static async updateReview(reviewId, data) {
+        const db = getDb();
+        await db.run(
+            `UPDATE reviews SET rating = ?, comment = ? WHERE id = ?`,
+            [data.rating, data.comment, reviewId]
+        );
+    }
 }
 
 module.exports = ReviewModel;

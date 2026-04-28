@@ -119,6 +119,74 @@ class OrderModel {
             [newStatus, orderId]
         );
     }
+
+    static async getById(orderId) {
+        const db = getDb();
+        return db.get(`SELECT * FROM orders WHERE id = ?`, [orderId]);
+    }
+
+    static async cancelOrder(orderId, userId = null) {
+        const db = getDb();
+        const order = userId
+            ? await db.get(`SELECT * FROM orders WHERE id = ? AND user_id = ?`, [orderId, userId])
+            : await db.get(`SELECT * FROM orders WHERE id = ?`, [orderId]);
+
+        if (!order) throw new Error('Order not found');
+        if (order.status === 'Delivered') throw new Error('Delivered orders cannot be cancelled');
+        if (order.status === 'Shipped' && userId) throw new Error('Shipped orders cannot be cancelled by customer');
+        if (order.status === 'Cancelled') return order;
+
+        await db.exec('BEGIN TRANSACTION');
+        try {
+            const items = await db.all(`SELECT product_id, quantity FROM order_items WHERE order_id = ?`, [orderId]);
+            for (const item of items) {
+                await db.run(
+                    `UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?`,
+                    [item.quantity, item.product_id]
+                );
+            }
+
+            await db.run(`UPDATE orders SET status = 'Cancelled' WHERE id = ?`, [orderId]);
+            await db.exec('COMMIT');
+            return { ...order, status: 'Cancelled' };
+        } catch (error) {
+            await db.exec('ROLLBACK');
+            throw error;
+        }
+    }
+
+    static async getAnalytics() {
+        const db = getDb();
+        const totals = await db.get(`
+            SELECT
+                COALESCE(SUM(CASE WHEN status != 'Cancelled' THEN total_amount ELSE 0 END), 0) AS total_sales,
+                COUNT(*) AS order_count
+            FROM orders
+        `);
+        const products = await db.get(`SELECT COUNT(*) AS product_count FROM products`);
+        const users = await db.get(`SELECT COUNT(*) AS user_count FROM users`);
+        const latestOrders = await db.all(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 5`);
+        const bestProducts = await db.all(`
+            SELECT p.id, p.title, p.image_url, SUM(oi.quantity) AS sold_quantity,
+                   SUM(oi.quantity * oi.price_at_purchase) AS sales_total
+            FROM order_items oi
+            JOIN products p ON p.id = oi.product_id
+            JOIN orders o ON o.id = oi.order_id
+            WHERE o.status != 'Cancelled'
+            GROUP BY p.id, p.title, p.image_url
+            ORDER BY sold_quantity DESC
+            LIMIT 5
+        `);
+
+        return {
+            total_sales: totals.total_sales || 0,
+            order_count: totals.order_count || 0,
+            product_count: products.product_count || 0,
+            user_count: users.user_count || 0,
+            latest_orders: latestOrders,
+            best_products: bestProducts
+        };
+    }
 }
 
 module.exports = OrderModel;

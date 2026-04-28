@@ -87,6 +87,16 @@ class ProductModel {
             params.push(categoryId);
         }
 
+        if (options.brand) {
+            conditions.push(`p.brand LIKE ?`);
+            params.push(`%${options.brand}%`);
+        }
+
+        if (options.tag) {
+            conditions.push(`p.tags LIKE ?`);
+            params.push(`%${options.tag}%`);
+        }
+
         if (conditions.length > 0) {
             query += ` WHERE ` + conditions.join(' AND ');
         }

@@ -40,6 +40,9 @@ function loadAdminSidebar(activePage) {
                 <a href="add-category.html" class="block px-4 py-3 rounded-md transition ${activePage === 'add-category' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
                     <i class="fas fa-tags ml-2"></i> إضافة قسم
                 </a>
+                <a href="manage-tags.html" class="block px-4 py-3 rounded-md transition ${activePage === 'manage-tags' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
+                    <i class="fas fa-hashtag ml-2"></i> إدارة الوسوم
+                </a>
                 <a href="add-banner.html" class="block px-4 py-3 rounded-md transition ${activePage === 'add-banner' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
                     <i class="fas fa-images ml-2"></i> إضافة سلايدر
                 </a>

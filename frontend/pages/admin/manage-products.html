@@ -232,7 +232,7 @@
                                     <option value="pending" ${product.status === 'pending' ? 'selected' : ''}>مراجعة</option>
                                     <option value="rejected" ${product.status === 'rejected' ? 'selected' : ''}>مرفوض</option>
                                 </select>
-                                <button onclick="updateProductMeta(${safeNumber(product.id)}, product.status || 'approved', ${product.featured ? 0 : 1})" class="${product.featured ? 'text-secondary-500 bg-secondary-50' : 'text-gray-400 bg-gray-50'} hover:text-secondary-500 border border-gray-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تمييز المنتج">
+                                <button onclick="updateProductMeta(${safeNumber(product.id)}, '${escapeHTML(product.status || 'approved')}', ${product.featured ? 0 : 1})" class="${product.featured ? 'text-secondary-500 bg-secondary-50' : 'text-gray-400 bg-gray-50'} hover:text-secondary-500 border border-gray-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تمييز المنتج">
                                     <i class="fas fa-star"></i>
                                 </button>
                                 <button onclick="editProduct(${safeNumber(product.id)})" class="text-blue-500 hover:text-white hover:bg-blue-500 bg-blue-50 border border-blue-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل المنتج">

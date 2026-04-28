@@ -80,4 +80,36 @@ async function replyToReview(req, res, reviewIdFromPath = null) {
     }
 }
 
-module.exports = { createReview, getReviews, replyToReview };
+async function updateReview(req, res, reviewId) {
+    try {
+        const body = await getPostData(req);
+        const rating = Number(body.rating);
+        const comment = String(body.comment || '').trim();
+
+        if (!reviewId || !rating || rating < 1 || rating > 5 || !comment) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Valid rating and comment are required' }));
+        }
+
+        const review = await ReviewModel.getById(reviewId);
+        if (!review) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Review not found' }));
+        }
+
+        const canEdit = req.user.role === 'admin' || req.user.role === 'seller' || Number(review.user_id) === Number(req.user.userId);
+        if (!canEdit) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Not allowed to edit this review' }));
+        }
+
+        await ReviewModel.updateReview(reviewId, { rating, comment });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'تم تعديل التقييم بنجاح' }));
+    } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'تعذر تعديل التقييم' }));
+    }
+}
+
+module.exports = { createReview, getReviews, replyToReview, updateReview };

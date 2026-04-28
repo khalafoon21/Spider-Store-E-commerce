@@ -106,7 +106,7 @@ async function updateOrderStatus(req, res) {
         const body = await getPostData(req);
         const { order_id, status } = body;
 
-        const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered'];
+        const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
         
         if (!order_id || !validStatuses.includes(status)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -116,7 +116,11 @@ async function updateOrderStatus(req, res) {
             }));
         }
 
-        await OrderModel.updateStatus(order_id, status);
+        if (status === 'Cancelled') {
+            await OrderModel.cancelOrder(order_id, null);
+        } else {
+            await OrderModel.updateStatus(order_id, status);
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
@@ -143,4 +147,42 @@ async function updateOrderStatus(req, res) {
     }
 } 
 
-module.exports = { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin };
+async function cancelOrder(req, res) {
+    try {
+        const body = await getPostData(req);
+        const orderId = Number(body.order_id);
+        if (!orderId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Valid order id is required' }));
+        }
+
+        const isAdminActor = req.user.role === 'admin' || req.user.role === 'seller';
+        await OrderModel.cancelOrder(orderId, isAdminActor ? null : req.user.userId);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'تم إلغاء الطلب بنجاح' }));
+    } catch (error) {
+        const known = /not found|cannot|cancel/i.test(error.message || '');
+        res.writeHead(known ? 400 : 500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: error.message || 'تعذر إلغاء الطلب' }));
+    }
+}
+
+async function getSalesAnalytics(req, res) {
+    try {
+        if (req.user.role !== 'admin' && req.user.role !== 'seller') {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Not allowed' }));
+        }
+
+        const data = await OrderModel.getAnalytics();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data }));
+    } catch (error) {
+        console.error(error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Could not load analytics' }));
+    }
+}
+
+module.exports = { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin, cancelOrder, getSalesAnalytics };

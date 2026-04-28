@@ -118,6 +118,12 @@
             try { return JSON.parse(atob(token.split('.')[1])).role; } catch(e) { return null; }
         }
 
+        function decodeTokenUserId() {
+            const token = localStorage.getItem('spider_token');
+            if (!token) return null;
+            try { return JSON.parse(atob(token.split('.')[1])).userId; } catch(e) { return null; }
+        }
+
         async function fetchProductDetails() {
             if (!productId) { showError('لم يتم العثور على المنتج.'); return; }
             try {
@@ -310,15 +316,18 @@
                 return;
             }
             let html = '';
+            const currentUserId = decodeTokenUserId();
             reviews.forEach(rev => {
                 let starsHtml = '';
                 for(let i=1; i<=5; i++) starsHtml += `<i class="fas fa-star ${i <= rev.rating ? 'text-yellow-400' : 'text-gray-300'} text-sm"></i>`;
                 
                 let replyHtml = '';
+                const canEditReview = currentUserRole === 'admin' || currentUserRole === 'seller' || Number(rev.user_id) === Number(currentUserId);
                 if (rev.reply) {
                     replyHtml = `<div class="mt-4 bg-primary-50 p-4 rounded-md border border-primary-100 mr-8">
                                     <p class="text-xs font-bold text-primary-700 mb-1"><i class="fas fa-store"></i> رد الإدارة:</p>
                                     <p class="text-sm text-gray-700">${escapeHTML(rev.reply)}</p>
+                                    ${(currentUserRole === 'admin' || currentUserRole === 'seller') ? `<div class="mt-3"><textarea id="replyInput-${rev.id}" rows="1" class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(rev.reply)}</textarea><button onclick="submitReply(${rev.id})" class="text-xs bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 transition-colors">تعديل الرد</button></div>` : ''}
                                  </div>`;
                 } else if (currentUserRole === 'admin' || currentUserRole === 'seller') {
                     replyHtml = `<div class="mt-3 mr-8" id="replyBox-${rev.id}">
@@ -334,6 +343,7 @@
                                 </div>
                             </div>
                             <p class="text-gray-600 text-sm mt-3 leading-relaxed pl-12">${escapeHTML(rev.comment)}</p>
+                            ${canEditReview ? `<div class="mt-3 pl-12"><textarea id="reviewEdit-${rev.id}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(rev.comment)}</textarea><button onclick="updateReview(${rev.id}, ${rev.rating})" class="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 transition-colors">تعديل التقييم</button></div>` : ''}
                             ${replyHtml}
                         </div>`;
             });
@@ -386,6 +396,27 @@
                     fetchReviews();
                 }
             } catch(e) { showToast('حدث خطأ أثناء الرد', 'error'); }
+        }
+
+        async function updateReview(reviewId, rating) {
+            const comment = document.getElementById(`reviewEdit-${reviewId}`).value.trim();
+            if (!comment) {
+                showToast('اكتب نص التقييم قبل الحفظ', 'error');
+                return;
+            }
+            const token = localStorage.getItem('spider_token');
+            try {
+                const res = await fetch(`${API_URL}/reviews/${reviewId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ rating, comment })
+                });
+                const data = await res.json();
+                showToast(data.message || (res.ok ? 'تم تعديل التقييم' : 'تعذر تعديل التقييم'), res.ok ? 'success' : 'error');
+                if (res.ok) fetchReviews();
+            } catch (error) {
+                showToast('تعذر الاتصال بالسيرفر', 'error');
+            }
         }
 
         function changeQty(change) {

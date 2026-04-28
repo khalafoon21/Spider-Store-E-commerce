@@ -4,15 +4,16 @@ const url = require('url');
 
 const { isAdmin } = require('./middleware/role.middleware');
 const { getAllUsers, updateUserRole } = require('./controllers/admin.controller');
-const { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin } = require('./controllers/order.controller'); 
+const { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin, cancelOrder, getSalesAnalytics } = require('./controllers/order.controller'); 
 const { addToCart, viewCart, updateCartItem, removeCartItem } = require('./controllers/cart.controller');
 const { getProducts, getProductById, createProduct, getMyProducts, updateProduct, deleteProduct } = require('./controllers/product.controller');
 const { authenticate } = require('./middleware/auth.middleware');
 const { getProfile, updateProfile } = require('./controllers/user.controller');
 const { registerUser, loginUser, activateEmail, forgotPassword, resetPassword } = require('./controllers/auth.controller');
-const { createReview, getReviews, replyToReview } = require('./controllers/review.controller');
+const { createReview, getReviews, replyToReview, updateReview } = require('./controllers/review.controller');
 const { getAllCategories, createCategory, updateCategory, deleteCategory } = require('./controllers/category.controller');
 const { getWishlist, addWishlist, removeWishlist } = require('./controllers/wishlist.controller');
+const { getAllTags, createTag, updateTag, deleteTag } = require('./controllers/tag.controller');
 
 // ✨ تم إضافة updateBanner و deleteBanner
 const { getAllBanners, createBanner, updateBanner, deleteBanner } = require('./controllers/banner.controller');
@@ -63,6 +64,11 @@ const router = async (req, res) => {
     if (path.startsWith('/api/categories/') && method === 'PUT') { try { await authenticate(req, res); const id = path.split('/').pop(); return updateCategory(req, res, Number(id)); } catch (e) { return; } }
     if (path.startsWith('/api/categories/') && method === 'DELETE') { try { await authenticate(req, res); const id = path.split('/').pop(); return deleteCategory(req, res, Number(id)); } catch (e) { return; } }
 
+    if (path === '/api/tags' && method === 'GET') return getAllTags(req, res);
+    if (path === '/api/tags' && method === 'POST') { try { await authenticate(req, res); return createTag(req, res); } catch (e) { return; } }
+    if (path.startsWith('/api/tags/') && method === 'PUT') { try { await authenticate(req, res); const id = path.split('/').pop(); return updateTag(req, res, Number(id)); } catch (e) { return; } }
+    if (path.startsWith('/api/tags/') && method === 'DELETE') { try { await authenticate(req, res); const id = path.split('/').pop(); return deleteTag(req, res, Number(id)); } catch (e) { return; } }
+
     // ======= ✨ مسارات السلايدر =======
     if (path === '/api/banners' && method === 'GET') return getAllBanners(req, res);
     if (path === '/api/banners' && method === 'POST') { try { await authenticate(req, res); return createBanner(req, res); } catch (e) { return; } }
@@ -88,13 +94,16 @@ const router = async (req, res) => {
     if (path === '/api/orders/checkout' && method === 'POST') { try { await authenticate(req, res); return checkout(req, res); } catch (e) { return; } }
     if (path === '/api/orders/history' && method === 'GET') { try { await authenticate(req, res); return getOrderHistory(req, res); } catch (e) { return; } }
     if (path === '/api/orders/update-status' && method === 'POST') { try { await authenticate(req, res); return updateOrderStatus(req, res); } catch (e) { return; } }
+    if (path === '/api/orders/cancel' && method === 'POST') { try { await authenticate(req, res); return cancelOrder(req, res); } catch (e) { return; } }
 
     if (path === '/api/orders/all' && method === 'GET') { try { await authenticate(req, res); return getAllOrdersAdmin(req, res); } catch (e) { return; } }
+    if (path === '/api/admin/analytics' && method === 'GET') { try { await authenticate(req, res); return getSalesAnalytics(req, res); } catch (e) { return; } }
     if (path === '/api/admin/users' && method === 'GET') { try { await authenticate(req, res); await isAdmin(req, res); return getAllUsers(req, res); } catch (e) { return; } }
     if (path === '/api/admin/users/role' && method === 'PUT') { try { await authenticate(req, res); await isAdmin(req, res); return updateUserRole(req, res); } catch (e) { return; } }
 
     if (path === '/api/reviews' && method === 'GET') return getReviews(req, res);
     if (path === '/api/reviews' && method === 'POST') { try { await authenticate(req, res); return createReview(req, res); } catch (e) { return; } }
+    if (path.startsWith('/api/reviews/') && !path.endsWith('/reply') && method === 'PUT') { try { await authenticate(req, res); const id = path.split('/').pop(); return updateReview(req, res, Number(id)); } catch (e) { return; } }
     if (path.startsWith('/api/reviews/') && path.endsWith('/reply') && method === 'PUT') { try { await authenticate(req, res); const id = path.split('/')[3]; return replyToReview(req, res, Number(id)); } catch (e) { return; } }
     if (path === '/api/reviews/reply' && method === 'POST') { try { await authenticate(req, res); return replyToReview(req, res); } catch (e) { return; } }
 
