@@ -5,7 +5,6 @@ let dbWrapper = null;
 
 function checkRequiredEnv() {
     const required = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
-
     const missing = required.filter((key) => !process.env[key]);
 
     if (missing.length > 0) {
@@ -13,6 +12,24 @@ function checkRequiredEnv() {
             `Missing required database environment variables: ${missing.join(', ')}`
         );
     }
+}
+
+// تحويل تواريخ JavaScript / ISO إلى صيغة MySQL DATETIME
+function normalizeParams(params = []) {
+    return params.map((value) => {
+        if (value instanceof Date) {
+            return value.toISOString().slice(0, 19).replace('T', ' ');
+        }
+
+        if (
+            typeof value === 'string' &&
+            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
+        ) {
+            return value.slice(0, 19).replace('T', ' ');
+        }
+
+        return value;
+    });
 }
 
 async function initDB() {
@@ -33,30 +50,27 @@ async function initDB() {
             queueLimit: 0,
 
             multipleStatements: true,
-
             charset: 'utf8mb4'
         });
 
-        // اختبار الاتصال بشكل صحيح
         const connection = await pool.getConnection();
         connection.release();
 
         console.log('✅ تم الاتصال بقاعدة بيانات MySQL على Railway بنجاح!');
 
-        // Wrapper عشان باقي المشروع يفضل شغال بنفس طريقة SQLite القديمة
         dbWrapper = {
             get: async (sql, params = []) => {
-                const [rows] = await pool.execute(sql, params);
+                const [rows] = await pool.execute(sql, normalizeParams(params));
                 return rows[0] || null;
             },
 
             all: async (sql, params = []) => {
-                const [rows] = await pool.execute(sql, params);
+                const [rows] = await pool.execute(sql, normalizeParams(params));
                 return rows;
             },
 
             run: async (sql, params = []) => {
-                const [result] = await pool.execute(sql, params);
+                const [result] = await pool.execute(sql, normalizeParams(params));
 
                 return {
                     lastID: result.insertId || null,
@@ -265,7 +279,6 @@ async function initDB() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
-        // إصلاح بيانات قديمة لو موجودة
         await dbWrapper.run(`
             UPDATE users
             SET role = 'user'
