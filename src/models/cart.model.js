@@ -4,12 +4,16 @@ class CartModel {
     static async addItem(userId, productId, quantity) {
         const db = getDb();
         const product = await db.get(
-            `SELECT id, stock_quantity FROM products WHERE id = ?`,
+            `SELECT id, stock_quantity, status FROM products WHERE id = ?`,
             [productId]
         );
 
         if (!product) {
             throw new Error('Product not found');
+        }
+
+        if (product.status && product.status !== 'approved') {
+            throw new Error('Product is not available');
         }
 
         if (quantity > product.stock_quantity) {
@@ -43,12 +47,16 @@ class CartModel {
     static async setItemQuantity(userId, productId, quantity) {
         const db = getDb();
         const product = await db.get(
-            `SELECT id, stock_quantity FROM products WHERE id = ?`,
+            `SELECT id, stock_quantity, status FROM products WHERE id = ?`,
             [productId]
         );
 
         if (!product) {
             throw new Error('Product not found');
+        }
+
+        if (product.status && product.status !== 'approved') {
+            throw new Error('Product is not available');
         }
 
         if (quantity > product.stock_quantity) {
@@ -96,7 +104,7 @@ class CartModel {
                    (c.quantity * (p.price - (p.price * COALESCE(p.discount, 0) / 100))) AS total_price
             FROM cart_items c
             JOIN products p ON c.product_id = p.id
-            WHERE c.user_id = ?
+            WHERE c.user_id = ? AND COALESCE(p.status, 'approved') = 'approved'
         `, [userId]);
     }
 }

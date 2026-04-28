@@ -72,9 +72,10 @@ async function updateUserRole(req, res) {
         const body = await getPostData(req);
         const { user_id, new_role } = body;
 
-        const validRoles = ['customer', 'seller', 'admin'];
+        const requestedRole = new_role === 'customer' ? 'user' : new_role;
+        const validRoles = ['user', 'seller', 'admin'];
         
-        if (!user_id || !validRoles.includes(new_role)) {
+        if (!user_id || !validRoles.includes(requestedRole)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ success: false, message: 'بيانات غير صالحة أو رتبة غير مسموحة' }));
         }
@@ -86,10 +87,10 @@ async function updateUserRole(req, res) {
         }
 
         const db = getDb();
-        await db.run(`UPDATE users SET role = ? WHERE id = ?`, [new_role, user_id]);
+        await db.run(`UPDATE users SET role = ? WHERE id = ?`, [requestedRole, user_id]);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, message: `تم تحديث صلاحيات المستخدم إلى: ${new_role}` }));
+        res.end(JSON.stringify({ success: true, message: `تم تحديث صلاحيات المستخدم إلى: ${requestedRole}` }));
     } catch (error) {
         console.error(error);
         if (error.code === 'INVALID_JSON') {

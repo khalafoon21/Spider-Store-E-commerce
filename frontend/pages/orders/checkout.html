@@ -34,6 +34,7 @@
 </head>
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
+    <script src="../../components/app-state.js"></script>
     <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/main-navbar.js"></script>
 
@@ -122,7 +123,7 @@
         const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
         
         async function initCheckout() {
-            const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
             if (!token) {
                 window.location.replace('../auth/login.html');
                 return;
@@ -140,7 +141,7 @@
 
                 // 2. لو السلة فاضية على السيرفر، نحاول نجيبها من localStorage مرة واحدة
                 // وبعدين نجبر إعادة القراءة من السيرفر لضمان التطابق
-                const localCart = JSON.parse(localStorage.getItem('spider_cart')) || [];
+                const localCart = window.AppState ? window.AppState.getCart() : (JSON.parse(localStorage.getItem('spider_cart') || '[]') || []);
                 if ((!res.ok || cartItems.length === 0) && localCart.length > 0) {
                     document.getElementById('checkoutItems').innerHTML = '<div class="text-center text-primary-500 py-4"><i class="fas fa-sync fa-spin"></i> جاري مزامنة السلة...</div>';
 
@@ -178,7 +179,8 @@
                             confirmText: '\u062a\u0635\u0641\u062d \u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a'
                         });
                     }
-                    localStorage.removeItem('spider_cart');
+                    if (window.AppState) window.AppState.clearCart();
+                    else localStorage.removeItem('spider_cart');
                     window.location.replace('../../index.html');
                     return;
                 }
@@ -208,7 +210,8 @@
 
                 // مزامنة المتصفح عشان العداد
                 const syncData = cartItems.map(i => ({ id: i.product_id || i.id, quantity: i.quantity }));
-                localStorage.setItem('spider_cart', JSON.stringify(syncData));
+                if (window.AppState) window.AppState.setCart(syncData);
+                else localStorage.setItem('spider_cart', JSON.stringify(syncData));
 
             } catch (error) {
                 console.error(error);
@@ -235,7 +238,7 @@
             const btn = document.getElementById('submitBtn');
             const errorDiv = document.getElementById('errorMessage');
             const overlay = document.getElementById('loadingOverlay');
-            const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
 
             btn.disabled = true;
             btn.style.pointerEvents = 'none';
@@ -264,7 +267,8 @@
 
                 if (response.ok && data.success !== false) {
                     sessionStorage.setItem('spider_order_completed', '1');
-                    localStorage.removeItem('spider_cart'); 
+                    if (window.AppState) window.AppState.clearCart();
+                    else localStorage.removeItem('spider_cart'); 
                     if (typeof updateGlobalCartCount === 'function') updateGlobalCartCount();
                     overlay.classList.add('hidden');
                     document.getElementById('checkoutForm').reset();

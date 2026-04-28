@@ -20,9 +20,9 @@ class UserModel {
         const db = getDb();
         const { first_name, last_name, email, password_hash, phone, activation_token = null, activation_expires = null } = userDATA;
         const result = await db.run(
-            `INSERT INTO users (first_name, last_name, email, password_hash, phone, email_verified, activation_token, activation_expires)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [first_name, last_name, email, password_hash, phone, activation_token ? 0 : 1, activation_token, activation_expires]
+            `INSERT INTO users (first_name, last_name, email, password_hash, phone, role, email_verified, activation_token, activation_expires)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [first_name, last_name, email, password_hash, phone, 'user', activation_token ? 0 : 1, activation_token, activation_expires]
         );
         return result.lastID;
     }
@@ -31,7 +31,7 @@ class UserModel {
         const db = getDb();
         // ✨ تم إضافة الحقول الجديدة هنا عشان تظهر في البروفايل
         return await db.get(
-            `SELECT id, first_name, last_name, email, phone, role, profile_picture, email_verified, address, birthdate, city, country
+            `SELECT id, first_name, last_name, email, phone, role, seller_status, profile_picture, email_verified, address, birthdate, city, country
              FROM users
              WHERE id = ?`,
             [userId]

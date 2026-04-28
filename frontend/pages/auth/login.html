@@ -27,6 +27,7 @@
     <style> body { background-color: #F9FAFB; } .smooth-transition { transition: all 0.2s ease-out; } </style>
 </head>
 <body class="font-sans text-gray-800 antialiased flex items-center justify-center min-h-screen relative overflow-hidden">
+    <script src="../../components/app-state.js"></script>
     <script src="../../components/ui-feedback.js"></script>
 
     <div class="absolute top-0 right-0 w-64 h-64 bg-primary-50 rounded-bl-full -z-10 opacity-50"></div>
@@ -80,7 +81,7 @@
 
         // 1. فحص هل المستخدم مسجل دخول بالفعل أم لا
         window.addEventListener('DOMContentLoaded', () => {
-            if(localStorage.getItem('spider_token')) {
+            if((window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token'))) {
                 window.location.replace('../../index.html');
             }
         });
@@ -114,7 +115,9 @@
                 const data = await response.json();
 
                 if (response.ok && data.token) {
-                    localStorage.setItem('spider_token', data.token);
+                    if (window.AppState) window.AppState.setToken(data.token);
+                    else localStorage.setItem('spider_token', data.token);
+                    await syncGuestCart(data.token);
                     
                     msgBox.className = 'block bg-success-50 text-success-600 border border-success-200 text-sm px-4 py-2 rounded-md mb-4 text-center font-bold';
                     msgBox.innerHTML = '<i class="fas fa-check-circle"></i> تم تسجيل الدخول بنجاح!';
@@ -139,6 +142,27 @@
                 btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> تسجيل الدخول';
                 btn.disabled = false;
             }
+        }
+
+        async function syncGuestCart(token) {
+            let localCart = [];
+            try { localCart = window.AppState ? window.AppState.getCart() : JSON.parse(localStorage.getItem('spider_cart') || '[]'); } catch (error) { localCart = []; }
+            if (!Array.isArray(localCart) || localCart.length === 0) return;
+
+            for (const item of localCart) {
+                const productId = Number(item.product_id || item.id);
+                const quantity = Number(item.quantity || 1);
+                if (!productId || quantity <= 0) continue;
+                try {
+                    await fetch(`${API_URL}/cart`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ product_id: productId, quantity })
+                    });
+                } catch (error) {}
+            }
+            if (window.AppState) window.AppState.clearCart();
+            else localStorage.removeItem('spider_cart');
         }
     </script>
 </body>

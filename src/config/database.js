@@ -22,7 +22,8 @@ async function initDB() {
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 phone TEXT,
-                role TEXT DEFAULT 'customer',
+                role TEXT DEFAULT 'user',
+                seller_status TEXT DEFAULT 'pending',
                 profile_picture TEXT,
                 email_verified INTEGER DEFAULT 1,
                 activation_token TEXT,
@@ -114,6 +115,10 @@ async function initDB() {
                 total_amount REAL NOT NULL,
                 status TEXT DEFAULT 'Pending', 
                 shipping_address TEXT NOT NULL,
+                city TEXT,
+                country TEXT,
+                payment_method TEXT DEFAULT 'Cash on Delivery',
+                notes TEXT,
                 phone TEXT NOT NULL,          /* ✨ جديد: رقم الهاتف */
                 full_name TEXT NOT NULL,      /* ✨ جديد: الاسم بالكامل */
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -158,12 +163,17 @@ async function initDB() {
             "ALTER TABLE users ADD COLUMN activation_expires DATETIME",
             "ALTER TABLE users ADD COLUMN reset_token TEXT",
             "ALTER TABLE users ADD COLUMN reset_expires DATETIME",
+            "ALTER TABLE users ADD COLUMN seller_status TEXT DEFAULT 'pending'",
             "ALTER TABLE users ADD COLUMN address TEXT",
             "ALTER TABLE users ADD COLUMN birthdate DATE",
             "ALTER TABLE users ADD COLUMN city TEXT",
             "ALTER TABLE users ADD COLUMN country TEXT",
             "ALTER TABLE orders ADD COLUMN phone TEXT",
-            "ALTER TABLE orders ADD COLUMN full_name TEXT"
+            "ALTER TABLE orders ADD COLUMN full_name TEXT",
+            "ALTER TABLE orders ADD COLUMN city TEXT",
+            "ALTER TABLE orders ADD COLUMN country TEXT",
+            "ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'Cash on Delivery'",
+            "ALTER TABLE orders ADD COLUMN notes TEXT"
         ];
 
         for (const query of migrationQueries) {
@@ -175,6 +185,9 @@ async function initDB() {
                 }
             }
         }
+
+        await db.run(`UPDATE users SET role = 'user' WHERE role = 'customer' OR role IS NULL`);
+        await db.run(`UPDATE users SET seller_status = 'pending' WHERE seller_status IS NULL`);
 
         await db.exec(`
             CREATE TABLE IF NOT EXISTS wishlist_items (

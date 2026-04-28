@@ -64,7 +64,7 @@ async function registerUser(req, res) {
                 id: newUserId,
                 first_name: first_name,
                 email: email,
-                role: 'customer'
+                role: 'user'
             }
         }));
 
@@ -109,7 +109,7 @@ async function loginUser(req, res) {
         }
 
         const token = jwt.sign(
-            { userId: user.id, role: user.role }, 
+            { userId: user.id, role: user.role === 'customer' ? 'user' : user.role }, 
             process.env.JWT_SECRET || 'fallback_secret_key', 
             { expiresIn: '30d' } 
         );
@@ -123,7 +123,8 @@ async function loginUser(req, res) {
                 id: user.id,
                 first_name: user.first_name,
                 email: user.email,
-                role: user.role
+                role: user.role === 'customer' ? 'user' : user.role,
+                seller_status: user.seller_status || 'pending'
             }
         }));
 

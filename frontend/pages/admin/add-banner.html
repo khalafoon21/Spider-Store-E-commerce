@@ -104,7 +104,7 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div class="p-6 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800">البانرات الحالية</h2>
-                        <button onclick="fetchBanners()" class="text-primary-600 hover:text-primary-800 text-sm font-bold flex items-center gap-1 transition">
+                        <button type="button" onclick="fetchBanners()" class="text-primary-600 hover:text-primary-800 text-sm font-bold flex items-center gap-1 transition">
                             <i class="fas fa-sync-alt"></i> تحديث
                         </button>
                     </div>
@@ -199,12 +199,13 @@
                 <p class="text-gray-500 text-sm">هل أنت متأكد من حذف هذا البانر نهائياً؟</p>
             </div>
             <div class="flex gap-3">
-                <button id="confirmDeleteBtn" class="flex-1 bg-error-500 hover:bg-error-600 text-white font-bold py-2 px-4 rounded-lg transition">تأكيد الحذف</button>
-                <button onclick="closeDeleteModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg transition">إلغاء</button>
+                <button type="button" id="confirmDeleteBtn" class="flex-1 bg-error-500 hover:bg-error-600 text-white font-bold py-2 px-4 rounded-lg transition">تأكيد الحذف</button>
+                <button type="button" onclick="closeDeleteModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg transition">إلغاء</button>
             </div>
         </div>
     </div>
 
+    <script src="../../components/app-state.js"></script>
     <script src="../../components/admin-sidebar.js"></script>
     <script>
         if(typeof loadAdminSidebar === 'function') loadAdminSidebar('add-banner');
@@ -224,7 +225,8 @@
         };
 
         function logout() {
-            localStorage.removeItem('spider_token');
+            if (window.AppState) window.AppState.clearToken();
+            else localStorage.removeItem('spider_token');
             window.location.href = '../auth/login.html';
         }
 
@@ -289,10 +291,10 @@
                     </td>
                     <td class="p-4 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button onclick="openEditModal(${safeNumber(banner.id)})" class="text-primary-600 hover:text-white hover:bg-primary-600 bg-primary-50 border border-primary-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل الألوان والنصوص">
+                            <button type="button" onclick="openEditModal(${safeNumber(banner.id)})" class="text-primary-600 hover:text-white hover:bg-primary-600 bg-primary-50 border border-primary-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="تعديل الألوان والنصوص">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="openDeleteModal(${safeNumber(banner.id)})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حذف البانر">
+                            <button type="button" onclick="openDeleteModal(${safeNumber(banner.id)})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حذف البانر">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>

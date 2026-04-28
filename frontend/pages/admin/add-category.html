@@ -103,6 +103,7 @@
         </div>
     </main>
 
+    <script src="../../components/app-state.js"></script>
     <script src="../../components/admin-sidebar.js"></script>
     <script>
         if(typeof loadAdminSidebar === 'function') loadAdminSidebar('add-category');
@@ -145,7 +146,8 @@
         }
 
         function logout() {
-            localStorage.removeItem('spider_token');
+            if (window.AppState) window.AppState.clearToken();
+            else localStorage.removeItem('spider_token');
             window.location.href = '../auth/login.html';
         }
 
@@ -193,7 +195,7 @@
                             </td>
                             <td class="p-4 font-bold text-gray-700">${cat.name}</td>
                             <td class="p-4 text-center">
-                                <button onclick="deleteCategory(${cat.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center mx-auto" title="حذف القسم">
+                                <button type="button" onclick="deleteCategory(${cat.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center mx-auto" title="حذف القسم">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>

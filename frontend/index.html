@@ -57,6 +57,7 @@
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
     <div id="navbar-container"></div>
+    <script src="components/app-state.js"></script>
     <script src="components/ui-feedback.js"></script>
     <script src="components/main-navbar.js" defer></script>
 
@@ -153,6 +154,20 @@
             const cleanPath = String(imagePath || '').trim();
             if (!cleanPath) return 'https://via.placeholder.com/300?text=No+Image';
             return /^https?:\/\//i.test(cleanPath) ? cleanPath : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+        };
+        const getProductImage = product => {
+            if (product.image_url || product.image) return product.image_url || product.image;
+            if (Array.isArray(product.images_array) && product.images_array.length) return product.images_array[0];
+            if (Array.isArray(product.images_list) && product.images_list.length) return product.images_list[0];
+            if (typeof product.images === 'string' && product.images.trim()) {
+                try {
+                    const parsed = JSON.parse(product.images);
+                    if (Array.isArray(parsed) && parsed.length) return parsed[0];
+                } catch (error) {
+                    return product.images.split(/[,\n]/).find(Boolean) || '';
+                }
+            }
+            return '';
         };
         const calcFinalPrice = (price, discount) => {
             const basePrice = safeNumber(price);
@@ -318,7 +333,7 @@
                     <div class="relative p-4 bg-gray-50 flex justify-center items-center">
                         ${hasDiscount ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${discount}%</span>` : ''}
                         <a href="pages/products/product.html?id=${productId}" class="w-full">
-                            <img src="${buildImageUrl(product.image_url)}" class="w-full aspect-square object-contain group-hover:scale-110 transition-transform duration-500" alt="${escapeHTML(product.title)}">
+                            <img src="${buildImageUrl(getProductImage(product))}" class="w-full aspect-square object-contain group-hover:scale-110 transition-transform duration-500" alt="${escapeHTML(product.title)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'">
                         </a>
                     </div>
                     <div class="p-5 flex flex-col flex-1">
@@ -346,10 +361,12 @@
         //  الإضافة المباشرة للباك اند (Hybrid Model)
         // ==========================================
         window.addToCart = async function(button, id) {
-            const token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'); 
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token')); 
             
             if (!token) {
-                showToast("يرجى تسجيل الدخول أولاً لإضافة منتجات للسلة", "error");
+                addGuestCartItem(id, 1);
+                showToast("تمت إضافة المنتج لسلة الزائر");
+                if (typeof window.updateGlobalCartCount === 'function') window.updateGlobalCartCount();
                 return;
             }
 
@@ -402,6 +419,21 @@
             window.addToCart(button, button.dataset.productId);
             return false;
         };
+
+        function addGuestCartItem(id, quantity) {
+            const productId = Number(id);
+            if (!productId) return;
+            if (window.AppState) {
+                window.AppState.addCartItem(productId, quantity);
+                return;
+            }
+            let cart = [];
+            try { cart = JSON.parse(localStorage.getItem('spider_cart') || '[]'); } catch (error) { cart = []; }
+            const existing = cart.find(item => Number(item.id || item.product_id) === productId);
+            if (existing) existing.quantity = Number(existing.quantity || 0) + quantity;
+            else cart.push({ id: productId, product_id: productId, quantity });
+            localStorage.setItem('spider_cart', JSON.stringify(cart));
+        }
 
         ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(eventName => {
             document.addEventListener(eventName, event => {

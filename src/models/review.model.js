@@ -41,7 +41,12 @@ class ReviewModel {
 
     static async getById(reviewId) {
         const db = getDb();
-        return db.get(`SELECT * FROM reviews WHERE id = ?`, [reviewId]);
+        return db.get(`
+            SELECT r.*, p.seller_id
+            FROM reviews r
+            JOIN products p ON p.id = r.product_id
+            WHERE r.id = ?
+        `, [reviewId]);
     }
 
     static async updateReview(reviewId, data) {

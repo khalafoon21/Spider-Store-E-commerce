@@ -35,6 +35,7 @@
 </head>
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
+    <script src="../../components/app-state.js"></script>
     <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/main-navbar.js"></script>
 
@@ -67,7 +68,7 @@
                 </div>
 
                 <textarea id="reviewComment" rows="3" placeholder="اكتب رأيك ومميزات أو عيوب المنتج..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 outline-none mb-4"></textarea>
-                <button onclick="submitReview()" id="submitReviewBtn" class="bg-secondary-500 hover:bg-yellow-500 text-white font-bold py-2 px-6 rounded-md shadow-sm transition-colors">
+                <button type="button" onclick="submitReview()" id="submitReviewBtn" class="bg-secondary-500 hover:bg-yellow-500 text-white font-bold py-2 px-6 rounded-md shadow-sm transition-colors">
                     نشر التقييم
                 </button>
             </div>
@@ -106,6 +107,29 @@
             if (!cleanPath) return 'https://via.placeholder.com/600?text=No+Image';
             return /^https?:\/\//i.test(cleanPath) ? cleanPath : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
         };
+        const normalizeProductImages = product => {
+            const images = [];
+            const pushImage = value => {
+                const clean = String(value || '').trim();
+                if (clean && !images.includes(clean)) images.push(clean);
+            };
+
+            pushImage(product.image_url || product.image);
+            [product.images_array, product.images_list, product.images].forEach(value => {
+                if (Array.isArray(value)) return value.forEach(pushImage);
+                if (typeof value === 'string' && value.trim()) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (Array.isArray(parsed)) parsed.forEach(pushImage);
+                        else pushImage(parsed);
+                    } catch (error) {
+                        value.split(/[,\n]/).forEach(pushImage);
+                    }
+                }
+            });
+
+            return images.length ? images : [''];
+        };
         const calcFinalPrice = (price, discount) => {
             const basePrice = safeNumber(price);
             const discountValue = safeNumber(discount);
@@ -113,13 +137,13 @@
         };
 
         function decodeTokenRole() {
-            const token = localStorage.getItem('spider_token');
+            const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
             if (!token) return null;
             try { return JSON.parse(atob(token.split('.')[1])).role; } catch(e) { return null; }
         }
 
         function decodeTokenUserId() {
-            const token = localStorage.getItem('spider_token');
+            const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
             if (!token) return null;
             try { return JSON.parse(atob(token.split('.')[1])).userId; } catch(e) { return null; }
         }
@@ -156,8 +180,7 @@
             const hasDiscount = discount > 0;
             const finalPrice = calcFinalPrice(price, discount);
 
-            let imagesArray = product.images_array ? product.images_array : [product.image_url];
-            imagesArray = imagesArray.filter(Boolean);
+            let imagesArray = normalizeProductImages(product);
             const mainImgUrl = buildImageUrl(imagesArray[0]);
             
             let thumbnailsHtml = '';
@@ -181,7 +204,7 @@
                 <div class="flex flex-col md:flex-row w-full">
                     <div class="md:w-1/2 bg-white flex flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-l border-gray-100 relative">
                         ${hasDiscount ? `<span class="absolute top-6 left-6 bg-error-500 text-white text-sm font-bold px-4 py-1 rounded-full z-10 shadow-md">خصم ${discount}%</span>` : ''}
-                        <img id="mainProductImage" src="${mainImgUrl}" alt="${escapeHTML(product.title)}" class="w-full max-h-[400px] object-contain hover:scale-105 transition-transform duration-300">
+                        <img id="mainProductImage" src="${mainImgUrl}" alt="${escapeHTML(product.title)}" class="w-full max-h-[400px] object-contain hover:scale-105 transition-transform duration-300" onerror="this.onerror=null;this.src='https://via.placeholder.com/600?text=No+Image'">
                         ${thumbnailsHtml}
                     </div>
 
@@ -224,7 +247,7 @@
                             </div>
                         ` : `
                             <div class="mt-auto border-t pt-8 border-gray-200">
-                                <button disabled class="w-full bg-gray-300 text-gray-500 font-bold py-3 px-6 rounded-md cursor-not-allowed flex items-center justify-center gap-2 text-lg">
+                                <button type="button" disabled class="w-full bg-gray-300 text-gray-500 font-bold py-3 px-6 rounded-md cursor-not-allowed flex items-center justify-center gap-2 text-lg">
                                     <i class="fas fa-box-open"></i> المنتج غير متاح حالياً
                                 </button>
                             </div>
@@ -327,12 +350,12 @@
                     replyHtml = `<div class="mt-4 bg-primary-50 p-4 rounded-md border border-primary-100 mr-8">
                                     <p class="text-xs font-bold text-primary-700 mb-1"><i class="fas fa-store"></i> رد الإدارة:</p>
                                     <p class="text-sm text-gray-700">${escapeHTML(rev.reply)}</p>
-                                    ${(currentUserRole === 'admin' || currentUserRole === 'seller') ? `<div class="mt-3"><textarea id="replyInput-${rev.id}" rows="1" class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(rev.reply)}</textarea><button onclick="submitReply(${rev.id})" class="text-xs bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 transition-colors">تعديل الرد</button></div>` : ''}
+                                    ${(currentUserRole === 'admin' || currentUserRole === 'seller') ? `<div class="mt-3"><textarea id="replyInput-${rev.id}" rows="1" class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(rev.reply)}</textarea><button type="button" onclick="submitReply(${rev.id})" class="text-xs bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 transition-colors">تعديل الرد</button></div>` : ''}
                                  </div>`;
                 } else if (currentUserRole === 'admin' || currentUserRole === 'seller') {
                     replyHtml = `<div class="mt-3 mr-8" id="replyBox-${rev.id}">
                                     <textarea id="replyInput-${rev.id}" rows="1" placeholder="اكتب ردك هنا..." class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500"></textarea>
-                                    <button onclick="submitReply(${rev.id})" class="text-xs bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 transition-colors">إرسال الرد</button>
+                                    <button type="button" onclick="submitReply(${rev.id})" class="text-xs bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 transition-colors">إرسال الرد</button>
                                  </div>`;
                 }
                 html += `<div class="border-b border-gray-100 pb-6 last:border-0">
@@ -343,7 +366,7 @@
                                 </div>
                             </div>
                             <p class="text-gray-600 text-sm mt-3 leading-relaxed pl-12">${escapeHTML(rev.comment)}</p>
-                            ${canEditReview ? `<div class="mt-3 pl-12"><textarea id="reviewEdit-${rev.id}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(rev.comment)}</textarea><button onclick="updateReview(${rev.id}, ${rev.rating})" class="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 transition-colors">تعديل التقييم</button></div>` : ''}
+                            ${canEditReview ? `<div class="mt-3 pl-12"><textarea id="reviewEdit-${rev.id}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(rev.comment)}</textarea><button type="button" onclick="updateReview(${rev.id}, ${rev.rating})" class="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 transition-colors">تعديل التقييم</button></div>` : ''}
                             ${replyHtml}
                         </div>`;
             });
@@ -355,7 +378,7 @@
             const comment = document.getElementById('reviewComment').value.trim();
             if (!comment) { showToast('يرجى كتابة تعليقك', 'error'); return; }
 
-            const token = localStorage.getItem('spider_token');
+            const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
             const btn = document.getElementById('submitReviewBtn');
             btn.disabled = true; btn.innerText = 'جاري النشر...';
 
@@ -383,7 +406,7 @@
         async function submitReply(reviewId) {
             const replyText = document.getElementById(`replyInput-${reviewId}`).value.trim();
             if (!replyText) return;
-            const token = localStorage.getItem('spider_token');
+            const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
 
             try {
                 const res = await fetch(`${API_URL}/reviews/${reviewId}/reply`, {
@@ -404,7 +427,7 @@
                 showToast('اكتب نص التقييم قبل الحفظ', 'error');
                 return;
             }
-            const token = localStorage.getItem('spider_token');
+            const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
             try {
                 const res = await fetch(`${API_URL}/reviews/${reviewId}`, {
                     method: 'PUT',
@@ -437,9 +460,11 @@
         // الإضافة المباشرة للباك اند (Hybrid Model)
         // ==========================================
         async function addToCartFromDetails(button) {
-            const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
             if (!token) { 
-                showToast('يجب تسجيل الدخول أولاً لإضافة منتجات للسلة!', 'error'); 
+                addGuestCartItem(currentProduct.id, selectedQuantity);
+                showToast(`تم إضافة عدد (${selectedQuantity}) لسلة الزائر`);
+                if (typeof updateGlobalCartCount === 'function') updateGlobalCartCount();
                 return; 
             }
             
@@ -474,7 +499,7 @@
         }
 
         async function addToWishlist() {
-            const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
             if (!token) {
                 showToast('يجب تسجيل الدخول لإضافة المنتج لقائمة الأمنيات', 'error');
                 return;
@@ -490,6 +515,21 @@
             } catch (error) {
                 showToast('تعذر الاتصال بالسيرفر', 'error');
             }
+        }
+
+        function addGuestCartItem(id, quantity) {
+            const productId = Number(id);
+            if (!productId) return;
+            if (window.AppState) {
+                window.AppState.addCartItem(productId, quantity);
+                return;
+            }
+            let cart = [];
+            try { cart = JSON.parse(localStorage.getItem('spider_cart') || '[]'); } catch (error) { cart = []; }
+            const existing = cart.find(item => Number(item.id || item.product_id) === productId);
+            if (existing) existing.quantity = Number(existing.quantity || 0) + quantity;
+            else cart.push({ id: productId, product_id: productId, quantity });
+            localStorage.setItem('spider_cart', JSON.stringify(cart));
         }
 
         function showError(msg) {
@@ -512,7 +552,7 @@
                     <h4 class="font-bold text-gray-800 text-sm">${isSuccess ? 'تم بنجاح' : 'تنبيه'}</h4>
                     <p class="text-xs text-gray-500 font-medium mt-0.5 leading-relaxed">${escapeHTML(message)}</p>
                 </div>
-                <button class="flex-shrink-0 text-gray-400 hover:text-gray-700" onclick="this.parentElement.remove()">
+                <button type="button" class="flex-shrink-0 text-gray-400 hover:text-gray-700" onclick="this.parentElement.remove()">
                     <i class="fas fa-times"></i>
                 </button>
                 <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-100">

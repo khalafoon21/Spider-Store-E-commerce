@@ -70,7 +70,7 @@ async function getOrderHistory(req, res) {
 
 async function getAllOrdersAdmin(req, res) {
     try {
-        if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+        if (req.user.role !== 'admin') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ 
                 success: false, 
@@ -95,7 +95,7 @@ async function getAllOrdersAdmin(req, res) {
 
 async function updateOrderStatus(req, res) {
     try {
-        if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+        if (req.user.role !== 'admin') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ 
                 success: false, 
@@ -156,7 +156,7 @@ async function cancelOrder(req, res) {
             return res.end(JSON.stringify({ success: false, message: 'Valid order id is required' }));
         }
 
-        const isAdminActor = req.user.role === 'admin' || req.user.role === 'seller';
+        const isAdminActor = req.user.role === 'admin';
         await OrderModel.cancelOrder(orderId, isAdminActor ? null : req.user.userId);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -170,7 +170,7 @@ async function cancelOrder(req, res) {
 
 async function getSalesAnalytics(req, res) {
     try {
-        if (req.user.role !== 'admin' && req.user.role !== 'seller') {
+        if (req.user.role !== 'admin') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ success: false, message: 'Not allowed' }));
         }

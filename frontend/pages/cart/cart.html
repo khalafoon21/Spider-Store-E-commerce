@@ -33,6 +33,7 @@
 </head>
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
+    <script src="../../components/app-state.js"></script>
     <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/main-navbar.js"></script>
 
@@ -75,7 +76,7 @@
                     <span id="total" class="font-bold text-primary-600">0 ج.م</span>
                 </div>
 
-                <button onclick="goToCheckout()" class="w-full bg-secondary-500 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-md shadow-sm smooth-transition text-lg">
+                <button type="button" onclick="goToCheckout()" class="w-full bg-secondary-500 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-md shadow-sm smooth-transition text-lg">
                     إتمام الطلب
                 </button>
             </div>
@@ -96,12 +97,11 @@
         };
 
         function getToken() {
-            return localStorage.getItem('spider_token') || localStorage.getItem('token');
+            return window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
         }
 
         function checkAuth() {
             if (!getToken()) {
-                window.location.href = '../auth/login.html';
                 return false;
             }
             return true;
@@ -109,7 +109,10 @@
 
         // 1. جلب السلة من الباك اند (بدون LocalStorage وبدون جلب المنتجات)
         async function initCart() {
-            if (!checkAuth()) return;
+            if (!checkAuth()) {
+                await initGuestCart();
+                return;
+            }
             
             try {
                 const res = await fetch(`${API_URL}/cart`, {
@@ -135,6 +138,44 @@
                 console.error(error);
                 document.getElementById('cartItemsContainer').innerHTML = '<p class="text-center text-error-500 font-bold py-8">حدث خطأ في الاتصال بالخادم.</p>';
             }
+        }
+
+        async function initGuestCart() {
+            let localCart = [];
+            try { localCart = window.AppState ? window.AppState.getCart() : JSON.parse(localStorage.getItem('spider_cart') || '[]'); } catch (error) { localCart = []; }
+            if (!Array.isArray(localCart) || localCart.length === 0) {
+                serverCart = [];
+                renderCart();
+                return;
+            }
+
+            const items = [];
+            for (const item of localCart) {
+                const productId = Number(item.product_id || item.id);
+                if (!productId) continue;
+                try {
+                    const response = await fetch(`${API_URL}/products/${productId}`);
+                    const result = await response.json();
+                    if (response.ok && result.success && result.data) {
+                        const product = result.data;
+                        const quantity = Math.max(1, Number(item.quantity || 1));
+                        const price = Number(product.price || 0);
+                        const discount = Number(product.discount || 0);
+                        const finalPrice = discount > 0 ? price - (price * discount / 100) : price;
+                        items.push({
+                            product_id: product.id,
+                            title: product.title,
+                            image_url: product.image_url,
+                            price: finalPrice,
+                            quantity,
+                            total_price: finalPrice * quantity
+                        });
+                    }
+                } catch (error) {}
+            }
+            serverCart = items;
+            renderCart();
+            if (typeof updateGlobalCartCount === 'function') updateGlobalCartCount();
         }
 
         // 2. رسم السلة بناءً على الداتا اللي راجعة جاهزة من السيرفر
@@ -207,6 +248,12 @@
             const newQty = currentQty + change;
             if (newQty < 1) return; // لا يمكن أن تكون الكمية أقل من 1
 
+            if (!getToken()) {
+                updateGuestCartQuantity(productId, newQty);
+                await initGuestCart();
+                return;
+            }
+
             const overlay = document.getElementById('loadingOverlay');
             overlay.classList.remove('hidden');
 
@@ -237,6 +284,13 @@
 
         // 4. حذف المنتج من السيرفر مباشرة
         async function removeItem(productId) {
+            if (!getToken()) {
+                updateGuestCartQuantity(productId, 0);
+                showToast("تم إزالة المنتج من السلة");
+                await initGuestCart();
+                return;
+            }
+
             const overlay = document.getElementById('loadingOverlay');
             overlay.classList.remove('hidden');
 
@@ -265,7 +319,24 @@
             }
         }
 
+        function updateGuestCartQuantity(productId, quantity) {
+            if (window.AppState) {
+                window.AppState.updateCartItem(productId, quantity);
+                return;
+            }
+            let cart = [];
+            try { cart = JSON.parse(localStorage.getItem('spider_cart') || '[]'); } catch (error) { cart = []; }
+            cart = cart
+                .map(item => Number(item.id || item.product_id) === Number(productId) ? { ...item, quantity } : item)
+                .filter(item => Number(item.quantity || 0) > 0);
+            localStorage.setItem('spider_cart', JSON.stringify(cart));
+        }
+
         function goToCheckout() {
+            if (!getToken()) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
             window.location.href = '../orders/checkout.html';
         }
 

@@ -49,7 +49,7 @@
                 <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900">إدارة الطلبات المباشرة</h1>
                 <p class="text-gray-500 mt-1 text-sm md:text-base">متابعة وتحديث حالات طلبات العملاء</p>
             </div>
-            <button onclick="fetchAllOrders()" class="bg-primary-50 text-primary-600 hover:bg-primary-100 px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2">
+            <button type="button" onclick="fetchAllOrders()" class="bg-primary-50 text-primary-600 hover:bg-primary-100 px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2">
                 <i class="fas fa-sync-alt"></i> تحديث البيانات
             </button>
         </header>
@@ -94,15 +94,29 @@
         </div>
     </main>
 
+    <div id="orderDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto shadow-2xl">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h2 class="text-xl font-extrabold text-gray-900">تفاصيل الطلب</h2>
+                <button type="button" onclick="closeOrderDetails()" class="h-9 w-9 rounded-lg bg-gray-100 hover:bg-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="orderDetailsContent" class="p-5"></div>
+        </div>
+    </div>
+
+    <script src="../../components/app-state.js"></script>
     <script src="../../components/admin-sidebar.js"></script>
 
     <script>
         loadAdminSidebar('dashboard');
         const API_URL = 'http://127.0.0.1:3000/api';
+        let ordersCache = [];
+        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag]));
 
         // دالة تسجيل الخروج المطلوبة للشريط الجانبي
         function logout() {
-            localStorage.removeItem('spider_token');
+            if (window.AppState) window.AppState.clearToken();
+            else localStorage.removeItem('spider_token');
             window.location.href = '../auth/login.html';
         }
 
@@ -155,7 +169,8 @@
                 const data = await response.json();
 
                 if (response.ok || data.success) {
-                    renderAdminOrders(data.data || []);
+                    ordersCache = data.data || [];
+                    renderAdminOrders(ordersCache);
                 } else {
                     container.innerHTML = `<tr><td colspan="6" class="text-center text-error-500 p-12 bg-error-50 font-bold rounded-lg"><i class="fas fa-lock text-3xl mb-3 block"></i> خطأ: ${data.message || 'لست بصلاحية مسؤول (Admin)'}</td></tr>`;
                 }
@@ -220,17 +235,17 @@
 
                 html += `
                     <tr class="hover:bg-gray-50 transition duration-150 group">
-                        <td class="p-5 font-bold text-gray-800">
+                        <td class="p-5 font-bold text-gray-800 cursor-pointer" onclick="openOrderDetails(${order.id})">
                             <span class="bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-sm shadow-sm group-hover:bg-white transition">#${order.id}</span>
                         </td>
-                        <td class="p-5 font-semibold text-gray-700 flex items-center gap-3">
+                        <td class="p-5 font-semibold text-gray-700 flex items-center gap-3 cursor-pointer" onclick="openOrderDetails(${order.id})">
                             <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-sm shadow-sm">
                                 <i class="fas fa-user"></i>
                             </div>
                             ${customerName}
                         </td>
-                        <td class="p-5 text-gray-600 font-medium tracking-wide" dir="ltr">${customerPhone}</td>
-                        <td class="p-5 text-gray-500 max-w-[250px] truncate" title="${order.shipping_address}">
+                        <td class="p-5 text-gray-600 font-medium tracking-wide cursor-pointer" onclick="openOrderDetails(${order.id})" dir="ltr">${customerPhone}</td>
+                        <td class="p-5 text-gray-500 max-w-[250px] truncate cursor-pointer" onclick="openOrderDetails(${order.id})" title="${order.shipping_address}">
                             <i class="fas fa-map-marker-alt text-gray-400 ml-1"></i>
                             ${order.shipping_address || 'لم يتم تحديد عنوان'}
                         </td>
@@ -251,10 +266,11 @@
                                         <i class="fas fa-chevron-down text-xs"></i>
                                     </div>
                                 </div>
-                                <button onclick="updateStatus(${order.id})" class="text-primary-600 hover:text-white hover:bg-primary-600 bg-primary-50 border border-primary-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حفظ التعديل">
+                                <button type="button" onclick="updateStatus(${order.id})" class="text-primary-600 hover:text-white hover:bg-primary-600 bg-primary-50 border border-primary-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="حفظ التعديل">
                                     <i class="fas fa-save"></i>
                                 </button>
-                                ${statusStr !== 'Cancelled' && statusStr !== 'Delivered' ? `<button onclick="cancelOrder(${order.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="إلغاء الطلب"><i class="fas fa-ban"></i></button>` : ''}
+                                <button type="button" onclick="openOrderDetails(${order.id})" class="text-gray-600 hover:text-white hover:bg-gray-700 bg-gray-50 border border-gray-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="التفاصيل"><i class="fas fa-eye"></i></button>
+                                ${statusStr !== 'Cancelled' && statusStr !== 'Delivered' ? `<button type="button" onclick="cancelOrder(${order.id})" class="text-error-500 hover:text-white hover:bg-error-500 bg-error-50 border border-error-100 h-9 w-9 rounded-lg transition shadow-sm flex items-center justify-center" title="إلغاء الطلب"><i class="fas fa-ban"></i></button>` : ''}
                             </div>
                         </td>
                     </tr>
@@ -262,6 +278,54 @@
             });
 
             container.innerHTML = html;
+        }
+
+        function openOrderDetails(orderId) {
+            const order = ordersCache.find(item => Number(item.id) === Number(orderId));
+            if (!order) return showToast('لم يتم العثور على الطلب', 'error');
+            const items = order.items || [];
+            const subtotal = Number(order.subtotal || items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price_at_purchase), 0));
+            const shipping = Number(order.shipping_amount ?? Math.max(0, Number(order.total_amount || 0) - subtotal));
+            document.getElementById('orderDetailsContent').innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+                    ${detailItem('رقم الطلب', `#${order.id}`)}
+                    ${detailItem('اسم العميل', order.full_name || 'غير مسجل')}
+                    ${detailItem('رقم الهاتف', order.phone || 'غير مسجل')}
+                    ${detailItem('العنوان', order.shipping_address || 'غير محدد')}
+                    ${detailItem('المدينة / الدولة', `${order.city || '-'} / ${order.country || '-'}`)}
+                    ${detailItem('تاريخ الطلب', order.created_at || '-')}
+                    ${detailItem('طريقة الدفع', order.payment_method || 'Cash on Delivery')}
+                    ${detailItem('حالة الطلب', order.status || 'Pending')}
+                    ${detailItem('ملاحظات', order.notes || 'لا توجد')}
+                </div>
+                <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
+                    <div class="bg-gray-50 p-4 font-extrabold text-gray-900">المنتجات داخل الطلب</div>
+                    <div class="divide-y divide-gray-100">
+                        ${items.map(item => `
+                            <div class="p-4 flex justify-between gap-4">
+                                <div><p class="font-bold text-gray-900">${escapeHTML(item.title)}</p><p class="text-sm text-gray-500">البائع: ${escapeHTML(item.seller_name || '-')} - الكمية: ${item.quantity} × ${Number(item.price_at_purchase).toFixed(2)} ج.م</p></div>
+                                <strong class="text-primary-600">${(Number(item.quantity) * Number(item.price_at_purchase)).toFixed(2)} ج.م</strong>
+                            </div>
+                        `).join('') || '<p class="p-4 text-gray-500">لا توجد منتجات.</p>'}
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    ${detailItem('Subtotal', `${subtotal.toFixed(2)} ج.م`)}
+                    ${detailItem('الشحن', `${shipping.toFixed(2)} ج.م`)}
+                    ${detailItem('الإجمالي بالشحن', `${Number(order.total_amount || 0).toFixed(2)} ج.م`)}
+                </div>
+            `;
+            document.getElementById('orderDetailsModal').classList.remove('hidden');
+            document.getElementById('orderDetailsModal').classList.add('flex');
+        }
+
+        function detailItem(label, value) {
+            return `<div class="bg-gray-50 border border-gray-100 rounded-lg p-4"><span class="block text-gray-400 text-xs mb-1">${escapeHTML(label)}</span><strong class="text-gray-800">${escapeHTML(value)}</strong></div>`;
+        }
+
+        function closeOrderDetails() {
+            document.getElementById('orderDetailsModal').classList.add('hidden');
+            document.getElementById('orderDetailsModal').classList.remove('flex');
         }
 
         async function updateStatus(orderId) {

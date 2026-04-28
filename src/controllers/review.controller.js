@@ -66,6 +66,17 @@ async function replyToReview(req, res, reviewIdFromPath = null) {
             return res.end(JSON.stringify({ success: false, message: 'رقم التقييم والرد مطلوبان' }));
         }
 
+        const review = await ReviewModel.getById(reviewId);
+        if (!review) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Review not found' }));
+        }
+
+        if (req.user.role !== 'admin' && Number(review.seller_id) !== Number(req.user.userId)) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'You can only reply to reviews on your products' }));
+        }
+
         await ReviewModel.addReply(reviewId, reply);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, message: 'تم إضافة الرد بنجاح' }));
@@ -97,7 +108,7 @@ async function updateReview(req, res, reviewId) {
             return res.end(JSON.stringify({ success: false, message: 'Review not found' }));
         }
 
-        const canEdit = req.user.role === 'admin' || req.user.role === 'seller' || Number(review.user_id) === Number(req.user.userId);
+        const canEdit = req.user.role === 'admin' || Number(review.user_id) === Number(req.user.userId);
         if (!canEdit) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ success: false, message: 'Not allowed to edit this review' }));

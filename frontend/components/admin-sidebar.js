@@ -6,12 +6,49 @@ function ensureAdminUiFeedbackScript() {
     document.head.appendChild(script);
 }
 
-function loadAdminSidebar(activePage) {
+function ensureAdminAppStateScript() {
+    if (window.AppState || document.querySelector('script[data-app-state]')) return;
+    const script = document.createElement('script');
+    script.src = '../../components/app-state.js';
+    script.dataset.appState = 'true';
+    document.head.appendChild(script);
+}
+
+function getStoredAdminToken() {
+    if (window.AppState && typeof window.AppState.getToken === 'function') {
+        return window.AppState.getToken();
+    }
+    return localStorage.getItem('spider_token') || localStorage.getItem('token');
+}
+
+async function getLiveAdminRole(token) {
+    const decodedRole = decodeAdminRole(token);
+    if (decodedRole === 'admin') return decodedRole;
+
+    try {
+        const response = await fetch('http://127.0.0.1:3000/api/profile', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const result = await response.json();
+        return result && result.data ? result.data.role : decodedRole;
+    } catch (error) {
+        return decodedRole;
+    }
+}
+
+async function loadAdminSidebar(activePage) {
+    ensureAdminAppStateScript();
     ensureAdminUiFeedbackScript();
+    const token = getStoredAdminToken();
+    const role = await getLiveAdminRole(token);
+    if (!token || role !== 'admin') {
+        window.location.href = '../auth/login.html';
+        return;
+    }
     const sidebarHTML = `
         <div class="md:hidden bg-gray-900 text-white flex justify-between items-center p-4 shadow-md sticky top-0 z-40">
             <h2 class="text-xl font-bold text-primary-500">Spider<span class="text-white">Admin</span></h2>
-            <button id="mobileMenuBtn" class="text-white focus:outline-none hover:text-primary-500 transition">
+            <button type="button" id="mobileMenuBtn" class="text-white focus:outline-none hover:text-primary-500 transition">
                 <i class="fas fa-bars text-2xl"></i>
             </button>
         </div>
@@ -22,7 +59,7 @@ function loadAdminSidebar(activePage) {
             <div class="p-6 text-center border-b border-gray-800 flex justify-between items-center md:block">
                 <h2 class="text-2xl font-bold text-primary-500 hidden md:block">Spider<span class="text-white">Admin</span></h2>
                 <h2 class="text-xl font-bold text-primary-500 md:hidden">القائمة</h2>
-                <button id="closeSidebarBtn" class="md:hidden text-gray-400 hover:text-white focus:outline-none">
+                <button type="button" id="closeSidebarBtn" class="md:hidden text-gray-400 hover:text-white focus:outline-none">
                     <i class="fas fa-times text-2xl"></i>
                 </button>
             </div>
@@ -34,7 +71,7 @@ function loadAdminSidebar(activePage) {
                     <i class="fas fa-plus-circle ml-2"></i> إضافة منتج
                 </a>
                 <a href="manage-products.html" class="block px-4 py-3 rounded-md transition ${activePage === 'manage-products' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
-                    <i class="fas fa-pen-to-square ml-2"></i> تعديل وحذف المنتجات
+                    <i class="fas fa-pen-to-square ml-2"></i> المنتجات
                 </a>
                 
                 <a href="add-category.html" class="block px-4 py-3 rounded-md transition ${activePage === 'add-category' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
@@ -53,9 +90,9 @@ function loadAdminSidebar(activePage) {
                 <a href="../../index.html" class="block px-4 py-3 hover:bg-gray-800 rounded-md transition mt-4">
                     <i class="fas fa-store ml-2"></i> العودة للمتجر
                 </a>
-                <a href="#" onclick="logout()" class="block px-4 py-3 text-error-500 hover:bg-gray-800 rounded-md transition mt-8">
+                <button type="button" onclick="logout()" class="w-full text-right block px-4 py-3 text-error-500 hover:bg-gray-800 rounded-md transition mt-8">
                     <i class="fas fa-sign-out-alt ml-2"></i> تسجيل الخروج
-                </a>
+                </button>
             </nav>
         </aside>
     `;
@@ -73,4 +110,14 @@ function loadAdminSidebar(activePage) {
     document.getElementById('mobileMenuBtn').addEventListener('click', toggleSidebar);
     document.getElementById('closeSidebarBtn').addEventListener('click', toggleSidebar);
     overlay.addEventListener('click', toggleSidebar);
+}
+
+function decodeAdminRole(token) {
+    if (!token) return null;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.role === 'customer' ? 'user' : payload.role;
+    } catch (error) {
+        return null;
+    }
 }

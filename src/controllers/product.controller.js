@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const { formidable } = require('formidable');
 const ProductModel = require('../models/product.model');
+const TagModel = require('../models/tag.model');
+const getDb = require('../config/database');
 const { getPostData } = require('../utils/helpers');
 
 async function getProducts(req, res) {
@@ -34,6 +36,11 @@ async function getProductById(req, res, productId) {
         const product = await ProductModel.getById(productId);
 
         if (!product) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Product not found' }));
+        }
+
+        if (product.status && product.status !== 'approved') {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ success: false, message: 'Product not found' }));
         }
@@ -135,6 +142,9 @@ async function createProduct(req, res) {
                 }
 
                 // تسجيل المنتج في قاعدة البيانات
+                const syncedTags = await TagModel.syncFromString(tags);
+                const shouldAutoApprove = req.user.role === 'admin' || req.user.seller_status === 'approved_seller';
+
                 const newProductId = await ProductModel.create({
                     seller_id: req.user.userId,
                     title,
@@ -144,8 +154,8 @@ async function createProduct(req, res) {
                     stock_quantity: Math.floor(parsedStock),
                     category_id: parsedCategoryId,
                     brand,
-                    tags,
-                    status: req.user.role === 'admin' ? 'approved' : 'pending',
+                    tags: syncedTags,
+                    status: shouldAutoApprove ? 'approved' : 'pending',
                     featured: req.user.role === 'admin' ? featured : 0,
                     image_url,
                     additional_images 
@@ -195,6 +205,74 @@ async function getMyProducts(req, res) {
             success: false,
             message: 'حدث خطأ أثناء جلب منتجاتك'
         }));
+    }
+}
+
+async function getAdminProducts(req, res) {
+    try {
+        if (req.user.role !== 'admin') {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({
+                success: false,
+                message: 'Admin access only'
+            }));
+        }
+
+        const baseURL = `http://${req.headers.host}`;
+        const parsedUrl = new URL(req.url, baseURL);
+        const status = parsedUrl.searchParams.get('status') || '';
+        const products = await ProductModel.getAll('', null, {
+            publicOnly: false,
+            status: ['pending', 'approved', 'rejected'].includes(status) ? status : ''
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: products }));
+    } catch (error) {
+        console.error(error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: false,
+            message: 'Could not load admin products'
+        }));
+    }
+}
+
+async function updateProductStatusAdmin(req, res, productId) {
+    try {
+        if (req.user.role !== 'admin') {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Admin access only' }));
+        }
+
+        const body = await getPostData(req);
+        const status = body.status;
+        const validStatuses = ['pending', 'approved', 'rejected', 'approved_seller'];
+
+        if (!validStatuses.includes(status)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Invalid product status' }));
+        }
+
+        const existing = await ProductModel.getById(productId);
+        if (!existing) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Product not found' }));
+        }
+
+        if (status === 'approved_seller') {
+            const db = getDb();
+            await db.run(`UPDATE users SET seller_status = 'approved_seller' WHERE id = ?`, [existing.seller_id]);
+            await ProductModel.updateStatusById(productId, 'approved');
+        } else {
+            await ProductModel.updateStatusById(productId, status);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Product status updated successfully' }));
+    } catch (error) {
+        console.error(error);
+        const statusCode = error.code === 'INVALID_JSON' ? 400 : 500;
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Could not update product status' }));
     }
 }
 
@@ -255,7 +333,9 @@ async function updateProduct(req, res, productId) {
                 : existing.category_id;
             const brand = fields.brand ? fields.brand[0] : (existing.brand || '');
             const tags = fields.tags ? fields.tags[0] : (existing.tags || '');
-            const status = req.user.role === 'admin' && fields.status ? fields.status[0] : (existing.status || 'approved');
+            const status = req.user.role === 'admin'
+                ? (fields.status ? fields.status[0] : (existing.status || 'approved'))
+                : 'pending';
             const featured = req.user.role === 'admin' && fields.featured ? Number(fields.featured[0]) : Number(existing.featured || 0);
 
             if (
@@ -263,7 +343,8 @@ async function updateProduct(req, res, productId) {
                 Number.isNaN(price) || price < 0 ||
                 Number.isNaN(discount) || discount < 0 ||
                 Number.isNaN(stock_quantity) || stock_quantity < 0 ||
-                (category_id !== null && Number.isNaN(category_id))
+                (category_id !== null && Number.isNaN(category_id)) ||
+                !['pending', 'approved', 'rejected'].includes(status)
             ) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({
@@ -290,6 +371,8 @@ async function updateProduct(req, res, productId) {
                 if (fileName) image_url = `/uploads/products/${fileName}`;
             }
 
+            const syncedTags = await TagModel.syncFromString(tags);
+
             await ProductModel.updateById(productId, {
                 title,
                 description,
@@ -299,7 +382,7 @@ async function updateProduct(req, res, productId) {
                 image_url,
                 category_id,
                 brand,
-                tags,
+                tags: syncedTags,
                 status,
                 featured
             });
@@ -364,4 +447,13 @@ async function deleteProduct(req, res, productId) {
     }
 }
 
-module.exports = { getProducts, getProductById, createProduct, getMyProducts, updateProduct, deleteProduct };
+module.exports = {
+    getProducts,
+    getProductById,
+    createProduct,
+    getMyProducts,
+    getAdminProducts,
+    updateProductStatusAdmin,
+    updateProduct,
+    deleteProduct
+};

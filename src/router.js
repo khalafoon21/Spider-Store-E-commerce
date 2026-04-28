@@ -2,11 +2,12 @@ const fs = require('fs');
 const sysPath = require('path');
 const url = require('url');
 
-const { isAdmin } = require('./middleware/role.middleware');
+const { isAdmin, isSeller } = require('./middleware/role.middleware');
 const { getAllUsers, updateUserRole } = require('./controllers/admin.controller');
 const { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin, cancelOrder, getSalesAnalytics } = require('./controllers/order.controller'); 
 const { addToCart, viewCart, updateCartItem, removeCartItem } = require('./controllers/cart.controller');
-const { getProducts, getProductById, createProduct, getMyProducts, updateProduct, deleteProduct } = require('./controllers/product.controller');
+const { getProducts, getProductById, createProduct, getAdminProducts, updateProductStatusAdmin, updateProduct, deleteProduct } = require('./controllers/product.controller');
+const { getSellerProducts, getSellerOrders, getSellerStats, getSellerReviews } = require('./controllers/seller.controller');
 const { authenticate } = require('./middleware/auth.middleware');
 const { getProfile, updateProfile } = require('./controllers/user.controller');
 const { registerUser, loginUser, activateEmail, forgotPassword, resetPassword } = require('./controllers/auth.controller');
@@ -77,7 +78,15 @@ const router = async (req, res) => {
 
     if (path === '/api/products' && method === 'GET') return getProducts(req, res);
     if (path === '/api/products' && method === 'POST') { try { await authenticate(req, res); return createProduct(req, res); } catch (e) { return; } }
-    if (path === '/api/admin/products' && method === 'GET') { try { await authenticate(req, res); return getMyProducts(req, res); } catch (e) { return; } }
+    if (path === '/api/admin/products' && method === 'GET') { try { await authenticate(req, res); await isAdmin(req, res); return getAdminProducts(req, res); } catch (e) { return; } }
+    if (path.startsWith('/api/admin/products/') && path.endsWith('/status') && method === 'PUT') { try { await authenticate(req, res); await isAdmin(req, res); const id = path.split('/')[4]; return updateProductStatusAdmin(req, res, Number(id)); } catch (e) { return; } }
+    if (path === '/api/seller/products' && method === 'GET') { try { await authenticate(req, res); await isSeller(req, res); return getSellerProducts(req, res); } catch (e) { return; } }
+    if (path === '/api/seller/products' && method === 'POST') { try { await authenticate(req, res); await isSeller(req, res); return createProduct(req, res); } catch (e) { return; } }
+    if (path.startsWith('/api/seller/products/') && method === 'PUT') { try { await authenticate(req, res); await isSeller(req, res); const id = path.split('/').pop(); return updateProduct(req, res, Number(id)); } catch (e) { return; } }
+    if (path.startsWith('/api/seller/products/') && method === 'DELETE') { try { await authenticate(req, res); await isSeller(req, res); const id = path.split('/').pop(); return deleteProduct(req, res, Number(id)); } catch (e) { return; } }
+    if (path === '/api/seller/orders' && method === 'GET') { try { await authenticate(req, res); await isSeller(req, res); return getSellerOrders(req, res); } catch (e) { return; } }
+    if (path === '/api/seller/stats' && method === 'GET') { try { await authenticate(req, res); await isSeller(req, res); return getSellerStats(req, res); } catch (e) { return; } }
+    if (path === '/api/seller/reviews' && method === 'GET') { try { await authenticate(req, res); await isSeller(req, res); return getSellerReviews(req, res); } catch (e) { return; } }
     if (path.startsWith('/api/products/') && method === 'GET') { const id = path.split('/').pop(); return getProductById(req, res, Number(id)); }
     if (path.startsWith('/api/products/') && method === 'PUT') { try { await authenticate(req, res); const id = path.split('/').pop(); return updateProduct(req, res, Number(id)); } catch (e) { return; } }
     if (path.startsWith('/api/products/') && method === 'DELETE') { try { await authenticate(req, res); const id = path.split('/').pop(); return deleteProduct(req, res, Number(id)); } catch (e) { return; } }

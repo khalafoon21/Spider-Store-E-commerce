@@ -30,12 +30,30 @@ class ProductModel {
 
     static processRows(rows) {
         return rows.map(row => {
+            const images = [];
+            const pushImage = image => {
+                const clean = String(image || '').trim();
+                if (clean && !images.includes(clean)) images.push(clean);
+            };
+
+            pushImage(row.image_url || row.image);
+
             if (row.images) {
-                try { row.images_array = JSON.parse(row.images); } 
-                catch (e) { row.images_array = []; }
-            } else {
-                row.images_array = [];
+                try {
+                    const parsed = JSON.parse(row.images);
+                    if (Array.isArray(parsed)) parsed.forEach(pushImage);
+                    else pushImage(parsed);
+                } catch (e) {
+                    String(row.images).split(/[,\n]/).forEach(pushImage);
+                }
             }
+
+            if (Array.isArray(row.images_array)) row.images_array.forEach(pushImage);
+            row.image_url = row.image_url || images[0] || '';
+            row.image = row.image_url;
+            row.images_array = images;
+            row.images_list = images;
+            row.images_json = JSON.stringify(images);
             return row;
         });
     }
@@ -61,7 +79,8 @@ class ProductModel {
         const db = await ProductModel.ensureDb();
         
         let query = `
-            SELECT p.*, u.first_name || ' ' || u.last_name AS seller_name, c.name AS category_name
+            SELECT p.*, u.first_name || ' ' || u.last_name AS seller_name,
+                   u.role AS owner_role, u.seller_status, c.name AS category_name
             FROM products p
             JOIN users u ON p.seller_id = u.id
             LEFT JOIN categories c ON p.category_id = c.id
@@ -75,6 +94,11 @@ class ProductModel {
 
         if (options.featuredOnly) {
             conditions.push(`COALESCE(p.featured, 0) = 1`);
+        }
+
+        if (options.status) {
+            conditions.push(`COALESCE(p.status, 'approved') = ?`);
+            params.push(options.status);
         }
 
         if (searchQuery) {
@@ -135,6 +159,14 @@ class ProductModel {
         );
     }
 
+    static async updateStatusById(productId, status) {
+        const db = await ProductModel.ensureDb();
+        await db.run(
+            `UPDATE products SET status = ? WHERE id = ?`,
+            [status, productId]
+        );
+    }
+
     static async deleteById(productId) {
         const db = await ProductModel.ensureDb();
         await db.run(`DELETE FROM products WHERE id = ?`, [productId]);
@@ -142,7 +174,14 @@ class ProductModel {
 
     static async getById(productId) {
         const db = await ProductModel.ensureDb();
-        const row = await db.get(`SELECT * FROM products WHERE id = ?`, [productId]);
+        const row = await db.get(`
+            SELECT p.*, u.first_name || ' ' || u.last_name AS seller_name,
+                   u.role AS owner_role, u.seller_status, c.name AS category_name
+            FROM products p
+            JOIN users u ON p.seller_id = u.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = ?
+        `, [productId]);
         if(row) {
             return this.processRows([row])[0]; 
         }

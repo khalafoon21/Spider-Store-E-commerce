@@ -1,12 +1,12 @@
 // دالة لتحديث عداد السلة من السيرفر مباشرة
 async function updateGlobalCartCount() {
     const badge = document.getElementById('cartCountBadge');
-    const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
+    const token = getStoredToken();
     
     if (!badge) return;
 
     if (!token) {
-        badge.textContent = '0';
+        badge.textContent = getStoredCartCount();
         return;
     }
 
@@ -38,9 +38,14 @@ function loadMainNavbar() {
     const cartPathPrefix = isHomePage ? 'pages/cart/' : '../cart/';
     const profilePathPrefix = isHomePage ? 'pages/profile/' : '../profile/';
     const adminPath = isHomePage ? 'pages/admin/dashboard.html' : '../admin/dashboard.html';
+    const sellerPath = isHomePage ? 'pages/seller/dashboard.html' : '../seller/dashboard.html';
 
-    const token = localStorage.getItem('spider_token') || localStorage.getItem('token');
-    const isAdmin = decodeUserRole(token) === 'admin';
+    ensureAppStateScript(pathPrefix);
+
+    const token = getStoredToken();
+    const role = decodeUserRole(token);
+    const isAdmin = role === 'admin';
+    const isSeller = role === 'seller';
     ensureUiFeedbackScript(pathPrefix);
 
     const navbarHTML = `
@@ -63,6 +68,11 @@ function loadMainNavbar() {
                 <a href="${adminPath}" id="adminDashboardLink" class="hidden sm:inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-2 rounded-md smooth-transition text-sm font-bold">
                     <i class="fas fa-gauge-high"></i>
                     <span>لوحة الأدمن</span>
+                </a>` : ''}
+                ${isSeller ? `
+                <a href="${sellerPath}" id="sellerDashboardLink" class="hidden sm:inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-2 rounded-md smooth-transition text-sm font-bold">
+                    <i class="fas fa-store"></i>
+                    <span>لوحة البائع</span>
                 </a>` : ''}
                 <a href="${token ? profilePathPrefix + 'profile.html' : authPathPrefix + 'login.html'}" id="authLink" class="hover:text-secondary-500 smooth-transition text-sm font-medium">
                     <i class="fas fa-user ml-1"></i> ${token ? 'حسابي' : 'دخول'}
@@ -95,6 +105,51 @@ function decodeUserRole(token) {
     }
 }
 
+function getStoredToken() {
+    if (window.AppState && typeof window.AppState.getToken === 'function') {
+        return window.AppState.getToken();
+    }
+    const token = localStorage.getItem('spider_token') || localStorage.getItem('token') || getCookieValue('spider_token');
+    if (token) {
+        try {
+            localStorage.setItem('spider_token', token);
+            localStorage.removeItem('token');
+        } catch (error) {}
+    }
+    return token;
+}
+
+function getStoredCartCount() {
+    if (window.AppState && typeof window.AppState.getCartCount === 'function') {
+        return window.AppState.getCartCount();
+    }
+    try {
+        const localCart = JSON.parse(localStorage.getItem('spider_cart') || '[]');
+        return Array.isArray(localCart)
+            ? localCart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+            : 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+function getCookieValue(name) {
+    const encodedName = `${encodeURIComponent(name)}=`;
+    return document.cookie
+        .split(';')
+        .map(part => part.trim())
+        .filter(Boolean)
+        .reduce((found, part) => found || (part.startsWith(encodedName) ? decodeURIComponent(part.slice(encodedName.length)) : null), null);
+}
+
+function ensureAppStateScript(pathPrefix) {
+    if (window.AppState || document.querySelector('script[data-app-state]')) return;
+    const script = document.createElement('script');
+    script.src = `${pathPrefix}components/app-state.js`;
+    script.dataset.appState = 'true';
+    document.head.appendChild(script);
+}
+
 function ensureUiFeedbackScript(pathPrefix) {
     if (window.AppUI || document.querySelector('script[data-ui-feedback]')) return;
     const script = document.createElement('script');
@@ -102,3 +157,5 @@ function ensureUiFeedbackScript(pathPrefix) {
     script.dataset.uiFeedback = 'true';
     document.head.appendChild(script);
 }
+
+window.addEventListener('spider:cart-changed', updateGlobalCartCount);

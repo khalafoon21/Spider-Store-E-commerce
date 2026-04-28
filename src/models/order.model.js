@@ -78,13 +78,17 @@ class OrderModel {
 
         for (let order of orders) {
             const items = await db.all(`
-                SELECT oi.quantity, oi.price_at_purchase, p.title, p.image_url
+                SELECT oi.product_id, oi.quantity, oi.price_at_purchase, p.title, p.image_url,
+                       p.seller_id, u.first_name || ' ' || u.last_name AS seller_name
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
+                JOIN users u ON u.id = p.seller_id
                 WHERE oi.order_id = ?
             `, [order.id]);
             
             order.items = items;
+            order.subtotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price_at_purchase), 0);
+            order.shipping_amount = Math.max(0, Number(order.total_amount || 0) - order.subtotal);
         }
         
         return orders;
@@ -100,15 +104,51 @@ class OrderModel {
 
         for (let order of orders) {
             const items = await db.all(`
-                SELECT oi.quantity, oi.price_at_purchase, p.title, p.image_url
+                SELECT oi.product_id, oi.quantity, oi.price_at_purchase, p.title, p.image_url,
+                       p.seller_id, u.first_name || ' ' || u.last_name AS seller_name
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
+                JOIN users u ON u.id = p.seller_id
                 WHERE oi.order_id = ?
             `, [order.id]);
             
             order.items = items;
+            order.subtotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price_at_purchase), 0);
+            order.shipping_amount = Math.max(0, Number(order.total_amount || 0) - order.subtotal);
         }
         
+        return orders;
+    }
+
+    static async getOrdersForSeller(sellerId) {
+        const db = getDb();
+
+        const orders = await db.all(`
+            SELECT DISTINCT o.*
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+            JOIN products p ON p.id = oi.product_id
+            WHERE p.seller_id = ?
+            ORDER BY o.created_at DESC
+        `, [sellerId]);
+
+        for (let order of orders) {
+            const items = await db.all(`
+                SELECT oi.product_id, oi.quantity, oi.price_at_purchase,
+                       p.title, p.image_url, p.seller_id
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ? AND p.seller_id = ?
+            `, [order.id, sellerId]);
+
+            order.items = items;
+            order.seller_subtotal = items.reduce(
+                (sum, item) => sum + (Number(item.quantity) * Number(item.price_at_purchase)),
+                0
+            );
+            order.shipping_amount = 0;
+        }
+
         return orders;
     }
 
@@ -185,6 +225,65 @@ class OrderModel {
             user_count: users.user_count || 0,
             latest_orders: latestOrders,
             best_products: bestProducts
+        };
+    }
+
+    static async getSellerAnalytics(sellerId) {
+        const db = getDb();
+
+        const totals = await db.get(`
+            SELECT
+                COALESCE(SUM(CASE WHEN o.status != 'Cancelled' THEN oi.quantity * oi.price_at_purchase ELSE 0 END), 0) AS total_sales,
+                COUNT(DISTINCT CASE WHEN o.status != 'Cancelled' THEN o.id END) AS total_orders
+            FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            JOIN products p ON p.id = oi.product_id
+            WHERE p.seller_id = ?
+        `, [sellerId]);
+
+        const products = await db.get(
+            `SELECT COUNT(*) AS product_count FROM products WHERE seller_id = ?`,
+            [sellerId]
+        );
+
+        const latestOrders = await db.all(`
+            SELECT DISTINCT o.id, o.status, o.created_at, o.full_name, o.phone, o.shipping_address
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+            JOIN products p ON p.id = oi.product_id
+            WHERE p.seller_id = ?
+            ORDER BY o.created_at DESC
+            LIMIT 5
+        `, [sellerId]);
+
+        const bestProducts = await db.all(`
+            SELECT p.id, p.title, p.image_url,
+                   COALESCE(SUM(oi.quantity), 0) AS sold_quantity,
+                   COALESCE(SUM(oi.quantity * oi.price_at_purchase), 0) AS sales_total
+            FROM products p
+            JOIN order_items oi ON oi.product_id = p.id
+            JOIN orders o ON o.id = oi.order_id
+            WHERE p.seller_id = ? AND o.status != 'Cancelled'
+            GROUP BY p.id, p.title, p.image_url
+            ORDER BY sold_quantity DESC
+            LIMIT 5
+        `, [sellerId]);
+
+        const lowStockProducts = await db.all(`
+            SELECT id, title, image_url, stock_quantity
+            FROM products
+            WHERE seller_id = ? AND stock_quantity <= 5
+            ORDER BY stock_quantity ASC, created_at DESC
+            LIMIT 5
+        `, [sellerId]);
+
+        return {
+            total_sales: totals.total_sales || 0,
+            total_orders: totals.total_orders || 0,
+            product_count: products.product_count || 0,
+            latest_orders: latestOrders,
+            best_products: bestProducts,
+            low_stock_products: lowStockProducts
         };
     }
 }
