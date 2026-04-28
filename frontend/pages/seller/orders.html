@@ -39,7 +39,7 @@
     <script src="../../components/seller-sidebar.js"></script>
     <script>
         loadSellerSidebar('orders');
-        const API_URL = 'http://127.0.0.1:3000/api';
+        const API_URL = '/api';
         const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
         let ordersCache = [];
         const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));

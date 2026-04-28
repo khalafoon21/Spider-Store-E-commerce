@@ -84,8 +84,8 @@
     </main>
 
     <script>
-        const API_URL = 'http://127.0.0.1:3000/api';
-        const BASE_SERVER = 'http://127.0.0.1:3000';
+        const API_URL = '/api';
+        const BASE_SERVER = '';
         let serverCart = [];
         const escapeHTML = str => String(str || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
         const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;

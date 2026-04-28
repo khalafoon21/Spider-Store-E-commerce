@@ -75,7 +75,7 @@
     <script src="../../components/seller-sidebar.js"></script>
     <script>
         loadSellerSidebar('products');
-        const API_URL = 'http://127.0.0.1:3000/api';
+        const API_URL = '/api';
         const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
         let productsCache = [];
         let categoriesCache = [];
@@ -84,7 +84,7 @@
         const imageURL = value => {
             const clean = String(value || '').trim();
             if (!clean) return 'https://via.placeholder.com/120?text=No+Image';
-            return /^https?:\/\//i.test(clean) ? clean : `http://127.0.0.1:3000${clean.startsWith('/') ? clean : '/' + clean}`;
+            return /^https?:\/\//i.test(clean) ? clean : `${clean.startsWith('/') ? clean : '/' + clean}`;
         };
         const statusBadge = status => {
             const map = { approved: 'bg-emerald-50 text-emerald-700', pending: 'bg-amber-50 text-amber-700', rejected: 'bg-red-50 text-red-700' };

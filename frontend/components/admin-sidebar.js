@@ -26,7 +26,7 @@ async function getLiveAdminRole(token) {
     if (decodedRole === 'admin') return decodedRole;
 
     try {
-        const response = await fetch('http://127.0.0.1:3000/api/profile', {
+        const response = await fetch('/api/profile', {
             headers: { Authorization: `Bearer ${token}` }
         });
         const result = await response.json();

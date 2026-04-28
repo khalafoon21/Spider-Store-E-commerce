@@ -12,7 +12,7 @@ async function updateGlobalCartCount() {
 
     try {
         // بنسأل الباك اند عن السلة
-        const res = await fetch('http://127.0.0.1:3000/api/cart', {
+        const res = await fetch('/api/cart', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 

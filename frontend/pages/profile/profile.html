@@ -73,7 +73,7 @@
     </main>
 
     <script>
-        const API_URL = 'http://127.0.0.1:3000/api';
+        const API_URL = '/api';
 
         // دالة الحماية من ثغرات XSS
         function escapeHTML(str) {
@@ -116,7 +116,7 @@
                 }
                 container.innerHTML = items.map(item => `
                     <div class="border border-gray-100 rounded-lg p-4 flex gap-3 items-center">
-                        <img src="${item.image_url ? 'http://127.0.0.1:3000' + item.image_url : 'https://via.placeholder.com/80'}" class="w-16 h-16 object-contain bg-gray-50 rounded">
+                        <img src="${item.image_url ? '' + item.image_url : 'https://via.placeholder.com/80'}" class="w-16 h-16 object-contain bg-gray-50 rounded">
                         <div class="flex-1 min-w-0">
                             <a href="../products/product.html?id=${item.id}" class="font-bold text-gray-800 hover:text-primary-600 line-clamp-1">${escapeHTML(item.title)}</a>
                             <p class="text-primary-600 font-bold">${item.price || 0} ج.م</p>

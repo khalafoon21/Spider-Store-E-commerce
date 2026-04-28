@@ -211,8 +211,8 @@
         if(typeof loadAdminSidebar === 'function') loadAdminSidebar('add-banner');
         
         // المتغيرات الخاصة بالباك إند اللي انت كاتبها
-        const API_URL = 'http://127.0.0.1:3000/api';
-        const BASE_SERVER = 'http://127.0.0.1:3000';
+        const API_URL = '/api';
+        const BASE_SERVER = '';
         let bannersCache = [];
         let bannerToDelete = null;
         const escapeHTML = value => window.AppUI ? window.AppUI.escapeHTML(value) : String(value || '');
