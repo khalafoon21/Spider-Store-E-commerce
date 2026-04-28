@@ -11,7 +11,7 @@ class TagModel {
         const cleanName = String(name || '').trim();
         if (!cleanName) return null;
         const result = await db.run(
-            `INSERT OR IGNORE INTO tags (name) VALUES (?)`,
+            `INSERT IGNORE INTO tags (name) VALUES (?)`,
             [cleanName]
         );
         if (result.lastID) return result.lastID;

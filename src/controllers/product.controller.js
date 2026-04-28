@@ -70,10 +70,10 @@ async function createProduct(req, res) {
         }
 
         const form = formidable({
-            uploadDir: uploadFolder, 
-            keepExtensions: true,    
-            maxFileSize: 10 * 1024 * 1024, // 10 ميجا للصور
-            multiples: true // السماح برفع أكثر من ملف
+            multiples: true,
+            maxFileSize: 50 * 1024 * 1024,
+            maxTotalFileSize: 100 * 1024 * 1024,
+             keepExtensions: true
         });
 
         form.parse(req, async (err, fields, files) => {
@@ -308,9 +308,10 @@ async function updateProduct(req, res, productId) {
             fs.mkdirSync(uploadFolder, { recursive: true });
         }
         const form = formidable({
-            uploadDir: uploadFolder,
-            keepExtensions: true,
-            maxFileSize: 5 * 1024 * 1024,
+            multiples: true,
+            maxFileSize: 50 * 1024 * 1024,
+            maxTotalFileSize: 100 * 1024 * 1024,
+            keepExtensions: true
         });
 
         form.parse(req, async (err, fields, files) => {

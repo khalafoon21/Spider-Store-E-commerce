@@ -23,7 +23,7 @@ class WishlistModel {
         if (!product) throw new Error('Product not found');
 
         await db.run(
-            `INSERT OR IGNORE INTO wishlist_items (user_id, product_id) VALUES (?, ?)`,
+            `INSERT IGNORE INTO wishlist_items (user_id, product_id) VALUES (?, ?)`,
             [userId, productId]
         );
     }
