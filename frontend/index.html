@@ -26,7 +26,7 @@
     </script>
     
     <style>
-        body { background-color: #F9FAFB; }
+        body { background-color: #F8FAFC; }
         .smooth-transition { transition: all 0.3s ease-in-out; }
         .fade-in { animation: fadeIn 0.6s ease-in-out; }
 
@@ -63,9 +63,32 @@
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
 
-    <div class="container mx-auto px-4 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
+    <main class="mx-auto w-full max-w-[1440px] flex-1 px-3 py-4 sm:px-4 lg:px-6">
         
-        <aside class="w-full md:w-64 order-2 md:order-1">
+        <section id="heroContainer" class="relative mb-5 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mb-6 lg:mb-8">
+            <div id="sliderContent" class="w-full fade-in min-h-[210px] sm:min-h-[280px] lg:min-h-[360px]"></div>
+            <div class="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2" id="sliderDots"></div>
+        </section>
+
+        <section class="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:mb-6 sm:p-4">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <h2 class="flex items-center gap-2 text-base font-black text-slate-950 sm:text-lg">
+                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-cyan-50 text-primary-600"><i class="fas fa-th-large"></i></span>
+                    الأقسام
+                </h2>
+                <a href="index.html" class="text-sm font-bold text-primary-600 hover:text-primary-700">الكل</a>
+            </div>
+            <nav id="categoriesList" class="flex gap-3 overflow-x-auto pb-1" aria-label="Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª">
+                <div class="flex min-w-full gap-3">
+                    <div class="skeleton h-20 w-28 shrink-0 rounded-2xl"></div>
+                    <div class="skeleton h-20 w-28 shrink-0 rounded-2xl"></div>
+                    <div class="skeleton h-20 w-28 shrink-0 rounded-2xl"></div>
+                    <div class="skeleton h-20 w-28 shrink-0 rounded-2xl"></div>
+                </div>
+            </nav>
+        </section>
+
+        <aside class="hidden">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -73,7 +96,7 @@
                     </h2>
                     <a href="index.html" class="text-sm text-primary-500 hover:underline">الكل</a>
                 </div>
-                <nav id="categoriesList" aria-label="أقسام المنتجات">
+                <nav id="oldCategoriesList" aria-label="أقسام المنتجات">
                     <div class="space-y-3">
                         <div class="flex items-center gap-3 p-3"><div class="skeleton w-10 h-10 rounded-lg"></div><div class="skeleton h-4 w-3/4"></div></div>
                         <div class="flex items-center gap-3 p-3"><div class="skeleton w-10 h-10 rounded-lg"></div><div class="skeleton h-4 w-3/4"></div></div>
@@ -82,29 +105,29 @@
             </div>
         </aside>
 
-        <main class="flex-1 order-1 md:order-2">
+        <div class="flex-1">
             
-            <section id="heroContainer" class="relative overflow-hidden rounded-3xl shadow-lg mb-12 hidden min-h-[320px] md:min-h-[360px]">
-                <div id="sliderContent" class="w-full fade-in h-full min-h-[320px] md:min-h-[360px]"></div>
-                <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-20" id="sliderDots"></div>
+            <section id="oldHeroContainer" class="hidden">
+                <div id="oldSliderContent" class="hidden"></div>
+                <div class="hidden" id="oldSliderDots"></div>
             </section>
 
-            <section id="latestSection" class="mb-12">
-                <div class="flex items-center mb-6 border-r-4 border-secondary-500 pr-3">
+            <section id="latestSection" class="mb-8 sm:mb-10">
+                <div class="mb-4 flex items-center justify-between gap-3 border-r-4 border-secondary-500 pr-3 sm:mb-5">
                     <h2 id="latestTitle" class="text-2xl font-bold text-gray-900">وصل حديثاً</h2>
                 </div>
-                <div id="productsGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="productsGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"></div>
             </section>
 
             <section id="bestSellersSection">
-                <div class="flex items-center mb-6 border-r-4 border-primary-500 pr-3">
+                <div class="mb-4 flex items-center justify-between gap-3 border-r-4 border-primary-500 pr-3 sm:mb-5">
                     <h2 class="text-2xl font-bold text-gray-900">الأكثر مبيعاً</h2>
                 </div>
-                <div id="bestSellersGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="bestSellersGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"></div>
             </section>
 
-        </main>
-    </div>
+        </div>
+    </main>
 
     <footer class="bg-gray-900 text-white py-12 text-center mt-auto">
         <div class="container mx-auto px-4">
@@ -179,9 +202,9 @@
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = Array(count).fill(`
-                <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
-                    <div class="skeleton w-full aspect-square"></div>
-                    <div class="p-5 flex flex-col gap-3">
+                <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div class="skeleton aspect-square w-full"></div>
+                    <div class="flex flex-col gap-3 p-3 sm:p-4">
                         <div class="skeleton h-4 w-3/4"></div>
                         <div class="skeleton h-3 w-1/2"></div>
                         <div class="skeleton h-6 w-1/3 mt-2"></div>
@@ -192,7 +215,7 @@
 
         async function initPage() {
             renderProductsSkeleton('productsGrid');
-            renderProductsSkeleton('bestSellersGrid', 3);
+            renderProductsSkeleton('bestSellersGrid', 5);
 
             await Promise.allSettled([
                 fetchBanners(),
@@ -226,22 +249,24 @@
             const buttonColor = safeColor(slide.button_color, '#0891b2');
 
             container.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-[1fr_0.9fr] items-center gap-4 md:gap-8 p-6 sm:p-8 md:p-10 min-h-[320px] md:min-h-[360px] w-full relative" style="background-color: ${bgColor};">
-                    <div class="z-10 text-right max-w-xl" style="color: ${textColor};">
-                        <h2 class="text-2xl sm:text-3xl md:text-5xl font-extrabold mb-3 leading-tight">${escapeHTML(slide.title)}</h2>
-                        <p class="text-sm sm:text-base md:text-lg mb-6 max-w-lg opacity-90 leading-8">${escapeHTML(slide.description)}</p>
-                        <a href="${safeLink(slide.link_url)}" class="inline-flex items-center justify-center font-bold py-3 px-7 sm:px-9 rounded-full shadow-lg hover:scale-105 transition-transform text-white min-w-36" style="background-color: ${buttonColor};">
+                <div class="relative grid min-h-[210px] w-full grid-cols-1 items-center gap-4 p-5 sm:min-h-[280px] sm:p-8 lg:min-h-[360px] lg:grid-cols-[1fr_0.9fr] lg:gap-10 lg:p-10" style="background-color: ${bgColor};">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.45),transparent_32%)]"></div>
+                    <div class="relative z-10 max-w-xl text-right" style="color: ${textColor};">
+                        <p class="mb-2 text-xs font-black uppercase tracking-wide opacity-75 sm:text-sm">Spider Store</p>
+                        <h2 class="mb-3 text-2xl font-black leading-tight sm:text-4xl lg:text-5xl">${escapeHTML(slide.title)}</h2>
+                        <p class="mb-5 max-w-lg text-sm font-semibold leading-7 opacity-90 sm:text-base lg:text-lg">${escapeHTML(slide.description)}</p>
+                        <a href="${safeLink(slide.link_url)}" class="inline-flex min-w-32 items-center justify-center rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 sm:min-w-36 sm:px-8" style="background-color: ${buttonColor};">
                             ${escapeHTML(slide.button_text) || 'اكتشف الآن'}
                         </a>
                     </div>
-                    <div class="z-10 w-full h-44 sm:h-56 md:h-72 flex items-center justify-center md:justify-end overflow-hidden">
-                        <img src="${buildImageUrl(slide.image_url)}" class="max-w-full max-h-full object-contain drop-shadow-xl" alt="${escapeHTML(slide.title) || 'Banner'}" onerror="this.src='https://via.placeholder.com/600x320?text=Banner'">
+                    <div class="relative z-10 flex h-40 w-full items-center justify-center overflow-hidden sm:h-56 lg:h-72 lg:justify-end">
+                        <img src="${buildImageUrl(slide.image_url)}" class="max-h-full max-w-full object-contain drop-shadow-2xl" alt="${escapeHTML(slide.title) || 'Banner'}" onerror="this.src='https://via.placeholder.com/600x320?text=Banner'">
                     </div>
                 </div>
             `;
 
             document.getElementById('sliderDots').innerHTML = banners.map((_, i) => `
-                <button type="button" onclick="window.goToSlide(${i})" class="w-3 h-3 rounded-full border border-gray-400 ${i === currentSlide ? 'bg-gray-600 w-8' : 'bg-transparent'} smooth-transition"></button>
+                <button type="button" onclick="window.goToSlide(${i})" class="h-2.5 rounded-full border border-white/70 bg-white/60 shadow-sm ${i === currentSlide ? 'w-8 bg-primary-500 border-primary-500' : 'w-2.5'} smooth-transition" aria-label="Go to slide ${i + 1}"></button>
             `).join('');
         }
 
@@ -267,15 +292,15 @@
                 if (data.success && data.data?.length > 0) {
                     list.innerHTML = data.data.map(cat => {
                         const isActive = currentCategoryId == cat.id;
-                        const activeClasses = isActive ? "bg-primary-50 text-primary-600 border-primary-100" : "hover:bg-primary-50 hover:text-primary-600 border-transparent hover:border-primary-100 text-gray-700";
-                        const activeIconBg = isActive ? "bg-white text-primary-500 shadow-sm" : "bg-gray-50 text-gray-500 group-hover:bg-white group-hover:text-primary-500 shadow-sm";
+                        const activeClasses = isActive ? "bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100";
+                        const activeIconBg = isActive ? "bg-white/20 text-white" : "bg-white text-primary-600 shadow-sm group-hover:bg-white";
                         
                         return `
-                        <a href="?category=${safeId(cat.id)}" class="flex items-center gap-3 p-3 rounded-xl transition-all group border ${activeClasses}">
-                            <span class="w-10 h-10 rounded-lg flex items-center justify-center transition-all ${activeIconBg}">
+                        <a href="?category=${safeId(cat.id)}" class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${activeClasses}">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl transition-all ${activeIconBg}">
                                 <i class="fas ${safeIconClass(cat.icon)}"></i>
                             </span>
-                            <span class="font-bold">${escapeHTML(cat.name)}</span>
+                            <span class="line-clamp-1 text-sm font-black">${escapeHTML(cat.name)}</span>
                         </a>`;
                     }).join('');
                 }
@@ -307,7 +332,7 @@
                     renderProductCards(data.data, grid);
 
                     if (!currentCategoryId && !searchQuery && bestSellersGrid) {
-                        renderProductCards(data.data.slice(0, 3), bestSellersGrid); 
+                        renderProductCards(data.data.slice(0, 5), bestSellersGrid); 
                     }
                 } else {
                     grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">لا توجد منتجات مطابقة.</p>';
@@ -331,26 +356,29 @@
                 const stars = '<i class="fas fa-star"></i>'.repeat(fullStars) + '<i class="far fa-star text-gray-300"></i>'.repeat(5 - fullStars);
 
                 return `
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full relative">
-                    <div class="relative p-4 bg-gray-50 flex justify-center items-center">
+                <div class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-lg">
+                    <div class="relative flex items-center justify-center bg-slate-50 p-3 sm:p-4">
                         ${hasDiscount ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${discount}%</span>` : ''}
+                        <button type="button" data-action="wishlist" data-product-id="${productId}" class="absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white/95 text-slate-500 shadow-sm transition hover:border-error-100 hover:bg-error-50 hover:text-error-500 sm:right-3 sm:top-3" aria-label="Add to wishlist">
+                            <i class="far fa-heart pointer-events-none"></i>
+                        </button>
                         <a href="pages/products/product.html?id=${productId}" class="w-full">
-                            <img src="${buildImageUrl(getProductImage(product))}" class="w-full aspect-square object-contain group-hover:scale-110 transition-transform duration-500" alt="${escapeHTML(product.title)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'">
+                            <img src="${buildImageUrl(getProductImage(product))}" class="aspect-square w-full object-contain transition-transform duration-500 group-hover:scale-105" alt="${escapeHTML(product.title)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'">
                         </a>
                     </div>
-                    <div class="p-5 flex flex-col flex-1">
-                        <a href="pages/products/product.html?id=${productId}" class="hover:text-primary-600 transition-colors">
-                            <h3 class="font-bold text-gray-800 mb-1 line-clamp-2">${escapeHTML(product.title)}</h3>
+                    <div class="flex flex-1 flex-col p-3 sm:p-4">
+                        <a href="pages/products/product.html?id=${productId}" class="transition-colors hover:text-primary-600">
+                            <h3 class="mb-2 line-clamp-2 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:text-base">${escapeHTML(product.title)}</h3>
                         </a>
-                        <div class="flex items-center text-secondary-500 text-xs mb-3 gap-1">
+                        <div class="mb-3 flex min-h-[1.25rem] items-center gap-1 text-[11px] text-secondary-500 sm:text-xs">
                             ${ratingCount ? `${stars} <span class="text-gray-600 font-bold mr-1">${ratingAverage.toFixed(1)}</span><span class="text-gray-400">(${ratingCount} تقييم)</span>` : '<span class="text-gray-400">لا توجد تقييمات بعد</span>'}
                         </div>
                         <div class="mt-auto flex items-center justify-between">
                             <div class="flex flex-col">
                                 ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${price.toFixed(0)} ج.م</span>` : ''}
-                                <span class="text-primary-600 font-bold text-xl">${calcFinalPrice(price, discount)} ج.م</span>
+                                <span class="text-lg font-black text-primary-600 sm:text-xl">${calcFinalPrice(price, discount)} ج.م</span>
                             </div>
-                            <button type="button" data-action="add-to-cart" data-product-id="${productId}" class="add-to-cart-btn bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary-600 shadow-lg shadow-primary-200 transition-all z-20">
+                            <button type="button" data-action="add-to-cart" data-product-id="${productId}" class="add-to-cart-btn z-20 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white shadow-lg shadow-cyan-100 transition-all hover:bg-primary-600 sm:h-11 sm:w-11">
                                 <i class="fas fa-cart-plus pointer-events-none"></i>
                             </button>
                         </div>
@@ -358,6 +386,41 @@
                 </div>`;
             }).join('');
         }
+
+        window.toggleWishlist = async function(button, id) {
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+            if (!token) {
+                showToast('Please login to use wishlist', 'error');
+                return;
+            }
+            if (!button || button.dataset.busy === '1') return;
+            button.dataset.busy = '1';
+            try {
+                const response = await fetch(`${API_URL}/wishlist`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ product_id: parseInt(id) })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (response.ok || data.success) {
+                    button.classList.toggle('text-error-500', true);
+                    button.classList.toggle('bg-error-50', true);
+                    const icon = button.querySelector('i');
+                    if (icon) icon.className = 'fas fa-heart pointer-events-none';
+                    showToast(data.message || 'Added to wishlist');
+                } else {
+                    showToast(data.message || 'Could not update wishlist', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Could not update wishlist', 'error');
+            } finally {
+                button.dataset.busy = '0';
+            }
+        };
 
         // ==========================================
         //  الإضافة المباشرة للباك اند (Hybrid Model)
@@ -436,6 +499,14 @@
             else cart.push({ id: productId, product_id: productId, quantity });
             localStorage.setItem('spider_cart', JSON.stringify(cart));
         }
+
+        document.addEventListener('click', event => {
+            const button = event.target.closest('[data-action="wishlist"]');
+            if (!button) return;
+            event.preventDefault();
+            event.stopPropagation();
+            window.toggleWishlist(button, button.dataset.productId);
+        });
 
         ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(eventName => {
             document.addEventListener(eventName, event => {

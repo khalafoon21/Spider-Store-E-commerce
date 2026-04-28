@@ -25,7 +25,7 @@
         }
     </script>
     <style> 
-        body { background-color: #F9FAFB; } 
+        body { background-color: #F8FAFC; } 
         .smooth-transition { transition: all 0.2s ease-out; } 
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         @keyframes shrinkProgress { from { width: 100%; } to { width: 0%; } }
@@ -40,87 +40,128 @@
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
 
-    <main class="container mx-auto px-4 lg:px-8 py-12 flex-1 mt-6">
-        <div class="flex items-center justify-between mb-8 border-b pb-4">
-            <h1 class="text-3xl font-bold text-gray-900">إتمام الطلب</h1>
-            <a href="../cart/cart.html" class="text-primary-600 hover:text-primary-700 font-bold transition-colors flex items-center gap-2">
+    <main class="mx-auto w-full max-w-[1280px] flex-1 px-3 py-4 sm:px-4 lg:px-6 lg:py-8">
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">إتمام الطلب</h1>
+            <a href="../cart/cart.html" class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-primary-600 shadow-sm ring-1 ring-slate-200 transition hover:text-primary-700">
                 <i class="fas fa-arrow-right"></i> العودة للسلة
             </a>
         </div>
 
-        <div id="errorMessage" class="hidden bg-error-50 border border-error-200 text-error-600 px-4 py-3 rounded-md mb-6 font-bold text-center"></div>
+        <div class="mb-6 grid gap-2 sm:grid-cols-3">
+            <div class="rounded-2xl border border-primary-100 bg-white p-4 shadow-sm">
+                <span class="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-truck-fast"></i></span>
+                <p class="font-black text-slate-950">1. بيانات الشحن</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <span class="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-700"><i class="fas fa-money-bill-wave"></i></span>
+                <p class="font-black text-slate-950">2. طريقة الدفع</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <span class="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-700"><i class="fas fa-receipt"></i></span>
+                <p class="font-black text-slate-950">3. ملخص الطلب</p>
+            </div>
+        </div>
 
-        <div class="flex flex-col lg:flex-row gap-8">
+        <div id="errorMessage" class="mb-6 hidden rounded-2xl border border-error-200 bg-error-50 px-4 py-3 text-center font-bold text-error-600"></div>
+
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
             
-            <div class="lg:w-2/3 bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit relative">
-                <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl">
+            <div class="relative rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+                <div id="loadingOverlay" class="absolute inset-0 z-10 hidden flex flex-col items-center justify-center rounded-2xl bg-white/85 backdrop-blur-sm">
                     <i class="fas fa-spinner fa-spin text-5xl text-primary-500 mb-4"></i>
                     <p class="text-lg font-bold text-gray-700 mt-2">جاري تأكيد طلبك بأمان...</p>
                 </div>
 
-                <h2 class="text-xl font-bold text-gray-900 mb-6 border-b pb-4">بيانات الشحن</h2>
+                <h2 class="mb-5 flex items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-location-dot"></i></span>
+                    بيانات الشحن
+                </h2>
                 
                 <form id="checkoutForm" onsubmit="return false;">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">الاسم بالكامل <span class="text-error-500">*</span></label>
-                            <input type="text" id="fullName" required placeholder="الاسم ثلاثي" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 outline-none transition-shadow">
+                            <label class="mb-1.5 block text-sm font-black text-slate-700">الاسم بالكامل <span class="text-error-500">*</span></label>
+                            <input type="text" id="fullName" required minlength="3" autocomplete="name" placeholder="الاسم ثلاثي" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">رقم الهاتف <span class="text-error-500">*</span></label>
-                            <input type="tel" id="phone" required placeholder="01xxxxxxxxx" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 outline-none transition-shadow" dir="ltr">
+                            <label class="mb-1.5 block text-sm font-black text-slate-700">رقم الهاتف <span class="text-error-500">*</span></label>
+                            <input type="tel" id="phone" required minlength="8" autocomplete="tel" placeholder="01xxxxxxxxx" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" dir="ltr">
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-gray-700 mb-1">العنوان بالتفصيل <span class="text-error-500">*</span></label>
-                        <textarea id="address" required rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 outline-none transition-shadow" placeholder="المحافظة, المدينة, الشارع, رقم العمارة والدور..."></textarea>
+                    <div class="mb-6">
+                        <label class="mb-1.5 block text-sm font-black text-slate-700">العنوان بالتفصيل <span class="text-error-500">*</span></label>
+                        <textarea id="address" required minlength="8" rows="4" class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold leading-7 outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="المحافظة, المدينة, الشارع, رقم العمارة والدور..."></textarea>
                     </div>
 
-                    <div class="mt-8 border-t pt-6">
-                        <button type="button" id="submitBtn" class="w-full bg-success-500 hover:bg-success-600 text-white font-bold py-3 px-4 rounded-md shadow-md smooth-transition text-lg flex justify-center items-center gap-2">
+                    <section class="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <h2 class="mb-3 flex items-center gap-2 text-lg font-black text-slate-950">
+                            <i class="fas fa-credit-card text-primary-600"></i>
+                            طريقة الدفع
+                        </h2>
+                        <label class="flex cursor-pointer items-center justify-between rounded-xl border border-primary-100 bg-white p-4 shadow-sm">
+                            <span class="flex items-center gap-3">
+                                <span class="grid h-10 w-10 place-items-center rounded-xl bg-secondary-50 text-secondary-500"><i class="fas fa-money-bill-wave"></i></span>
+                                <span>
+                                    <span class="block font-black text-slate-950">الدفع عند الاستلام</span>
+                                    <span class="text-sm font-semibold text-slate-500">ادفع نقدًا عند وصول الطلب</span>
+                                </span>
+                            </span>
+                            <input type="radio" name="paymentMethod" value="cod" checked class="h-5 w-5 accent-primary-500">
+                        </label>
+                    </section>
+
+                    <div class="border-t border-slate-200 pt-5">
+                        <button type="button" id="submitBtn" class="flex w-full items-center justify-center gap-2 rounded-xl bg-success-500 px-4 py-3.5 text-lg font-black text-white shadow-lg shadow-green-100 transition hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-60">
                             <i class="fas fa-check-circle"></i> تأكيد الطلب
                         </button>
                     </div>
                 </form>
             </div>
 
-            <div class="lg:w-1/3 bg-gray-50 rounded-xl shadow-sm border border-gray-200 p-6 h-fit sticky top-24">
-                <h2 class="text-xl font-bold text-gray-900 mb-6">ملخص نهائي</h2>
+            <aside class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:sticky lg:top-24">
+                <h2 class="mb-5 flex items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-receipt"></i></span>
+                    ملخص نهائي
+                </h2>
                 
-                <div id="checkoutItems" class="space-y-4 mb-4 text-sm max-h-60 overflow-y-auto pr-2 hide-scrollbar">
+                <div id="checkoutItems" class="mb-4 max-h-72 space-y-3 overflow-y-auto pr-1 text-sm hide-scrollbar">
                     <div class="text-center text-gray-400 py-4"><i class="fas fa-spinner fa-spin"></i> جاري جلب السلة...</div>
                 </div>
                 
-                <hr class="border-gray-300 my-4">
+                <hr class="my-4 border-slate-200">
                 
-                <div class="flex justify-between mb-3 text-gray-600 text-sm">
+                <div class="mb-3 flex justify-between text-sm text-slate-600">
                     <span>المجموع الفرعي:</span>
-                    <span id="subtotalAmount" class="font-bold text-gray-800">0 ج.م</span>
+                    <span id="subtotalAmount" class="font-black text-slate-900">0 ج.م</span>
                 </div>
-                <div class="flex justify-between mb-4 text-gray-600 text-sm">
+                <div class="mb-4 flex justify-between text-sm text-slate-600">
                     <span>مصاريف الشحن:</span>
-                    <span class="font-bold text-gray-800">50 ج.م</span>
+                    <span id="shippingAmount" class="font-black text-slate-900">50 ج.م</span>
                 </div>
                 
-                <hr class="border-gray-300 my-4">
+                <hr class="my-4 border-slate-200">
                 
-                <div class="flex justify-between font-bold text-lg text-gray-900">
+                <div class="flex justify-between text-lg font-black text-slate-950">
                     <span>الإجمالي المطلوب:</span>
                     <span id="finalTotal" class="text-primary-600">0 ج.م</span>
                 </div>
-                <div class="mt-4 bg-secondary-50 border border-secondary-200 text-secondary-600 px-3 py-2 rounded-md text-sm text-center font-bold">
+                <div class="mt-4 rounded-xl border border-secondary-200 bg-secondary-50 px-3 py-3 text-center text-sm font-black text-secondary-500">
                     <i class="fas fa-money-bill-wave mr-1"></i> الدفع نقداً عند الاستلام
                 </div>
-            </div>
+            </aside>
 
         </div>
     </main>
 
     <script>
         const API_URL = '/api';
-        const escapeHTML = value => window.AppUI ? window.AppUI.escapeHTML(value) : String(value || '');
+        const escapeHTML = value => window.AppUI ? window.AppUI.escapeHTML(value) : String(value || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
         const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+        const SHIPPING_AMOUNT = 50;
+        let checkoutSubtotal = 0;
+        let checkoutTotal = 0;
         
         async function initCheckout() {
             const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
@@ -195,18 +236,22 @@
                     subtotal += itemTotal;
                     
                     summaryHtml += `
-                        <div class="flex justify-between items-center text-gray-700 border-b border-gray-200 pb-3">
-                            <span class="truncate pr-2 font-medium w-2/3">${quantity}x ${escapeHTML(item.title) || 'Product'}</span>
-                            <span class="font-bold text-gray-900 whitespace-nowrap">${itemTotal.toFixed(0)} ج.م</span>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                            <div class="flex items-start justify-between gap-3 text-slate-700">
+                                <span class="min-w-0 flex-1 truncate font-bold">${quantity}x ${escapeHTML(item.title) || 'Product'}</span>
+                                <span class="whitespace-nowrap font-black text-slate-950">${itemTotal.toFixed(0)} ج.م</span>
+                            </div>
                         </div>
                     `;
                 });
 
                 document.getElementById('checkoutItems').innerHTML = summaryHtml;
-                document.getElementById('subtotalAmount').textContent = `${subtotal.toFixed(0)} ج.م`;
+                checkoutSubtotal = safeNumber(subtotal);
+                checkoutTotal = checkoutSubtotal + SHIPPING_AMOUNT;
+                document.getElementById('subtotalAmount').textContent = `${checkoutSubtotal.toFixed(0)} ج.م`;
+                document.getElementById('shippingAmount').textContent = `${SHIPPING_AMOUNT.toFixed(0)} ج.م`;
                 
-                const finalAmount = subtotal + 50; 
-                document.getElementById('finalTotal').textContent = `${finalAmount.toFixed(0)} ج.م`;
+                document.getElementById('finalTotal').textContent = `${checkoutTotal.toFixed(0)} ج.م`;
 
                 // مزامنة المتصفح عشان العداد
                 const syncData = cartItems.map(i => ({ id: i.product_id || i.id, quantity: i.quantity }));
@@ -228,6 +273,46 @@
             document.getElementById('checkoutForm').requestSubmit();
         });
 
+        function setCheckoutError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${escapeHTML(message)}`;
+            errorDiv.classList.remove('hidden');
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function resetCheckoutButton() {
+            const btn = document.getElementById('submitBtn');
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('hidden');
+            btn.disabled = false;
+            btn.style.pointerEvents = 'auto';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد الطلب';
+            isProcessing = false;
+        }
+
+        function validateCheckoutForm(fullName, phone, address) {
+            if (!fullName || fullName.length < 3) {
+                setCheckoutError('يرجى إدخال الاسم بالكامل.');
+                document.getElementById('fullName').focus();
+                return false;
+            }
+            if (!phone || phone.length < 8) {
+                setCheckoutError('يرجى إدخال رقم هاتف صحيح.');
+                document.getElementById('phone').focus();
+                return false;
+            }
+            if (!address || address.length < 8) {
+                setCheckoutError('يرجى إدخال عنوان الشحن بالتفصيل.');
+                document.getElementById('address').focus();
+                return false;
+            }
+            if (!Number.isFinite(checkoutTotal) || checkoutTotal <= SHIPPING_AMOUNT) {
+                setCheckoutError('لا يمكن تأكيد الطلب قبل تحميل ملخص السلة بشكل صحيح.');
+                return false;
+            }
+            return true;
+        }
+
         document.getElementById('checkoutForm').addEventListener('submit', async function(event) {
             event.preventDefault();
             event.stopImmediatePropagation();
@@ -239,6 +324,14 @@
             const errorDiv = document.getElementById('errorMessage');
             const overlay = document.getElementById('loadingOverlay');
             const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
+            const fullName = document.getElementById('fullName').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const address = document.getElementById('address').value.trim();
+
+            if (!validateCheckoutForm(fullName, phone, address)) {
+                isProcessing = false;
+                return;
+            }
 
             btn.disabled = true;
             btn.style.pointerEvents = 'none';
@@ -249,9 +342,9 @@
 
             try {
                 const orderPayload = {
-                    shipping_address: document.getElementById('address').value.trim(),
-                    phone: document.getElementById('phone').value.trim(),
-                    full_name: document.getElementById('fullName').value.trim() 
+                    shipping_address: address,
+                    phone: phone,
+                    full_name: fullName
                 };
 
                 const response = await fetch(`${API_URL}/orders/checkout`, {
@@ -288,22 +381,12 @@
                         showToast('\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0637\u0644\u0628\u0643 \u0628\u0646\u062c\u0627\u062d\u060c \u0633\u064a\u062a\u0645 \u0627\u0644\u0631\u062c\u0648\u0639 \u0644\u0644\u0631\u0626\u064a\u0633\u064a\u0629.', 'success');
                     }
                 } else {
-                    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.message || 'حدث خطأ أثناء تسجيل الطلب'}`;
-                    errorDiv.classList.remove('hidden');
-                    overlay.classList.add('hidden');
-                    btn.disabled = false;
-                    btn.style.pointerEvents = 'auto';
-                    btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد الطلب';
-                    isProcessing = false; 
+                    setCheckoutError(data.message || 'حدث خطأ أثناء تسجيل الطلب');
+                    resetCheckoutButton();
                 }
             } catch (error) {
-                errorDiv.innerHTML = '<i class="fas fa-plug"></i> خطأ في الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.';
-                errorDiv.classList.remove('hidden');
-                overlay.classList.add('hidden');
-                btn.disabled = false;
-                btn.style.pointerEvents = 'auto';
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد الطلب';
-                isProcessing = false;
+                setCheckoutError('خطأ في الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.');
+                resetCheckoutButton();
             }
         });
 

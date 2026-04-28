@@ -48,7 +48,7 @@ async function getAllUsers(req, res) {
 
         const db = getDb();
         const users = await db.all(
-            `SELECT id, first_name, last_name, email, phone, role, created_at FROM users ORDER BY created_at DESC`
+            `SELECT id, first_name, last_name, email, phone, role, seller_status, created_at FROM users ORDER BY created_at DESC`
         );
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -87,7 +87,15 @@ async function updateUserRole(req, res) {
         }
 
         const db = getDb();
-        await db.run(`UPDATE users SET role = ? WHERE id = ?`, [requestedRole, user_id]);
+        const sellerStatus = requestedRole === 'seller'
+            ? 'approved_seller'
+            : (requestedRole === 'user' ? 'pending' : null);
+
+        if (sellerStatus) {
+            await db.run(`UPDATE users SET role = ?, seller_status = ? WHERE id = ?`, [requestedRole, sellerStatus, user_id]);
+        } else {
+            await db.run(`UPDATE users SET role = ? WHERE id = ?`, [requestedRole, user_id]);
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, message: `تم تحديث صلاحيات المستخدم إلى: ${requestedRole}` }));

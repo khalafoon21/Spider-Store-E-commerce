@@ -1,12 +1,23 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const getDb = require('./src/config/database');
 
-// مسار الداتا بيز الصحيح في الروت فولدر
-const dbPath = path.join(__dirname, 'database.sqlite'); 
-const db = new sqlite3.Database(dbPath);
+async function updateCategoriesIconColumn() {
+    const db = await getDb.init();
+    try {
+        await db.run("ALTER TABLE categories ADD COLUMN icon VARCHAR(100) DEFAULT 'fa-tags'");
+        console.log('categories.icon column added');
+    } catch (error) {
+        const message = String(error && error.message || '').toLowerCase();
+        if (message.includes('duplicate')) {
+            console.log('categories.icon column already exists');
+            return;
+        }
+        throw error;
+    }
+}
 
-db.run("ALTER TABLE categories ADD COLUMN icon TEXT DEFAULT 'fa-tags'", (err) => {
-    if (err) console.log("إما أن الحقل موجود بالفعل أو هناك خطأ:", err.message);
-    else console.log("✅ تم إضافة حقل الأيقونة (icon) لجدول الأقسام بنجاح بدون مسح أي داتا!");
-    db.close();
-});
+updateCategoriesIconColumn()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error('Failed to update categories schema:', error.message);
+        process.exit(1);
+    });

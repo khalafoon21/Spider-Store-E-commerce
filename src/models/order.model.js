@@ -6,6 +6,26 @@ function toMoney(value) {
     return Number.isFinite(number) ? number : 0;
 }
 
+function makeConnectionDb(connection) {
+    return {
+        get: async (sql, params = []) => {
+            const [rows] = await connection.execute(sql, params);
+            return rows[0] || null;
+        },
+        all: async (sql, params = []) => {
+            const [rows] = await connection.execute(sql, params);
+            return rows;
+        },
+        run: async (sql, params = []) => {
+            const [result] = await connection.execute(sql, params);
+            return {
+                lastID: result.insertId || null,
+                changes: result.affectedRows || 0
+            };
+        }
+    };
+}
+
 class OrderModel {
     // التعديل 1: إضافة phone و fullName للدالة
     static async createOrder(userId, shippingAddress, phone, fullName) {
@@ -25,12 +45,14 @@ class OrderModel {
         // التعديل 2: إضافة مصاريف الشحن للإجمالي عشان يتطابق مع اللي اليوزر شافه في الـ Checkout
         totalAmount = toMoney(totalAmount) + 50; 
 
-        // التعديل 3: إدخال البيانات الجديدة (phone, full_name) في جدول الطلبات
-        await db.exec('START TRANSACTION');
+        const connection = await db.pool.getConnection();
 
         try {
+            await connection.beginTransaction();
+            const tx = makeConnectionDb(connection);
+
             for (const item of cartItems) {
-                const product = await db.get(
+                const product = await tx.get(
                     `SELECT stock_quantity FROM products WHERE id = ?`,
                     [item.product_id]
                 );
@@ -40,7 +62,7 @@ class OrderModel {
                 }
             }
 
-            const orderResult = await db.run(
+            const orderResult = await tx.run(
                 `INSERT INTO orders (user_id, total_amount, shipping_address, phone, full_name) VALUES (?, ?, ?, ?, ?)`,
                 [userId, totalAmount, shippingAddress, phone, fullName]
             );
@@ -53,25 +75,27 @@ class OrderModel {
             const discount = toMoney(item.discount);
             const finalPrice = discount > 0 ? price - (price * discount / 100) : price;
             
-                await db.run(
+                await tx.run(
                     `INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)`,
                     [orderId, item.product_id, item.quantity, finalPrice]
                 );
 
-                await db.run(
+                await tx.run(
                     `UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?`,
                     [item.quantity, item.product_id]
                 );
             }
 
         // مسح السلة بعد نجاح الطلب 100%
-            await db.run(`DELETE FROM cart_items WHERE user_id = ?`, [userId]);
-            await db.exec('COMMIT');
+            await tx.run(`DELETE FROM cart_items WHERE user_id = ?`, [userId]);
+            await connection.commit();
 
             return orderId;
         } catch (error) {
-            await db.exec('ROLLBACK');
+            await connection.rollback();
             throw error;
+        } finally {
+            connection.release();
         }
     }
 
@@ -239,22 +263,26 @@ class OrderModel {
         if (order.status === 'Shipped' && userId) throw new Error('Shipped orders cannot be cancelled by customer');
         if (order.status === 'Cancelled') return order;
 
-        await db.exec('START TRANSACTION');
+        const connection = await db.pool.getConnection();
         try {
-            const items = await db.all(`SELECT product_id, quantity FROM order_items WHERE order_id = ?`, [orderId]);
+            await connection.beginTransaction();
+            const tx = makeConnectionDb(connection);
+            const items = await tx.all(`SELECT product_id, quantity FROM order_items WHERE order_id = ?`, [orderId]);
             for (const item of items) {
-                await db.run(
+                await tx.run(
                     `UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?`,
                     [item.quantity, item.product_id]
                 );
             }
 
-            await db.run(`UPDATE orders SET status = 'Cancelled' WHERE id = ?`, [orderId]);
-            await db.exec('COMMIT');
+            await tx.run(`UPDATE orders SET status = 'Cancelled' WHERE id = ?`, [orderId]);
+            await connection.commit();
             return { ...order, status: 'Cancelled' };
         } catch (error) {
-            await db.exec('ROLLBACK');
+            await connection.rollback();
             throw error;
+        } finally {
+            connection.release();
         }
     }
 

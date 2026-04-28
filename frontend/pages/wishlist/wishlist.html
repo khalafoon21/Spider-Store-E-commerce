@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | Wishlist</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#ECFEFF', 100: '#CFFAFE', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
+                        secondary: { 50: '#FFFBEB', 500: '#F59E0B' },
+                        success: { 500: '#22C55E', 100: '#DCFCE7', 600: '#16A34A' },
+                        error: { 500: '#EF4444', 50: '#FEF2F2', 100: '#FEE2E2', 600: '#DC2626' }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        body { background-color: #F8FAFC; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        @keyframes shrinkProgress { from { width: 100%; } to { width: 0%; } }
+        .animate-progress { animation: shrinkProgress 3s linear forwards; }
+    </style>
+</head>
+<body class="flex min-h-screen flex-col font-sans text-slate-800 antialiased">
+    <script src="../../components/app-state.js"></script>
+    <script src="../../components/ui-feedback.js"></script>
+    <script src="../../components/main-navbar.js"></script>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
+
+    <main class="mx-auto w-full max-w-[1440px] flex-1 px-3 py-4 sm:px-4 lg:px-6 lg:py-8">
+        <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="mb-2 text-sm font-black text-primary-600">Spider Store</p>
+                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">قائمة الأمنيات</h1>
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">كل المنتجات اللي حفظتها بالقلب موجودة هنا، تقدر ترجع لها بسرعة أو تضيفها للسلة.</p>
+                </div>
+                <a href="../../index.html" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                    <i class="fas fa-store"></i>
+                    متابعة التسوق
+                </a>
+            </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4 lg:p-5">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-error-50 text-error-500"><i class="fas fa-heart"></i></span>
+                    المنتجات المحفوظة
+                </h2>
+                <span id="wishlistCount" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">0 منتج</span>
+            </div>
+
+            <div id="wishlistGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+                <div class="col-span-full py-12 text-center text-slate-500">
+                    <i class="fas fa-spinner fa-spin mb-3 text-4xl text-primary-500"></i>
+                    <p class="font-bold">جاري تحميل قائمة الأمنيات...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-auto bg-slate-950 py-8 text-center text-white">
+        <p class="text-sm text-slate-400">© 2026 Spider Store. جميع الحقوق محفوظة.</p>
+    </footer>
+
+    <script>
+        const API_URL = '/api';
+        const TOKEN_KEY = 'spider_token';
+        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+        const safeId = value => encodeURIComponent(String(value || ''));
+        const buildImageUrl = imagePath => {
+            const cleanPath = String(imagePath || '').trim();
+            if (!cleanPath) return 'https://via.placeholder.com/300?text=No+Image';
+            return /^https?:\/\//i.test(cleanPath) ? cleanPath : `${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+        };
+        const getToken = () => window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+        const calcFinalPrice = (price, discount) => {
+            const basePrice = safeNumber(price);
+            const discountValue = safeNumber(discount);
+            return (discountValue > 0 && discountValue <= 100) ? (basePrice - (basePrice * discountValue / 100)).toFixed(0) : basePrice.toFixed(0);
+        };
+
+        function renderSkeleton() {
+            document.getElementById('wishlistGrid').innerHTML = Array(8).fill(`
+                <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div class="aspect-square animate-pulse bg-slate-100"></div>
+                    <div class="space-y-3 p-3 sm:p-4">
+                        <div class="h-4 w-3/4 animate-pulse rounded bg-slate-100"></div>
+                        <div class="h-3 w-1/2 animate-pulse rounded bg-slate-100"></div>
+                        <div class="h-9 w-full animate-pulse rounded-xl bg-slate-100"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderEmptyState() {
+            document.getElementById('wishlistCount').textContent = '0 منتج';
+            document.getElementById('wishlistGrid').innerHTML = `
+                <div class="col-span-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-16 text-center">
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-error-500 shadow-sm"><i class="far fa-heart"></i></span>
+                    <h2 class="text-2xl font-black text-slate-950">قائمة الأمنيات فارغة</h2>
+                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">اضغط على علامة القلب في أي منتج لحفظه هنا والرجوع له لاحقًا.</p>
+                    <a href="../../index.html" class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                        <i class="fas fa-store"></i>
+                        متابعة التسوق
+                    </a>
+                </div>
+            `;
+        }
+
+        async function loadWishlist() {
+            const token = getToken();
+            if (!token) {
+                window.location.replace('../auth/login.html');
+                return;
+            }
+
+            renderSkeleton();
+            try {
+                const response = await fetch(`${API_URL}/wishlist`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (!response.ok || data.success === false) throw new Error(data.message || 'Could not load wishlist');
+
+                const items = Array.isArray(data.data) ? data.data : [];
+                document.getElementById('wishlistCount').textContent = `${items.length} منتج`;
+                if (!items.length) {
+                    renderEmptyState();
+                    return;
+                }
+                renderWishlist(items);
+            } catch (error) {
+                document.getElementById('wishlistGrid').innerHTML = `
+                    <div class="col-span-full rounded-2xl border border-error-100 bg-error-50 p-8 text-center font-bold text-error-600">
+                        تعذر تحميل قائمة الأمنيات. حاول مرة أخرى.
+                    </div>
+                `;
+            }
+        }
+
+        function renderWishlist(items) {
+            document.getElementById('wishlistGrid').innerHTML = items.map(item => {
+                const id = safeId(item.id || item.product_id);
+                const price = safeNumber(item.price);
+                const discount = safeNumber(item.discount);
+                const hasDiscount = discount > 0;
+                const ratingAverage = safeNumber(item.rating_average);
+                const ratingCount = safeNumber(item.rating_count);
+                const fullStars = Math.max(0, Math.min(5, Math.round(ratingAverage)));
+                const stars = '<i class="fas fa-star"></i>'.repeat(fullStars) + '<i class="far fa-star text-slate-300"></i>'.repeat(5 - fullStars);
+
+                return `
+                    <article class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-lg" data-card-id="${id}">
+                        <button type="button" onclick="removeWishlistItem(this, ${Number(item.id || item.product_id)})" class="absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border border-error-100 bg-white/95 text-error-500 shadow-sm transition hover:bg-error-50" aria-label="Remove from wishlist">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        ${hasDiscount ? `<span class="absolute left-2 top-2 z-10 rounded-full bg-error-500 px-2.5 py-1 text-[11px] font-black text-white">خصم ${discount}%</span>` : ''}
+                        <a href="../products/product.html?id=${id}" class="flex aspect-square items-center justify-center bg-slate-50 p-3 sm:p-4">
+                            <img src="${buildImageUrl(item.image_url || item.image)}" alt="${escapeHTML(item.title)}" class="h-full w-full object-contain transition duration-500 group-hover:scale-105" onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'">
+                        </a>
+                        <div class="flex flex-1 flex-col p-3 sm:p-4">
+                            <a href="../products/product.html?id=${id}" class="transition hover:text-primary-600">
+                                <h3 class="mb-2 line-clamp-2 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:text-base">${escapeHTML(item.title)}</h3>
+                            </a>
+                            <div class="mb-3 flex min-h-[1.25rem] items-center gap-1 text-[11px] text-secondary-500 sm:text-xs">
+                                ${ratingCount ? `${stars} <span class="mr-1 font-bold text-slate-600">${ratingAverage.toFixed(1)}</span><span class="text-slate-400">(${ratingCount})</span>` : '<span class="text-slate-400">لا توجد تقييمات بعد</span>'}
+                            </div>
+                            <div class="mt-auto flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    ${hasDiscount ? `<p class="text-xs text-slate-400 line-through">${price.toFixed(0)} ج.م</p>` : ''}
+                                    <p class="text-lg font-black text-primary-600 sm:text-xl">${calcFinalPrice(price, discount)} ج.م</p>
+                                </div>
+                                <button type="button" onclick="addToCart(this, ${Number(item.id || item.product_id)})" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-500 text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600 sm:h-11 sm:w-11" aria-label="Add to cart">
+                                    <i class="fas fa-cart-plus pointer-events-none"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function removeWishlistItem(button, productId) {
+            const token = getToken();
+            if (!token || !productId || button.dataset.busy === '1') return;
+            button.dataset.busy = '1';
+            button.disabled = true;
+            try {
+                const response = await fetch(`${API_URL}/wishlist/remove`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ product_id: Number(productId) })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data.success === false) throw new Error(data.message || 'Could not remove item');
+                showToast(data.message || 'تم حذف المنتج من قائمة الأمنيات');
+                await loadWishlist();
+            } catch (error) {
+                button.disabled = false;
+                button.dataset.busy = '0';
+                showToast('تعذر حذف المنتج من قائمة الأمنيات', 'error');
+            }
+        }
+
+        async function addToCart(button, productId) {
+            const token = getToken();
+            if (!token || !productId || button.dataset.busy === '1') return;
+            button.dataset.busy = '1';
+            button.disabled = true;
+            try {
+                const response = await fetch(`${API_URL}/cart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ product_id: Number(productId), quantity: 1 })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data.success === false) throw new Error(data.message || 'Could not add to cart');
+                showToast(data.message || 'تمت إضافة المنتج للسلة');
+                if (typeof window.updateGlobalCartCount === 'function') window.updateGlobalCartCount();
+            } catch (error) {
+                showToast('تعذر إضافة المنتج للسلة', 'error');
+            } finally {
+                button.dataset.busy = '0';
+                button.disabled = false;
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            if (window.AppUI) return window.AppUI.toast(message, type);
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const isSuccess = type === 'success';
+            toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${isSuccess ? 'border-success-500' : 'border-error-500'}`;
+            toast.innerHTML = `<p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p><div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100"><div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div></div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        window.addEventListener('load', loadWishlist);
+    </script>
+</body>
+</html>

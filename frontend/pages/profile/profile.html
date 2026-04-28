@@ -25,7 +25,7 @@
             }
         }
     </script>
-    <style> body { background-color: #F9FAFB; } </style>
+    <style> body { background-color: #F8FAFC; } </style>
 </head>
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
@@ -33,70 +33,116 @@
     <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/main-navbar.js"></script>
 
-    <main class="container mx-auto px-4 lg:px-8 py-12 flex-1 max-w-4xl">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">سجل طلباتي</h1>
-            <button type="button" onclick="logout()" class="bg-red-50 text-error-500 hover:bg-error-500 hover:text-white px-4 py-2 rounded-md font-semibold transition-colors">
-                <i class="fas fa-sign-out-alt ml-1"></i> تسجيل الخروج
-            </button>
-        </div>
-
-        <div id="sellerRequestCard" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-            <div class="flex items-center justify-between gap-3 mb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900">طلب التسجيل كبائع</h2>
-                    <p id="sellerRequestStatus" class="text-sm text-gray-500 mt-1">جاري تحميل حالة الطلب...</p>
+    <main class="mx-auto w-full max-w-[1280px] flex-1 px-3 py-4 sm:px-4 lg:px-6 lg:py-8">
+        <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-4">
+                    <img id="profilePreview" src="https://via.placeholder.com/128?text=User" class="h-20 w-20 rounded-full border-4 border-cyan-50 bg-slate-50 object-cover shadow-sm sm:h-24 sm:w-24">
+                    <div class="min-w-0">
+                        <p class="text-sm font-black text-primary-600">Spider Store Account</p>
+                        <h1 id="accountName" class="truncate text-2xl font-black text-slate-950 sm:text-3xl">حسابي</h1>
+                        <p id="accountEmail" class="truncate text-sm font-semibold text-slate-500">جاري تحميل بيانات الحساب...</p>
+                        <span id="accountRole" class="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">User</span>
+                    </div>
                 </div>
-                <button type="button" onclick="toggleSellerForm()" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md font-bold">طلب التسجيل كبائع</button>
+                <div class="flex flex-wrap gap-2">
+                    <label class="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        <i class="fas fa-camera text-primary-600"></i> صورة الحساب
+                        <input id="profile_picture" type="file" accept="image/*" class="hidden">
+                    </label>
+                    <button type="button" onclick="logout()" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-error-50 px-4 text-sm font-black text-error-500 transition hover:bg-error-500 hover:text-white">
+                        <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                    </button>
+                </div>
             </div>
-            <form id="sellerRequestForm" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input id="store_name" required placeholder="اسم المتجر أو البائع" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
-                <input id="seller_phone" placeholder="رقم الهاتف" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
-                <input id="seller_city" placeholder="المدينة" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
-                <input id="seller_country" placeholder="الدولة" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
-                <textarea id="seller_address" placeholder="العنوان" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500"></textarea>
-                <textarea id="seller_description" placeholder="وصف بسيط" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500"></textarea>
-                <input id="store_image" type="file" accept="image/*" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg">
-                <button type="submit" class="md:col-span-2 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg transition">إرسال الطلب</button>
-            </form>
+        </section>
+
+        <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <a href="../orders/orders.html" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-md">
+                <span class="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-bag-shopping"></i></span>
+                <h2 class="font-black text-slate-950">طلباتي</h2>
+                <p class="mt-1 text-sm font-semibold text-slate-500">تابع حالة الطلبات والشحن.</p>
+            </a>
+            <a href="../wishlist/wishlist.html" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-md">
+                <span class="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-red-50 text-error-500"><i class="fas fa-heart"></i></span>
+                <h2 class="font-black text-slate-950">قائمة الأمنيات</h2>
+                <p class="mt-1 text-sm font-semibold text-slate-500">منتجاتك المحفوظة بالقلب.</p>
+            </a>
+            <a id="sellerDashboardCard" href="../seller/products.html" class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-md">
+                <span class="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-cyan-50 text-primary-600"><i class="fas fa-store"></i></span>
+                <h2 class="font-black text-slate-950">لوحة البائع</h2>
+                <p class="mt-1 text-sm font-semibold text-slate-500">إدارة المنتجات والطلبات.</p>
+            </a>
+            <a id="adminPanelCard" href="../admin/manage-products.html" class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-md">
+                <span class="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-slate-100 text-slate-700"><i class="fas fa-gauge-high"></i></span>
+                <h2 class="font-black text-slate-950">لوحة الأدمن</h2>
+                <p class="mt-1 text-sm font-semibold text-slate-500">إدارة المتجر والمراجعة.</p>
+            </a>
+        </section>
+
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+                <h2 class="mb-5 flex items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-user-pen"></i></span>
+                    بيانات الحساب
+                </h2>
+                <form id="profileForm" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <input id="first_name" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="الاسم الأول">
+                    <input id="last_name" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="الاسم الأخير">
+                    <input id="phone" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="رقم الهاتف">
+                    <input id="birthdate" type="date" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                    <input id="city" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="المدينة">
+                    <input id="country" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="الدولة">
+                    <textarea id="address" rows="4" class="resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50 md:col-span-2" placeholder="العنوان"></textarea>
+                    <button type="submit" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-700 md:col-span-2">
+                        <i class="fas fa-floppy-disk"></i> حفظ البيانات
+                    </button>
+                </form>
+            </section>
+
+            <aside class="space-y-6">
+                <section id="sellerRequestCard" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                    <div class="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-950">طلب التسجيل كبائع</h2>
+                            <p id="sellerRequestStatus" class="mt-1 text-sm font-semibold leading-6 text-slate-500">جاري تحميل حالة الطلب...</p>
+                        </div>
+                        <button type="button" onclick="toggleSellerForm()" class="shrink-0 rounded-xl bg-primary-600 px-3 py-2 text-sm font-black text-white transition hover:bg-primary-700">طلب</button>
+                    </div>
+                    <form id="sellerRequestForm" class="hidden grid grid-cols-1 gap-3">
+                        <input id="store_name" required placeholder="اسم المتجر أو البائع" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                        <input id="seller_phone" placeholder="رقم الهاتف" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                        <input id="seller_city" placeholder="المدينة" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                        <input id="seller_country" placeholder="الدولة" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                        <textarea id="seller_address" placeholder="العنوان" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"></textarea>
+                        <textarea id="seller_description" placeholder="وصف بسيط" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"></textarea>
+                        <input id="store_image" type="file" accept="image/*" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold">
+                        <button type="submit" class="rounded-xl bg-primary-600 py-3 font-black text-white transition hover:bg-primary-700">إرسال الطلب</button>
+                    </form>
+                </section>
+
+                <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                    <h2 class="mb-3 text-lg font-black text-slate-950">ملخص سريع</h2>
+                    <div id="wishlistContainer" class="grid grid-cols-1 gap-3">
+                        <p class="text-sm font-semibold text-slate-500">جاري تحميل قائمة الأمنيات...</p>
+                    </div>
+                    <a href="../wishlist/wishlist.html" class="mt-4 inline-flex text-sm font-black text-primary-600 hover:text-primary-700">عرض كل الأمنيات</a>
+                </section>
+            </aside>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">بيانات الحساب</h2>
-            <div class="flex items-center gap-4 mb-5">
-                <img id="profilePreview" src="https://via.placeholder.com/96?text=User" class="w-24 h-24 rounded-full object-cover border border-gray-200 bg-gray-50">
-                <label class="cursor-pointer bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md font-bold text-sm">
-                    <i class="fas fa-camera ml-1"></i> صورة الحساب
-                    <input id="profile_picture" type="file" accept="image/*" class="hidden">
-                </label>
+        <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="text-xl font-black text-slate-950">آخر الطلبات</h2>
+                <a href="../orders/orders.html" class="text-sm font-black text-primary-600 hover:text-primary-700">عرض كل الطلبات</a>
             </div>
-            <form id="profileForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input id="first_name" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الاسم الأول">
-                <input id="last_name" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الاسم الأخير">
-                <input id="phone" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="رقم الهاتف">
-                <input id="birthdate" type="date" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
-                <input id="city" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="المدينة">
-                <input id="country" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الدولة">
-                <textarea id="address" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="العنوان"></textarea>
-                <button type="submit" class="md:col-span-2 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg transition">حفظ البيانات</button>
-            </form>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">قائمة الأمنيات</h2>
-            <div id="wishlistContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p class="text-gray-500">جاري تحميل قائمة الأمنيات...</p>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div id="ordersContainer" class="space-y-6">
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+            <div id="ordersContainer" class="space-y-4">
+                <div class="py-8 text-center text-slate-500">
+                    <i class="fas fa-spinner fa-spin mb-2 text-3xl"></i>
                     <p>جاري تحميل طلباتك...</p>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
 
     <script>
@@ -114,6 +160,29 @@
             return window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
         }
 
+        function buildImageUrl(imagePath) {
+            const clean = String(imagePath || '').trim();
+            if (!clean) return 'https://via.placeholder.com/128?text=User';
+            return /^https?:\/\//i.test(clean) ? clean : `${clean.startsWith('/') ? clean : `/${clean}`}`;
+        }
+
+        function displayName(user) {
+            const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            return name || user.email || 'مستخدم Spider Store';
+        }
+
+        function updateAccountHeader(user) {
+            const name = displayName(user);
+            document.getElementById('accountName').textContent = name;
+            document.getElementById('accountEmail').textContent = user.email || '';
+            document.getElementById('accountRole').textContent = user.role === 'admin' ? 'Admin' : (user.role === 'seller' || user.seller_status === 'approved_seller' ? 'Seller' : 'User');
+
+            const sellerCard = document.getElementById('sellerDashboardCard');
+            const adminCard = document.getElementById('adminPanelCard');
+            if (sellerCard && (user.role === 'seller' || user.seller_status === 'approved_seller')) sellerCard.classList.remove('hidden');
+            if (adminCard && user.role === 'admin') adminCard.classList.remove('hidden');
+        }
+
         async function fetchProfile() {
             const token = getToken();
             if (!token) return;
@@ -124,10 +193,11 @@
                 const user = data.data || {};
                 ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'].forEach(id => {
                     const element = document.getElementById(id);
-                    if (element) element.value = user[id] || '';
+                    if (element) element.value = id === 'birthdate' && user[id] ? String(user[id]).slice(0, 10) : (user[id] || '');
                 });
+                updateAccountHeader(user);
                 const preview = document.getElementById('profilePreview');
-                if (preview && user.profile_picture) preview.src = user.profile_picture;
+                if (preview) preview.src = buildImageUrl(user.profile_picture);
             } catch (error) {}
         }
 
@@ -180,7 +250,9 @@
             event.preventDefault();
             const token = getToken();
             const body = new FormData();
-            ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'].forEach(id => body.append(id, document.getElementById(id).value.trim()));
+            ['first_name', 'last_name', 'phone', 'city', 'country', 'address'].forEach(id => body.append(id, document.getElementById(id).value.trim()));
+            const birthdate = document.getElementById('birthdate').value.trim();
+            if (birthdate) body.append('birthdate', birthdate);
             const imageFile = document.getElementById('profile_picture').files[0];
             if (imageFile) body.append('profile_picture', imageFile);
             try {
@@ -191,6 +263,11 @@
                 });
                 const data = await response.json();
                 if (window.AppUI) window.AppUI.toast(data.message || (response.ok ? 'تم حفظ البيانات' : 'تعذر حفظ البيانات'), response.ok ? 'success' : 'error');
+                if (response.ok && data.data) {
+                    updateAccountHeader(data.data);
+                    const preview = document.getElementById('profilePreview');
+                    if (preview) preview.src = buildImageUrl(data.data.profile_picture);
+                }
             } catch (error) {
                 if (window.AppUI) window.AppUI.toast('تعذر الاتصال بالسيرفر', 'error');
             }
@@ -198,7 +275,18 @@
 
         document.getElementById('profile_picture').addEventListener('change', event => {
             const file = event.target.files[0];
-            if (file) document.getElementById('profilePreview').src = URL.createObjectURL(file);
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                event.target.value = '';
+                if (window.AppUI) window.AppUI.toast('يرجى اختيار صورة صالحة', 'error');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                event.target.value = '';
+                if (window.AppUI) window.AppUI.toast('حجم الصورة يجب ألا يتجاوز 5MB', 'error');
+                return;
+            }
+            document.getElementById('profilePreview').src = URL.createObjectURL(file);
         });
 
         document.getElementById('sellerRequestForm').addEventListener('submit', async event => {
@@ -223,7 +311,7 @@
         });
 
         async function fetchMyOrders() {
-            const token = localStorage.getItem('spider_token');
+            const token = getToken();
             if (!token) {
                 window.location.href = '../auth/login.html';
                 return;

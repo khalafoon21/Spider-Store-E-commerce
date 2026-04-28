@@ -1,18 +1,32 @@
-// src/update-schema-3.js
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const getDb = require('./config/database');
 
-// تأكد أن هذا هو مسار قاعدة البيانات الصحيح عندك
-const dbPath = path.join(__dirname, 'config', 'ecommerce.db'); 
-const db = new sqlite3.Database(dbPath);
+async function runSchemaUpdate() {
+    const db = await getDb.init();
+    const queries = [
+        "ALTER TABLE products ADD COLUMN discount DECIMAL(10,2) DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN brand VARCHAR(100)",
+        "ALTER TABLE products ADD COLUMN tags TEXT",
+        "ALTER TABLE products ADD COLUMN images TEXT"
+    ];
 
-db.serialize(() => {
-    // إضافة الأعمدة الجديدة المطلوبة في المشروع
-    db.run("ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0", (err) => { if(!err) console.log("تم إضافة عمود الخصم (discount)"); });
-    db.run("ALTER TABLE products ADD COLUMN brand TEXT", (err) => { if(!err) console.log("تم إضافة عمود الماركة (brand)"); });
-    db.run("ALTER TABLE products ADD COLUMN tags TEXT", (err) => { if(!err) console.log("تم إضافة عمود الوسوم (tags)"); });
-    db.run("ALTER TABLE products ADD COLUMN images TEXT", (err) => { 
-        if(!err) console.log("تم إضافة عمود الصور الإضافية (images)"); 
-        console.log("✅ تم تحديث قاعدة البيانات بنجاح! يمكنك الآن تشغيل السيرفر.");
+    for (const query of queries) {
+        try {
+            await db.run(query);
+            console.log(`Applied: ${query}`);
+        } catch (error) {
+            const message = String(error && error.message || '').toLowerCase();
+            if (message.includes('duplicate')) {
+                console.log(`Already applied: ${query}`);
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
+runSchemaUpdate()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error('Schema update failed:', error.message);
+        process.exit(1);
     });
-});

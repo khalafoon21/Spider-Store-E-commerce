@@ -51,11 +51,11 @@ async function updateDatabase() {
         // 3. إنشاء جدول صور المنتجات (للسلايدر) لو مش موجود
         await db.exec(`
             CREATE TABLE IF NOT EXISTS product_images (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                product_id INTEGER NOT NULL,
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                product_id INT NOT NULL,
                 image_url TEXT NOT NULL,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-            );
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
         console.log(`✅ تم التأكد من جاهزية جدول صور المنتجات (product_images).`);
 

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | My Orders</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#ECFEFF', 100: '#CFFAFE', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
+                        secondary: { 50: '#FFFBEB', 500: '#F59E0B' },
+                        success: { 50: '#F0FDF4', 500: '#22C55E', 600: '#16A34A' },
+                        error: { 50: '#FEF2F2', 100: '#FEE2E2', 500: '#EF4444', 600: '#DC2626' }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        body { background-color: #F8FAFC; }
+        @keyframes shrinkProgress { from { width: 100%; } to { width: 0%; } }
+        .animate-progress { animation: shrinkProgress 3s linear forwards; }
+    </style>
+</head>
+<body class="flex min-h-screen flex-col font-sans text-slate-800 antialiased">
+    <script src="../../components/app-state.js"></script>
+    <script src="../../components/ui-feedback.js"></script>
+    <script src="../../components/main-navbar.js"></script>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
+
+    <main class="mx-auto w-full max-w-[1200px] flex-1 px-3 py-4 sm:px-4 lg:px-6 lg:py-8">
+        <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="mb-2 text-sm font-black text-primary-600">Spider Store</p>
+                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">طلباتي</h1>
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">تابع حالة طلباتك والشحنات الخاصة بكل بائع في مكان واحد.</p>
+                </div>
+                <a href="../../index.html" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                    <i class="fas fa-store"></i>
+                    متابعة التسوق
+                </a>
+            </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-bag-shopping"></i></span>
+                    سجل الطلبات
+                </h2>
+                <span id="ordersCount" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">0 طلب</span>
+            </div>
+            <div id="ordersContainer" class="space-y-4">
+                <div class="py-14 text-center text-slate-500">
+                    <i class="fas fa-spinner fa-spin mb-3 text-4xl text-primary-500"></i>
+                    <p class="font-bold">جاري تحميل الطلبات...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-auto bg-slate-950 py-8 text-center text-white">
+        <p class="text-sm text-slate-400">© 2026 Spider Store. جميع الحقوق محفوظة.</p>
+    </footer>
+
+    <script>
+        const API_URL = '/api';
+        const TOKEN_KEY = 'spider_token';
+        const getToken = () => window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        const money = value => `${(Number.isFinite(Number(value)) ? Number(value) : 0).toFixed(0)} ج.م`;
+
+        function statusBadge(status) {
+            const map = {
+                Pending: ['قيد المراجعة', 'bg-yellow-50 text-yellow-700 border-yellow-100', 'fa-clock'],
+                Processing: ['قيد التجهيز', 'bg-blue-50 text-blue-700 border-blue-100', 'fa-box-open'],
+                Shipped: ['في الطريق إليك', 'bg-purple-50 text-purple-700 border-purple-100', 'fa-truck-fast'],
+                Delivered: ['تم التوصيل', 'bg-green-50 text-green-700 border-green-100', 'fa-circle-check'],
+                Cancelled: ['ملغي', 'bg-red-50 text-red-700 border-red-100', 'fa-ban']
+            };
+            const [label, classes, icon] = map[status] || [status || 'Pending', 'bg-slate-100 text-slate-700 border-slate-200', 'fa-circle-info'];
+            return `<span class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-black ${classes}"><i class="fas ${icon}"></i>${escapeHTML(label)}</span>`;
+        }
+
+        function sellerStatusLabel(status) {
+            return ({
+                pending_review: 'قيد المراجعة',
+                processing: 'قيد التجهيز',
+                shipped: 'تم الشحن',
+                delivered: 'تم التوصيل'
+            })[status] || status || 'قيد المراجعة';
+        }
+
+        function formatDate(value) {
+            const date = value ? new Date(value) : null;
+            if (!date || Number.isNaN(date.getTime())) return 'غير محدد';
+            return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        async function loadOrders() {
+            const token = getToken();
+            if (!token) {
+                renderLoginPrompt();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/orders/history`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (!response.ok || data.success === false) throw new Error(data.message || 'Could not load orders');
+                renderOrders(data.data || []);
+            } catch (error) {
+                document.getElementById('ordersContainer').innerHTML = `
+                    <div class="rounded-2xl border border-error-100 bg-error-50 p-8 text-center font-bold text-error-600">
+                        تعذر تحميل الطلبات. حاول مرة أخرى.
+                    </div>
+                `;
+            }
+        }
+
+        function renderLoginPrompt() {
+            document.getElementById('ordersCount').textContent = '0 طلب';
+            document.getElementById('ordersContainer').innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-14 text-center">
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-primary-600 shadow-sm"><i class="fas fa-user-lock"></i></span>
+                    <h2 class="text-2xl font-black text-slate-950">سجل الدخول لعرض طلباتك</h2>
+                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">طلباتك محفوظة على حسابك، سجل الدخول للمتابعة.</p>
+                    <a href="../auth/login.html" class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                        <i class="fas fa-right-to-bracket"></i>
+                        تسجيل الدخول
+                    </a>
+                </div>
+            `;
+        }
+
+        function renderEmptyState() {
+            document.getElementById('ordersCount').textContent = '0 طلب';
+            document.getElementById('ordersContainer').innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-14 text-center">
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-slate-400 shadow-sm"><i class="fas fa-box-open"></i></span>
+                    <h2 class="text-2xl font-black text-slate-950">لا توجد طلبات بعد</h2>
+                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">ابدأ التسوق وأي طلب جديد هيظهر هنا.</p>
+                    <a href="../../index.html" class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                        <i class="fas fa-store"></i>
+                        تصفح المنتجات
+                    </a>
+                </div>
+            `;
+        }
+
+        function renderOrders(orders) {
+            const container = document.getElementById('ordersContainer');
+            document.getElementById('ordersCount').textContent = `${orders.length} طلب`;
+            if (!orders.length) {
+                renderEmptyState();
+                return;
+            }
+
+            container.innerHTML = [...orders].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).map(order => {
+                const items = Array.isArray(order.items) ? order.items : [];
+                const previewItems = items.slice(0, 4);
+                const shipments = Array.isArray(order.seller_shipments) ? order.seller_shipments : [];
+                return `
+                    <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary-100 hover:shadow-md">
+                        <div class="flex flex-col gap-4 border-b border-slate-100 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <div class="mb-2 flex flex-wrap items-center gap-2">
+                                    <h3 class="text-lg font-black text-slate-950">طلب #${escapeHTML(order.id)}</h3>
+                                    ${statusBadge(order.status)}
+                                </div>
+                                <p class="text-sm font-semibold text-slate-500"><i class="far fa-calendar-alt ml-1"></i>${formatDate(order.created_at)}</p>
+                            </div>
+                            <div class="text-right sm:text-left">
+                                <p class="text-xs font-bold text-slate-500">الإجمالي</p>
+                                <p class="text-2xl font-black text-primary-600">${money(order.total_amount)}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                            <div>
+                                <p class="mb-3 text-sm font-black text-slate-700">المنتجات</p>
+                                <div class="space-y-2">
+                                    ${previewItems.length ? previewItems.map(item => `
+                                        <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-black text-slate-800">${escapeHTML(item.title || 'Product')}</p>
+                                                <p class="text-xs font-semibold text-slate-500">الكمية: ${Number(item.quantity || 1)}</p>
+                                            </div>
+                                            <span class="shrink-0 text-sm font-black text-slate-900">${money((Number(item.price_at_purchase || 0) * Number(item.quantity || 1)))}</span>
+                                        </div>
+                                    `).join('') : `
+                                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm font-semibold text-slate-500">تفاصيل المنتجات غير متاحة.</div>
+                                    `}
+                                    ${items.length > 4 ? `<p class="text-xs font-bold text-slate-500">+ ${items.length - 4} منتجات أخرى</p>` : ''}
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                <p class="mb-2 text-sm font-black text-slate-700">عنوان الشحن</p>
+                                <p class="mb-4 line-clamp-3 text-sm font-semibold leading-7 text-slate-500">${escapeHTML(order.shipping_address || 'غير محدد')}</p>
+                                ${shipments.length ? `
+                                    <p class="mb-2 text-sm font-black text-slate-700">شحنات البائعين</p>
+                                    <div class="space-y-2">
+                                        ${shipments.map(shipment => `
+                                            <div class="rounded-xl bg-white p-3 text-xs font-bold text-slate-600">
+                                                <span class="block text-slate-900">${escapeHTML(shipment.seller_name || 'بائع')}</span>
+                                                <span>${escapeHTML(sellerStatusLabel(shipment.seller_status))}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                                ${['Pending', 'Processing'].includes(order.status || 'Pending') ? `
+                                    <button type="button" onclick="cancelMyOrder(${Number(order.id)})" class="mt-4 w-full rounded-xl border border-error-100 bg-white px-4 py-2.5 text-sm font-black text-error-600 transition hover:bg-error-500 hover:text-white">
+                                        إلغاء الطلب
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function cancelMyOrder(orderId) {
+            const ok = window.AppUI ? await window.AppUI.modal({
+                type: 'warning',
+                title: 'إلغاء الطلب',
+                message: 'يمكن إلغاء الطلب قبل الشحن فقط. هل تريد المتابعة؟',
+                showCancel: true,
+                confirmText: 'إلغاء الطلب',
+                cancelText: 'رجوع'
+            }) : confirm('Cancel this order?');
+            if (!ok) return;
+
+            try {
+                const response = await fetch(`${API_URL}/orders/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                    body: JSON.stringify({ order_id: Number(orderId) })
+                });
+                const data = await response.json().catch(() => ({}));
+                showToast(data.message || (response.ok ? 'تم إلغاء الطلب' : 'تعذر إلغاء الطلب'), response.ok ? 'success' : 'error');
+                if (response.ok) loadOrders();
+            } catch (error) {
+                showToast('خطأ في الاتصال بالسيرفر', 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            if (window.AppUI) return window.AppUI.toast(message, type);
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const isSuccess = type === 'success';
+            toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${isSuccess ? 'border-success-500' : 'border-error-500'}`;
+            toast.innerHTML = `<p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p><div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100"><div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div></div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        window.addEventListener('load', loadOrders);
+    </script>
+</body>
+</html>
