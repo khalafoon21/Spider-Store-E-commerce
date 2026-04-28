@@ -1,221 +1,195 @@
-const sqlite3 = require('sqlite3');
-const { open } = require('sqlite');
-const path = require('path');
+const mysql = require('mysql2/promise');
 
-const dbPath = path.join(__dirname, '../../database.sqlite');
+let pool = null;
+let dbWrapper = null;
 
-let dbInstance = null;
-
-// غيرنا اسم الدالة لـ initDB عشان تكون واضحة
 async function initDB() {
+    if (dbWrapper) return dbWrapper;
+
     try {
-        const db = await open({
-            filename: dbPath,
-            driver: sqlite3.Database
+        // إنشاء الاتصال بقاعدة بيانات MySQL على Railway
+        pool = mysql.createPool({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            port: process.env.DB_PORT || 3306,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0,
+            multipleStatements: true // ضروري لتشغيل أكثر من استعلام مع بعض
         });
 
-       await db.exec(`
+        // اختبار الاتصال
+        await pool.getConnection();
+        console.log('✅ تم الاتصال بقاعدة بيانات MySQL على Railway بنجاح!');
+
+        // الغلاف (Wrapper) عشان باقي كود المشروع يشتغل كأنه SQLite من غير ما تعدل حاجة تانية
+        dbWrapper = {
+            get: async (sql, params) => {
+                const [rows] = await pool.execute(sql, params);
+                return rows[0] || null;
+            },
+            all: async (sql, params) => {
+                const [rows] = await pool.execute(sql, params);
+                return rows;
+            },
+            run: async (sql, params) => {
+                const [result] = await pool.execute(sql, params);
+                return { lastID: result.insertId, changes: result.affectedRows };
+            },
+            exec: async (sql) => {
+                return await pool.query(sql);
+            }
+        };
+
+        // إنشاء الجداول بنفس الهيكل الخاص بك متوافق مع MySQL
+        await dbWrapper.exec(`
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                first_name TEXT NOT NULL,
-                last_name TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                phone TEXT,
-                role TEXT DEFAULT 'user',
-                seller_status TEXT DEFAULT 'pending',
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                first_name VARCHAR(255) NOT NULL,
+                last_name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                phone VARCHAR(50),
+                role VARCHAR(50) DEFAULT 'user',
+                seller_status VARCHAR(50) DEFAULT 'pending',
                 profile_picture TEXT,
-                email_verified INTEGER DEFAULT 1,
-                activation_token TEXT,
+                email_verified TINYINT(1) DEFAULT 1,
+                activation_token VARCHAR(255),
                 activation_expires DATETIME,
-                reset_token TEXT,
+                reset_token VARCHAR(255),
                 reset_expires DATETIME,
-                address TEXT,        /* ✨ جديد: العنوان */
-                birthdate DATE,      /* ✨ جديد: تاريخ الميلاد */
-                city TEXT,           /* ✨ جديد: المدينة */
-                country TEXT,        /* ✨ جديد: البلد */
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                address TEXT,        
+                birthdate DATE,      
+                city VARCHAR(100),           
+                country VARCHAR(100),        
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                icon TEXT DEFAULT 'fa-tags'
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(255) NOT NULL,
+                icon VARCHAR(100) DEFAULT 'fa-tags'
             );
 
             CREATE TABLE IF NOT EXISTS tags (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                seller_id INTEGER NOT NULL,
-                title TEXT NOT NULL,
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                seller_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
                 description TEXT,
-                price REAL NOT NULL,
-                discount REAL DEFAULT 0,    /* ✨ جديد: نسبة الخصم الاختيارية */
-                stock_quantity INTEGER NOT NULL DEFAULT 0,
-                image_url TEXT,             /* الصورة الأساسية */
-                category_id INTEGER,
-                brand TEXT,                 /* ✨ جديد: العلامة التجارية */
-                tags TEXT,                  /* ✨ جديد: الكلمات المفتاحية */
-                status TEXT DEFAULT 'approved',
-                featured INTEGER DEFAULT 0,
+                price DECIMAL(10, 2) NOT NULL,
+                discount DECIMAL(10, 2) DEFAULT 0,    
+                stock_quantity INT NOT NULL DEFAULT 0,
+                image_url TEXT,             
+                category_id INT,
+                brand VARCHAR(100),                 
+                tags TEXT,                  
+                status VARCHAR(50) DEFAULT 'approved',
+                featured TINYINT(1) DEFAULT 0,
                 images TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (seller_id) REFERENCES users(id),
                 FOREIGN KEY (category_id) REFERENCES categories(id)
             );
 
-            /* ✨ جديد: جدول لصور المنتج الإضافية (عشان السلايدر Slider) */
             CREATE TABLE IF NOT EXISTS product_images (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                product_id INTEGER NOT NULL,
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                product_id INT NOT NULL,
                 image_url TEXT NOT NULL,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS banners (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                title VARCHAR(255),
                 description TEXT,
                 image_url TEXT NOT NULL,
-                bg_color TEXT DEFAULT '#ffffff',
-                text_color TEXT DEFAULT '#1f2937',
-                button_text TEXT DEFAULT 'اكتشف الآن',
-                button_color TEXT DEFAULT '#0891b2',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                bg_color VARCHAR(50) DEFAULT '#ffffff',
+                text_color VARCHAR(50) DEFAULT '#1f2937',
+                button_text VARCHAR(100) DEFAULT 'اكتشف الآن',
+                button_color VARCHAR(50) DEFAULT '#0891b2',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS cart_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                product_id INTEGER NOT NULL,
-                quantity INTEGER NOT NULL DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                product_id INT NOT NULL,
+                quantity INT NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 FOREIGN KEY (product_id) REFERENCES products(id)
             );
 
             CREATE TABLE IF NOT EXISTS wishlist_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                product_id INTEGER NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                product_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(user_id, product_id),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                total_amount REAL NOT NULL,
-                status TEXT DEFAULT 'Pending', 
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                total_amount DECIMAL(10, 2) NOT NULL,
+                status VARCHAR(50) DEFAULT 'Pending', 
                 shipping_address TEXT NOT NULL,
-                city TEXT,
-                country TEXT,
-                payment_method TEXT DEFAULT 'Cash on Delivery',
+                city VARCHAR(100),
+                country VARCHAR(100),
+                payment_method VARCHAR(50) DEFAULT 'Cash on Delivery',
                 notes TEXT,
-                phone TEXT NOT NULL,          /* ✨ جديد: رقم الهاتف */
-                full_name TEXT NOT NULL,      /* ✨ جديد: الاسم بالكامل */
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                phone VARCHAR(50) NOT NULL,          
+                full_name VARCHAR(255) NOT NULL,      
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
 
             CREATE TABLE IF NOT EXISTS order_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                order_id INTEGER NOT NULL,
-                product_id INTEGER NOT NULL,
-                quantity INTEGER NOT NULL,
-                price_at_purchase REAL NOT NULL,
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                order_id INT NOT NULL,
+                product_id INT NOT NULL,
+                quantity INT NOT NULL,
+                price_at_purchase DECIMAL(10, 2) NOT NULL,
                 FOREIGN KEY (order_id) REFERENCES orders(id),
                 FOREIGN KEY (product_id) REFERENCES products(id)
             );
 
             CREATE TABLE IF NOT EXISTS reviews (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                product_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
-                rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                product_id INT NOT NULL,
+                user_id INT NOT NULL,
+                rating INT NOT NULL CHECK(rating >= 1 AND rating <= 5),
                 comment TEXT,
                 reply TEXT, 
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (product_id) REFERENCES products(id),
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
         `);
-        
-        console.log('✅ تم الاتصال بقاعدة البيانات وتجهيز الجداول بنجاح!');
-        const migrationQueries = [
-            "ALTER TABLE categories ADD COLUMN icon TEXT DEFAULT 'fa-tags'",
-            "ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0",
-            "ALTER TABLE products ADD COLUMN brand TEXT",
-            "ALTER TABLE products ADD COLUMN tags TEXT",
-            "ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'approved'",
-            "ALTER TABLE products ADD COLUMN featured INTEGER DEFAULT 0",
-            "ALTER TABLE products ADD COLUMN images TEXT",
-            "ALTER TABLE users ADD COLUMN profile_picture TEXT",
-            "ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 1",
-            "ALTER TABLE users ADD COLUMN activation_token TEXT",
-            "ALTER TABLE users ADD COLUMN activation_expires DATETIME",
-            "ALTER TABLE users ADD COLUMN reset_token TEXT",
-            "ALTER TABLE users ADD COLUMN reset_expires DATETIME",
-            "ALTER TABLE users ADD COLUMN seller_status TEXT DEFAULT 'pending'",
-            "ALTER TABLE users ADD COLUMN address TEXT",
-            "ALTER TABLE users ADD COLUMN birthdate DATE",
-            "ALTER TABLE users ADD COLUMN city TEXT",
-            "ALTER TABLE users ADD COLUMN country TEXT",
-            "ALTER TABLE orders ADD COLUMN phone TEXT",
-            "ALTER TABLE orders ADD COLUMN full_name TEXT",
-            "ALTER TABLE orders ADD COLUMN city TEXT",
-            "ALTER TABLE orders ADD COLUMN country TEXT",
-            "ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'Cash on Delivery'",
-            "ALTER TABLE orders ADD COLUMN notes TEXT"
-        ];
 
-        for (const query of migrationQueries) {
-            try {
-                await db.run(query);
-            } catch (error) {
-                if (!error.message.includes('duplicate column name')) {
-                    throw error;
-                }
-            }
-        }
+        // تحديث الحسابات القديمة إن وجدت لتجنب المشاكل (متوافق مع MySQL)
+        await dbWrapper.run(`UPDATE users SET role = 'user' WHERE role = 'customer' OR role IS NULL`);
+        await dbWrapper.run(`UPDATE users SET seller_status = 'pending' WHERE seller_status IS NULL`);
 
-        await db.run(`UPDATE users SET role = 'user' WHERE role = 'customer' OR role IS NULL`);
-        await db.run(`UPDATE users SET seller_status = 'pending' WHERE seller_status IS NULL`);
-
-        await db.exec(`
-            CREATE TABLE IF NOT EXISTS wishlist_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                product_id INTEGER NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(user_id, product_id),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-            );
-
-            CREATE TABLE IF NOT EXISTS tags (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        dbInstance = db;
-        return db;
+        return dbWrapper;
     } catch (error) {
         console.error('❌ خطأ في الاتصال بقاعدة البيانات:', error.message);
+        throw error;
     }
 }
 
 // السحر كله في الـ 4 سطور دول:
-const getDb = () => dbInstance;
+const getDb = () => dbWrapper;
 
 // بنربط دالة التهيئة بالدالة دي عشان نقدر نستدعيها من السيرفر قبل ما يشتغل
 getDb.init = initDB; 
