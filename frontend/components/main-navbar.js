@@ -91,6 +91,22 @@ function loadMainNavbar() {
     
     // تحديث العداد بعد تحميل الناف بار
     updateGlobalCartCount();
+    if (token) {
+        fetch('/api/profile', { headers: { Authorization: `Bearer ${token}` } })
+            .then(res => res.ok ? res.json() : null)
+            .then(result => {
+                const liveRole = result && result.data && result.data.role;
+                const actions = document.querySelector('nav .flex.items-center.gap-6');
+                if (!actions) return;
+                if (liveRole === 'seller' && !document.getElementById('sellerDashboardLink')) {
+                    actions.insertAdjacentHTML('afterbegin', `<a href="${sellerPath}" id="sellerDashboardLink" class="hidden sm:inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-2 rounded-md smooth-transition text-sm font-bold"><i class="fas fa-store"></i><span>لوحة البائع</span></a>`);
+                }
+                if (liveRole === 'admin' && !document.getElementById('adminDashboardLink')) {
+                    actions.insertAdjacentHTML('afterbegin', `<a href="${adminPath}" id="adminDashboardLink" class="hidden sm:inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-2 rounded-md smooth-transition text-sm font-bold"><i class="fas fa-gauge-high"></i><span>لوحة الأدمن</span></a>`);
+                }
+            })
+            .catch(() => {});
+    }
 }
 
 // تشغيل الدالة تلقائياً

@@ -1,6 +1,20 @@
 const bcrypt = require('bcryptjs');
+const path = require('path');
+const fs = require('fs');
+const { formidable } = require('formidable');
 const UserModel = require('../models/user.model');
 const { getPostData } = require('../utils/helpers');
+
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+function fieldValue(fields, key, fallback = '') {
+    return fields[key] ? fields[key][0] : fallback;
+}
+
+function uploadedProfilePath(file) {
+    const fileName = path.basename(file.filepath || file.newFilename || '');
+    return fileName ? `/uploads/profiles/${fileName}` : null;
+}
 
 // جلب بيانات الملف الشخصي
 async function getProfile(req, res) {
@@ -27,7 +41,7 @@ async function getProfile(req, res) {
 async function updateProfile(req, res) {
     try {
         const userId = req.user.userId;
-        const body = await getPostData(req);
+        const isMultipart = (req.headers['content-type'] || '').includes('multipart/form-data');
 
         // جلب البيانات الحالية للمستخدم لاستخدامها كقيم افتراضية في حالة عدم إرسال بعض الحقول
         const currentUser = await UserModel.getById(userId);
@@ -38,6 +52,53 @@ async function updateProfile(req, res) {
                 message: 'User not found'
             }));
         }
+
+        if (isMultipart) {
+            const uploadFolder = path.join(__dirname, '../../uploads/profiles');
+            if (!fs.existsSync(uploadFolder)) fs.mkdirSync(uploadFolder, { recursive: true });
+
+            const form = formidable({
+                uploadDir: uploadFolder,
+                keepExtensions: true,
+                maxFileSize: 5 * 1024 * 1024
+            });
+
+            return form.parse(req, async (err, fields, files) => {
+                if (err) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ success: false, message: 'Error uploading profile image' }));
+                }
+
+                let profilePicture = null;
+                if (files.profile_picture) {
+                    const file = Array.isArray(files.profile_picture) ? files.profile_picture[0] : files.profile_picture;
+                    if (!allowedImageTypes.includes(file.mimetype)) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        return res.end(JSON.stringify({ success: false, message: 'Only image files are allowed' }));
+                    }
+                    profilePicture = uploadedProfilePath(file);
+                }
+
+                await UserModel.updateProfile(userId, {
+                    first_name: fieldValue(fields, 'first_name', currentUser.first_name),
+                    last_name: fieldValue(fields, 'last_name', currentUser.last_name),
+                    phone: fieldValue(fields, 'phone', currentUser.phone || ''),
+                    address: fieldValue(fields, 'address', currentUser.address || ''),
+                    birthdate: fieldValue(fields, 'birthdate', currentUser.birthdate || ''),
+                    city: fieldValue(fields, 'city', currentUser.city || ''),
+                    country: fieldValue(fields, 'country', currentUser.country || ''),
+                    store_name: fields.store_name ? fields.store_name[0] : null,
+                    store_description: fields.store_description ? fields.store_description[0] : null,
+                    profile_picture: profilePicture
+                });
+
+                const updatedUser = await UserModel.getById(userId);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, message: 'Profile updated successfully', data: updatedUser }));
+            });
+        }
+
+        const body = await getPostData(req);
 
         // تجهيز البيانات المحدثة شاملة الحقول الإضافية المطلوبة للمشروع
         const profileData = {

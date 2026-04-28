@@ -127,7 +127,8 @@
                 <input id="editTags" list="tagsList" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="الوسوم مفصولة بفواصل">
                 <datalist id="tagsList"></datalist>
                 <textarea id="editDescription" rows="4" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-primary-500" placeholder="الوصف"></textarea>
-                <input type="file" id="editImage" accept="image/*" class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                <input type="file" id="editImage" accept="image/*" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                <div id="editImagePreviewGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3"></div>
                 <div class="flex gap-3 pt-2">
                     <button type="submit" id="saveEditBtn" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg transition">حفظ التعديل</button>
                     <button type="button" onclick="closeEditModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-lg transition">إلغاء</button>
@@ -146,6 +147,8 @@
         let productsCache = [];
         let categoriesCache = [];
         let currentStatusFilter = '';
+        let editExistingImages = [];
+        let editNewImages = [];
 
         const escapeHTML = str => String(str || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
         const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -383,6 +386,9 @@
             document.getElementById('editTags').value = product.tags || '';
             document.getElementById('editDescription').value = product.description || '';
             document.getElementById('editImage').value = '';
+            editExistingImages = productImages(product);
+            editNewImages = [];
+            renderEditImages();
             populateCategorySelect(product.category_id);
             fetchTagsForEdit();
             closeDetailsModal();
@@ -394,6 +400,23 @@
                 modalContent.classList.remove('scale-95');
                 modalContent.classList.add('scale-100');
             }, 10);
+        }
+
+        function renderEditImages() {
+            const grid = document.getElementById('editImagePreviewGrid');
+            const existingHtml = editExistingImages.map((src, index) => `
+                <div class="relative border rounded-md overflow-hidden bg-white">
+                    <img src="${buildImageUrl(src)}" class="w-full h-24 object-contain bg-gray-50">
+                    <button type="button" onclick="editExistingImages.splice(${index},1);renderEditImages()" class="absolute top-1 left-1 h-7 w-7 rounded bg-red-600 text-white"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
+            const newHtml = editNewImages.map((file, index) => `
+                <div class="relative border rounded-md overflow-hidden bg-white">
+                    <img src="${URL.createObjectURL(file)}" class="w-full h-24 object-contain bg-gray-50">
+                    <button type="button" onclick="editNewImages.splice(${index},1);renderEditImages()" class="absolute top-1 left-1 h-7 w-7 rounded bg-red-600 text-white"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
+            grid.innerHTML = existingHtml + newHtml || '<p class="text-sm text-gray-400">لا توجد صور.</p>';
         }
 
         function closeEditModal() {
@@ -421,8 +444,9 @@
             formData.append('description', document.getElementById('editDescription').value);
             formData.append('status', product ? (product.status || 'approved') : 'approved');
             formData.append('featured', product && product.featured ? 1 : 0);
-            const image = document.getElementById('editImage').files[0];
-            if (image) formData.append('image', image);
+            if (editExistingImages.length + editNewImages.length > 8) return showToast('الحد الأقصى 8 صور للمنتج', 'error');
+            formData.append('existing_images', JSON.stringify(editExistingImages));
+            editNewImages.forEach(image => formData.append('images', image));
 
             const response = await fetch(`${API_URL}/products/${id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
             const data = await response.json();
@@ -432,6 +456,18 @@
                 await fetchTagsForEdit();
                 await fetchProducts();
             }
+        });
+
+        document.getElementById('editImage').addEventListener('change', event => {
+            const incoming = Array.from(event.target.files || []);
+            if (editExistingImages.length + editNewImages.length + incoming.length > 8) {
+                showToast('الحد الأقصى 8 صور للمنتج', 'error');
+                event.target.value = '';
+                return;
+            }
+            editNewImages = editNewImages.concat(incoming);
+            event.target.value = '';
+            renderEditImages();
         });
 
         window.addEventListener('load', () => {

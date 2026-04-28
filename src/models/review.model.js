@@ -25,7 +25,7 @@ class ReviewModel {
     static async getProductReviews(productId) {
         const db = getDb();
         return await db.all(`
-            SELECT r.*, u.first_name || ' ' || u.last_name AS customer_name 
+            SELECT r.*, CONCAT(u.first_name, ' ', u.last_name) AS customer_name 
             FROM reviews r
             JOIN users u ON r.user_id = u.id
             WHERE r.product_id = ?

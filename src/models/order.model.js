@@ -21,7 +21,7 @@ class OrderModel {
         totalAmount += 50; 
 
         // التعديل 3: إدخال البيانات الجديدة (phone, full_name) في جدول الطلبات
-        await db.exec('BEGIN TRANSACTION');
+        await db.exec('START TRANSACTION');
 
         try {
             for (const item of cartItems) {
@@ -78,8 +78,9 @@ class OrderModel {
 
         for (let order of orders) {
             const items = await db.all(`
-                SELECT oi.product_id, oi.quantity, oi.price_at_purchase, p.title, p.image_url,
-                       p.seller_id, u.first_name || ' ' || u.last_name AS seller_name
+                SELECT oi.product_id, oi.quantity, oi.price_at_purchase, oi.seller_status,
+                       p.title, p.image_url, p.seller_id,
+                       CONCAT(u.first_name, ' ', u.last_name) AS seller_name
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
                 JOIN users u ON u.id = p.seller_id
@@ -89,6 +90,22 @@ class OrderModel {
             order.items = items;
             order.subtotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price_at_purchase), 0);
             order.shipping_amount = Math.max(0, Number(order.total_amount || 0) - order.subtotal);
+            const shipments = {};
+            items.forEach(item => {
+                const key = item.seller_id;
+                if (!shipments[key]) {
+                    shipments[key] = {
+                        seller_id: item.seller_id,
+                        seller_name: item.seller_name,
+                        seller_status: item.seller_status || 'pending_review',
+                        subtotal: 0,
+                        items: []
+                    };
+                }
+                shipments[key].subtotal += Number(item.quantity) * Number(item.price_at_purchase);
+                shipments[key].items.push(item);
+            });
+            order.seller_shipments = Object.values(shipments);
         }
         
         return orders;
@@ -104,8 +121,9 @@ class OrderModel {
 
         for (let order of orders) {
             const items = await db.all(`
-                SELECT oi.product_id, oi.quantity, oi.price_at_purchase, p.title, p.image_url,
-                       p.seller_id, u.first_name || ' ' || u.last_name AS seller_name
+                SELECT oi.product_id, oi.quantity, oi.price_at_purchase, oi.seller_status,
+                       p.title, p.image_url, p.seller_id,
+                       CONCAT(u.first_name, ' ', u.last_name) AS seller_name
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
                 JOIN users u ON u.id = p.seller_id
@@ -134,7 +152,7 @@ class OrderModel {
 
         for (let order of orders) {
             const items = await db.all(`
-                SELECT oi.product_id, oi.quantity, oi.price_at_purchase,
+                SELECT oi.product_id, oi.quantity, oi.price_at_purchase, oi.seller_status,
                        p.title, p.image_url, p.seller_id
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
@@ -146,7 +164,15 @@ class OrderModel {
                 (sum, item) => sum + (Number(item.quantity) * Number(item.price_at_purchase)),
                 0
             );
-            order.shipping_amount = 0;
+            order.seller_status = this.resolveSellerStatus(items.map(item => item.seller_status));
+            const orderTotals = await db.get(`
+                SELECT COALESCE(SUM(oi.quantity * oi.price_at_purchase), 0) AS subtotal
+                FROM order_items oi
+                WHERE oi.order_id = ?
+            `, [order.id]);
+            order.order_subtotal = Number(orderTotals && orderTotals.subtotal || 0);
+            order.shipping_amount = Math.max(0, Number(order.total_amount || 0) - order.order_subtotal);
+            order.seller_total_with_shipping = Number(order.seller_subtotal || 0) + Number(order.shipping_amount || 0);
         }
 
         return orders;
@@ -158,6 +184,36 @@ class OrderModel {
             `UPDATE orders SET status = ? WHERE id = ?`,
             [newStatus, orderId]
         );
+    }
+
+    static resolveSellerStatus(statuses) {
+        const clean = statuses.filter(Boolean);
+        if (!clean.length) return 'pending_review';
+        return clean.every(status => status === clean[0]) ? clean[0] : 'mixed';
+    }
+
+    static async updateSellerOrderStatus(orderId, sellerId, newStatus) {
+        const validStatuses = ['pending_review', 'processing', 'shipped', 'delivered'];
+        if (!validStatuses.includes(newStatus)) throw new Error('Invalid seller order status');
+
+        const db = getDb();
+        const ownedItems = await db.get(`
+            SELECT COUNT(*) AS count
+            FROM order_items oi
+            JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = ? AND p.seller_id = ?
+        `, [orderId, sellerId]);
+
+        if (!ownedItems || Number(ownedItems.count || 0) === 0) {
+            throw new Error('Seller order segment not found');
+        }
+
+        await db.run(`
+            UPDATE order_items oi
+            JOIN products p ON p.id = oi.product_id
+            SET oi.seller_status = ?
+            WHERE oi.order_id = ? AND p.seller_id = ?
+        `, [newStatus, orderId, sellerId]);
     }
 
     static async getById(orderId) {
@@ -176,7 +232,7 @@ class OrderModel {
         if (order.status === 'Shipped' && userId) throw new Error('Shipped orders cannot be cancelled by customer');
         if (order.status === 'Cancelled') return order;
 
-        await db.exec('BEGIN TRANSACTION');
+        await db.exec('START TRANSACTION');
         try {
             const items = await db.all(`SELECT product_id, quantity FROM order_items WHERE order_id = ?`, [orderId]);
             for (const item of items) {

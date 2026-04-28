@@ -54,6 +54,8 @@ class ProductModel {
             row.images_array = images;
             row.images_list = images;
             row.images_json = JSON.stringify(images);
+            row.rating_average = Number(row.rating_average || 0);
+            row.rating_count = Number(row.rating_count || 0);
             return row;
         });
     }
@@ -65,7 +67,8 @@ class ProductModel {
             discount = 0, brand = '', tags = '', additional_images = [], status = 'approved', featured = 0
         } = productData;
         
-        const imagesJson = JSON.stringify(additional_images);
+        const limitedImages = (Array.isArray(additional_images) ? additional_images : []).slice(0, 7);
+        const imagesJson = JSON.stringify(limitedImages);
 
         const result = await db.run(
             `INSERT INTO products (seller_id, title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, status, featured, images) 
@@ -79,11 +82,18 @@ class ProductModel {
         const db = await ProductModel.ensureDb();
         
         let query = `
-            SELECT p.*, u.first_name || ' ' || u.last_name AS seller_name,
-                   u.role AS owner_role, u.seller_status, c.name AS category_name
+            SELECT p.*, CONCAT(u.first_name, ' ', u.last_name) AS seller_name,
+                   u.role AS owner_role, u.seller_status, c.name AS category_name,
+                   COALESCE(rs.rating_average, 0) AS rating_average,
+                   COALESCE(rs.rating_count, 0) AS rating_count
             FROM products p
             JOIN users u ON p.seller_id = u.id
             LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN (
+                SELECT product_id, AVG(rating) AS rating_average, COUNT(*) AS rating_count
+                FROM reviews
+                GROUP BY product_id
+            ) rs ON rs.product_id = p.id
         `;
         const params = [];
         const conditions = [];
@@ -134,9 +144,16 @@ class ProductModel {
     static async getAllForSeller(sellerId) {
         const db = await ProductModel.ensureDb();
         const rows = await db.all(
-            `SELECT p.*, c.name AS category_name
+            `SELECT p.*, c.name AS category_name,
+                    COALESCE(rs.rating_average, 0) AS rating_average,
+                    COALESCE(rs.rating_count, 0) AS rating_count
              FROM products p
              LEFT JOIN categories c ON p.category_id = c.id
+             LEFT JOIN (
+                SELECT product_id, AVG(rating) AS rating_average, COUNT(*) AS rating_count
+                FROM reviews
+                GROUP BY product_id
+             ) rs ON rs.product_id = p.id
              WHERE p.seller_id = ?
              ORDER BY p.created_at DESC`,
             [sellerId]
@@ -148,14 +165,18 @@ class ProductModel {
         const db = await ProductModel.ensureDb();
         const {
             title, description, price, stock_quantity, image_url, category_id = null,
-            discount = 0, brand = '', tags = '', status = 'approved', featured = 0
+            discount = 0, brand = '', tags = '', status = 'approved', featured = 0, additional_images = undefined
         } = productData;
+
+        const setImages = Array.isArray(additional_images);
 
         await db.run(
             `UPDATE products
-             SET title = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, category_id = ?, discount = ?, brand = ?, tags = ?, status = ?, featured = ?
+             SET title = ?, description = ?, price = ?, stock_quantity = ?, image_url = ?, category_id = ?, discount = ?, brand = ?, tags = ?, status = ?, featured = ?${setImages ? ', images = ?' : ''}
              WHERE id = ?`,
-            [title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, status, featured ? 1 : 0, productId]
+            setImages
+                ? [title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, status, featured ? 1 : 0, JSON.stringify(additional_images.slice(0, 7)), productId]
+                : [title, description, price, stock_quantity, image_url, category_id, discount, brand, tags, status, featured ? 1 : 0, productId]
         );
     }
 
@@ -175,17 +196,42 @@ class ProductModel {
     static async getById(productId) {
         const db = await ProductModel.ensureDb();
         const row = await db.get(`
-            SELECT p.*, u.first_name || ' ' || u.last_name AS seller_name,
-                   u.role AS owner_role, u.seller_status, c.name AS category_name
+            SELECT p.*, CONCAT(u.first_name, ' ', u.last_name) AS seller_name,
+                   u.role AS owner_role, u.seller_status, c.name AS category_name,
+                   COALESCE(rs.rating_average, 0) AS rating_average,
+                   COALESCE(rs.rating_count, 0) AS rating_count
             FROM products p
             JOIN users u ON p.seller_id = u.id
             LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN (
+                SELECT product_id, AVG(rating) AS rating_average, COUNT(*) AS rating_count
+                FROM reviews
+                GROUP BY product_id
+            ) rs ON rs.product_id = p.id
             WHERE p.id = ?
         `, [productId]);
         if(row) {
-            return this.processRows([row])[0]; 
+            const product = this.processRows([row])[0];
+            product.rating_breakdown = await this.getRatingBreakdown(productId);
+            return product; 
         }
         return row;
+    }
+
+    static async getRatingBreakdown(productId) {
+        const db = await ProductModel.ensureDb();
+        const rows = await db.all(
+            `SELECT rating, COUNT(*) AS count
+             FROM reviews
+             WHERE product_id = ?
+             GROUP BY rating`,
+            [productId]
+        );
+        const breakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        rows.forEach(row => {
+            breakdown[Number(row.rating)] = Number(row.count || 0);
+        });
+        return breakdown;
     }
 }
 

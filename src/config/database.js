@@ -277,7 +277,48 @@ async function initDB() {
                     FOREIGN KEY (user_id) REFERENCES users(id)
                     ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+            CREATE TABLE IF NOT EXISTS seller_requests (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                user_id INT NOT NULL,
+                store_name VARCHAR(255) NOT NULL,
+                phone VARCHAR(50),
+                address TEXT,
+                city VARCHAR(100),
+                country VARCHAR(100),
+                description TEXT,
+                store_image TEXT,
+                status VARCHAR(50) DEFAULT 'pending',
+                admin_note TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+                INDEX idx_seller_requests_user_id (user_id),
+                INDEX idx_seller_requests_status (status),
+
+                CONSTRAINT fk_seller_requests_user
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
+
+        const alterQueries = [
+            "ALTER TABLE users ADD COLUMN store_name VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN store_description TEXT",
+            "ALTER TABLE order_items ADD COLUMN seller_status VARCHAR(50) DEFAULT 'pending_review'",
+            "ALTER TABLE order_items ADD INDEX idx_order_items_seller_status (seller_status)"
+        ];
+
+        for (const query of alterQueries) {
+            try {
+                await dbWrapper.run(query);
+            } catch (error) {
+                const message = String(error && error.message || '').toLowerCase();
+                if (!message.includes('duplicate') && !message.includes('exists')) {
+                    console.warn('Schema update skipped:', error.message);
+                }
+            }
+        }
 
         await dbWrapper.run(`
             UPDATE users

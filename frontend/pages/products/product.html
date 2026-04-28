@@ -194,11 +194,23 @@
                 `</div>`;
             }
 
-            const avgRating = Math.max(0, Math.min(5, Math.floor(safeNumber(product.average_rating || 4)))); 
+            const avgValue = safeNumber(product.rating_average);
+            const ratingCount = safeNumber(product.rating_count);
+            const avgRating = Math.max(0, Math.min(5, Math.round(avgValue))); 
             let starsHtml = '';
             for(let i=1; i<=5; i++) {
                 starsHtml += `<i class="fas fa-star ${i <= avgRating ? 'text-yellow-400' : 'text-gray-300'} text-sm"></i>`;
             }
+            const breakdown = product.rating_breakdown || {};
+            const ratingBars = [5, 4, 3, 2, 1].map(star => {
+                const count = safeNumber(breakdown[star]);
+                const percent = ratingCount ? Math.round((count / ratingCount) * 100) : 0;
+                return `<div class="flex items-center gap-3 text-sm">
+                    <span class="w-12 text-gray-500">${star} نجوم</span>
+                    <div class="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden"><div class="h-full bg-yellow-400" style="width:${percent}%"></div></div>
+                    <span class="w-10 text-left text-gray-500">${count}</span>
+                </div>`;
+            }).join('');
 
             container.innerHTML = `
                 <div class="flex flex-col md:flex-row w-full">
@@ -219,6 +231,14 @@
                         <div class="flex items-center gap-2 mb-6">
                             <div class="flex">${starsHtml}</div>
                             <span class="text-gray-400 text-sm">(تقييم عام)</span>
+                        </div>
+
+                        <div class="bg-white border border-gray-100 rounded-lg p-4 mb-6 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <strong class="text-gray-900">ملخص التقييمات</strong>
+                                <span class="text-primary-600 font-bold">${ratingCount ? avgValue.toFixed(1) : '0.0'} ★</span>
+                            </div>
+                            ${ratingCount ? `<div class="space-y-2">${ratingBars}</div>` : '<p class="text-gray-500 text-sm">لا توجد تقييمات بعد</p>'}
                         </div>
 
                         <div class="mb-6 flex items-end gap-3">
@@ -395,6 +415,7 @@
                     userRating = 0;
                     document.querySelectorAll('#starRating i').forEach(s => s.className = 'fas fa-star text-3xl text-gray-300 cursor-pointer peer hover:text-yellow-400 transition');
                     fetchReviews();
+                    fetchProduct();
                 } else {
                     const data = await res.json();
                     showToast(data.message || 'حدث خطأ', 'error');

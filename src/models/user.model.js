@@ -31,7 +31,7 @@ class UserModel {
         const db = getDb();
         // ✨ تم إضافة الحقول الجديدة هنا عشان تظهر في البروفايل
         return await db.get(
-            `SELECT id, first_name, last_name, email, phone, role, seller_status, profile_picture, email_verified, address, birthdate, city, country
+            `SELECT id, first_name, last_name, email, phone, role, seller_status, profile_picture, email_verified, address, birthdate, city, country, store_name, store_description
              FROM users
              WHERE id = ?`,
             [userId]
@@ -41,13 +41,16 @@ class UserModel {
     static async updateProfile(userId, profileData) {
         const db = getDb();
         // ✨ تم إضافة الحقول الجديدة عشان تتحدث في الداتا بيز
-        const { first_name, last_name, phone, address, birthdate, city, country } = profileData;
+        const { first_name, last_name, phone, address, birthdate, city, country, profile_picture = null, store_name = null, store_description = null } = profileData;
 
         await db.run(
             `UPDATE users
-             SET first_name = ?, last_name = ?, phone = ?, address = ?, birthdate = ?, city = ?, country = ?
+             SET first_name = ?, last_name = ?, phone = ?, address = ?, birthdate = ?, city = ?, country = ?,
+                 profile_picture = COALESCE(?, profile_picture),
+                 store_name = COALESCE(?, store_name),
+                 store_description = COALESCE(?, store_description)
              WHERE id = ?`,
-            [first_name, last_name, phone, address, birthdate, city, country, userId]
+            [first_name, last_name, phone, address, birthdate, city, country, profile_picture, store_name, store_description, userId]
         );
     }
 

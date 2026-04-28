@@ -4,7 +4,7 @@ const url = require('url');
 
 const { isAdmin, isSeller } = require('./middleware/role.middleware');
 const { getAllUsers, updateUserRole } = require('./controllers/admin.controller');
-const { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin, cancelOrder, getSalesAnalytics } = require('./controllers/order.controller'); 
+const { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin, cancelOrder, getSalesAnalytics, updateSellerOrderStatus } = require('./controllers/order.controller'); 
 const { addToCart, viewCart, updateCartItem, removeCartItem } = require('./controllers/cart.controller');
 const { getProducts, getProductById, createProduct, getAdminProducts, updateProductStatusAdmin, updateProduct, deleteProduct } = require('./controllers/product.controller');
 const { getSellerProducts, getSellerOrders, getSellerStats, getSellerReviews } = require('./controllers/seller.controller');
@@ -15,6 +15,7 @@ const { createReview, getReviews, replyToReview, updateReview } = require('./con
 const { getAllCategories, createCategory, updateCategory, deleteCategory } = require('./controllers/category.controller');
 const { getWishlist, addWishlist, removeWishlist } = require('./controllers/wishlist.controller');
 const { getAllTags, createTag, updateTag, deleteTag } = require('./controllers/tag.controller');
+const { getMySellerRequest, submitSellerRequest, getAdminSellers, updateSellerRequestStatus } = require('./controllers/seller-request.controller');
 
 // ✨ تم إضافة updateBanner و deleteBanner
 const { getAllBanners, createBanner, updateBanner, deleteBanner } = require('./controllers/banner.controller');
@@ -43,6 +44,7 @@ const router = async (req, res) => {
                 if (ext === '.png') contentType = 'image/png';
                 else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
                 else if (ext === '.webp') contentType = 'image/webp';
+                else if (ext === '.gif') contentType = 'image/gif';
 
                 res.writeHead(200, { 'Content-Type': contentType });
                 const readStream = fs.createReadStream(filePath);
@@ -59,6 +61,8 @@ const router = async (req, res) => {
 
     if (path === '/api/profile' && method === 'GET') { try { await authenticate(req, res); return getProfile(req, res); } catch (e) { return; } }
     if (path === '/api/profile' && method === 'PUT') { try { await authenticate(req, res); return updateProfile(req, res); } catch (e) { return; } }
+    if (path === '/api/seller-request' && method === 'GET') { try { await authenticate(req, res); return getMySellerRequest(req, res); } catch (e) { return; } }
+    if (path === '/api/seller-request' && method === 'POST') { try { await authenticate(req, res); return submitSellerRequest(req, res); } catch (e) { return; } }
 
     if (path === '/api/categories' && method === 'GET') return getAllCategories(req, res);
     if (path === '/api/categories' && method === 'POST') { try { await authenticate(req, res); return createCategory(req, res); } catch (e) { return; } }
@@ -85,6 +89,7 @@ const router = async (req, res) => {
     if (path.startsWith('/api/seller/products/') && method === 'PUT') { try { await authenticate(req, res); await isSeller(req, res); const id = path.split('/').pop(); return updateProduct(req, res, Number(id)); } catch (e) { return; } }
     if (path.startsWith('/api/seller/products/') && method === 'DELETE') { try { await authenticate(req, res); await isSeller(req, res); const id = path.split('/').pop(); return deleteProduct(req, res, Number(id)); } catch (e) { return; } }
     if (path === '/api/seller/orders' && method === 'GET') { try { await authenticate(req, res); await isSeller(req, res); return getSellerOrders(req, res); } catch (e) { return; } }
+    if (path.startsWith('/api/seller/orders/') && path.endsWith('/status') && method === 'PUT') { try { await authenticate(req, res); await isSeller(req, res); const id = path.split('/')[4]; return updateSellerOrderStatus(req, res, Number(id)); } catch (e) { return; } }
     if (path === '/api/seller/stats' && method === 'GET') { try { await authenticate(req, res); await isSeller(req, res); return getSellerStats(req, res); } catch (e) { return; } }
     if (path === '/api/seller/reviews' && method === 'GET') { try { await authenticate(req, res); await isSeller(req, res); return getSellerReviews(req, res); } catch (e) { return; } }
     if (path.startsWith('/api/products/') && method === 'GET') { const id = path.split('/').pop(); return getProductById(req, res, Number(id)); }
@@ -109,6 +114,8 @@ const router = async (req, res) => {
     if (path === '/api/admin/analytics' && method === 'GET') { try { await authenticate(req, res); return getSalesAnalytics(req, res); } catch (e) { return; } }
     if (path === '/api/admin/users' && method === 'GET') { try { await authenticate(req, res); await isAdmin(req, res); return getAllUsers(req, res); } catch (e) { return; } }
     if (path === '/api/admin/users/role' && method === 'PUT') { try { await authenticate(req, res); await isAdmin(req, res); return updateUserRole(req, res); } catch (e) { return; } }
+    if (path === '/api/admin/sellers' && method === 'GET') { try { await authenticate(req, res); await isAdmin(req, res); return getAdminSellers(req, res); } catch (e) { return; } }
+    if (path.startsWith('/api/admin/seller-requests/') && method === 'PUT') { try { await authenticate(req, res); await isAdmin(req, res); const id = path.split('/').pop(); return updateSellerRequestStatus(req, res, Number(id)); } catch (e) { return; } }
 
     if (path === '/api/reviews' && method === 'GET') return getReviews(req, res);
     if (path === '/api/reviews' && method === 'POST') { try { await authenticate(req, res); return createReview(req, res); } catch (e) { return; } }

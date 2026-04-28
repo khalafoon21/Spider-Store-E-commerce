@@ -7,6 +7,33 @@ const TagModel = require('../models/tag.model');
 const getDb = require('../config/database');
 const { getPostData } = require('../utils/helpers');
 
+const MAX_PRODUCT_IMAGES = 8;
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+function parseImageList(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.flatMap(parseImageList);
+    try {
+        const parsed = JSON.parse(String(value));
+        if (Array.isArray(parsed)) return parsed.map(item => String(item || '').trim()).filter(Boolean);
+    } catch (error) {}
+    return String(value).split(/[,\n]/).map(item => item.trim()).filter(Boolean);
+}
+
+function uniqueImages(images) {
+    const result = [];
+    images.forEach(image => {
+        const clean = String(image || '').trim();
+        if (clean && !result.includes(clean)) result.push(clean);
+    });
+    return result.slice(0, MAX_PRODUCT_IMAGES);
+}
+
+function imagePathFromFile(file) {
+    const fileName = path.basename(file.filepath || file.newFilename || '');
+    return fileName ? `/uploads/products/${fileName}` : '';
+}
+
 async function getProducts(req, res) {
     try {
         const baseURL = `http://${req.headers.host}`;
@@ -71,9 +98,10 @@ async function createProduct(req, res) {
 
         const form = formidable({
             multiples: true,
+            uploadDir: uploadFolder,
             maxFileSize: 50 * 1024 * 1024,
             maxTotalFileSize: 100 * 1024 * 1024,
-             keepExtensions: true
+            keepExtensions: true
         });
 
         form.parse(req, async (err, fields, files) => {
@@ -114,13 +142,16 @@ async function createProduct(req, res) {
                 // ✨ معالجة الصور (أول صورة أساسية، والباقي إضافي)
                 let image_url = '';
                 let additional_images = [];
-                const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-
                 // Frontend بيبعت الصور في حقل اسمه images
                 if (files.images) {
                     const uploadedFiles = Array.isArray(files.images) ? files.images : [files.images];
                     
                     if (uploadedFiles.length > 0) {
+                        if (uploadedFiles.length > MAX_PRODUCT_IMAGES) {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ success: false, message: `Maximum ${MAX_PRODUCT_IMAGES} images are allowed` }));
+                        }
+
                         const invalidFile = uploadedFiles.find(file => !allowedImageTypes.includes(file.mimetype));
                         if (invalidFile) {
                             res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -128,15 +159,12 @@ async function createProduct(req, res) {
                         }
 
                         // الصورة الأولى هي الأساسية
-                        const mainFile = uploadedFiles[0];
-                        const mainFileName = path.basename(mainFile.filepath || mainFile.newFilename || '');
-                        if (mainFileName) image_url = `/uploads/products/${mainFileName}`;
+                        image_url = imagePathFromFile(uploadedFiles[0]);
 
                         // باقي الصور تنزل كصور إضافية
                         for (let i = 1; i < uploadedFiles.length; i++) {
-                            const addFile = uploadedFiles[i];
-                            const addFileName = path.basename(addFile.filepath || addFile.newFilename || '');
-                            if (addFileName) additional_images.push(`/uploads/products/${addFileName}`);
+                            const addPath = imagePathFromFile(uploadedFiles[i]);
+                            if (addPath) additional_images.push(addPath);
                         }
                     }
                 }
@@ -309,6 +337,7 @@ async function updateProduct(req, res, productId) {
         }
         const form = formidable({
             multiples: true,
+            uploadDir: uploadFolder,
             maxFileSize: 50 * 1024 * 1024,
             maxTotalFileSize: 100 * 1024 * 1024,
             keepExtensions: true
@@ -354,23 +383,35 @@ async function updateProduct(req, res, productId) {
                 }));
             }
 
-            let image_url = existing.image_url || '';
+            let selectedImages = fields.existing_images
+                ? parseImageList(fields.existing_images[0])
+                : uniqueImages([existing.image_url, ...(existing.images_array || [])]);
             
             // لو رفع صورة جديدة (الاسم جاي من الفورم بـ images)
             if (files.images || files.image) {
                 const uploadedFileField = files.images || files.image;
-                const uploadedFile = Array.isArray(uploadedFileField) ? uploadedFileField[0] : uploadedFileField;
-                const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-                if (!allowedImageTypes.includes(uploadedFile.mimetype)) {
+                const uploadedFiles = Array.isArray(uploadedFileField) ? uploadedFileField : [uploadedFileField];
+                if (selectedImages.length + uploadedFiles.length > MAX_PRODUCT_IMAGES) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({
+                        success: false,
+                        message: `Maximum ${MAX_PRODUCT_IMAGES} images are allowed`
+                    }));
+                }
+                const invalidFile = uploadedFiles.find(file => !allowedImageTypes.includes(file.mimetype));
+                if (invalidFile) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     return res.end(JSON.stringify({
                         success: false,
                         message: 'Only image files are allowed'
                     }));
                 }
-                const fileName = path.basename(uploadedFile.filepath || uploadedFile.newFilename || '');
-                if (fileName) image_url = `/uploads/products/${fileName}`;
+                selectedImages = uniqueImages([...selectedImages, ...uploadedFiles.map(imagePathFromFile)]);
             }
+
+            selectedImages = uniqueImages(selectedImages);
+            const image_url = selectedImages[0] || '';
+            const additional_images = selectedImages.slice(1);
 
             const syncedTags = await TagModel.syncFromString(tags);
 
@@ -385,7 +426,8 @@ async function updateProduct(req, res, productId) {
                 brand,
                 tags: syncedTags,
                 status,
-                featured
+                featured,
+                additional_images
             });
 
             res.writeHead(200, { 'Content-Type': 'application/json' });

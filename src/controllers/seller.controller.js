@@ -43,7 +43,7 @@ async function getSellerReviews(req, res) {
         const db = getDb();
         const reviews = await db.all(`
             SELECT r.*, p.title AS product_title, p.image_url,
-                   u.first_name || ' ' || u.last_name AS customer_name
+                   CONCAT(u.first_name, ' ', u.last_name) AS customer_name
             FROM reviews r
             JOIN products p ON p.id = r.product_id
             JOIN users u ON u.id = r.user_id

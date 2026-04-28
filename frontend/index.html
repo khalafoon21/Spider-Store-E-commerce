@@ -325,8 +325,10 @@
                 const price = safeNumber(product.price);
                 const discount = safeNumber(product.discount);
                 const hasDiscount = discount > 0;
-                const rating = Math.max(0, Math.min(5, Math.floor(safeNumber(product.average_rating || 4))));
-                const stars = '<i class="fas fa-star"></i>'.repeat(rating) + '<i class="far fa-star text-gray-300"></i>'.repeat(5 - rating);
+                const ratingAverage = safeNumber(product.rating_average);
+                const ratingCount = safeNumber(product.rating_count);
+                const fullStars = Math.max(0, Math.min(5, Math.round(ratingAverage)));
+                const stars = '<i class="fas fa-star"></i>'.repeat(fullStars) + '<i class="far fa-star text-gray-300"></i>'.repeat(5 - fullStars);
 
                 return `
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full relative">
@@ -340,8 +342,8 @@
                         <a href="pages/products/product.html?id=${productId}" class="hover:text-primary-600 transition-colors">
                             <h3 class="font-bold text-gray-800 mb-1 line-clamp-2">${escapeHTML(product.title)}</h3>
                         </a>
-                        <div class="flex items-center text-secondary-500 text-xs mb-3">
-                            ${stars} <span class="text-gray-400 mr-2">(${safeNumber(product.reviews_count)})</span>
+                        <div class="flex items-center text-secondary-500 text-xs mb-3 gap-1">
+                            ${ratingCount ? `${stars} <span class="text-gray-600 font-bold mr-1">${ratingAverage.toFixed(1)}</span><span class="text-gray-400">(${ratingCount} تقييم)</span>` : '<span class="text-gray-400">لا توجد تقييمات بعد</span>'}
                         </div>
                         <div class="mt-auto flex items-center justify-between">
                             <div class="flex flex-col">

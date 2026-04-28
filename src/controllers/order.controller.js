@@ -185,4 +185,24 @@ async function getSalesAnalytics(req, res) {
     }
 }
 
-module.exports = { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin, cancelOrder, getSalesAnalytics };
+async function updateSellerOrderStatus(req, res, orderId) {
+    try {
+        if (req.user.role !== 'seller' && req.user.role !== 'admin') {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Not allowed' }));
+        }
+
+        const body = await getPostData(req);
+        const status = body.status;
+        await OrderModel.updateSellerOrderStatus(orderId, req.user.userId, status);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Seller order status updated successfully' }));
+    } catch (error) {
+        const known = /invalid|not found/i.test(error.message || '');
+        res.writeHead(known ? 400 : 500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: error.message || 'Could not update seller order status' }));
+    }
+}
+
+module.exports = { checkout, getOrderHistory, updateOrderStatus, getAllOrdersAdmin, cancelOrder, getSalesAnalytics, updateSellerOrderStatus };

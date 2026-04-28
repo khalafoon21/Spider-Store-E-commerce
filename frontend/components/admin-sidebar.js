@@ -87,6 +87,9 @@ async function loadAdminSidebar(activePage) {
                 <a href="users.html" class="block px-4 py-3 rounded-md transition ${activePage === 'users' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
                     <i class="fas fa-users ml-2"></i> إدارة المستخدمين
                 </a>
+                <a href="sellers.html" class="block px-4 py-3 rounded-md transition ${activePage === 'sellers' ? 'bg-gray-800 text-primary-500 font-bold' : 'hover:bg-gray-800'}">
+                    <i class="fas fa-store ml-2"></i> البائعين
+                </a>
                 <a href="../../index.html" class="block px-4 py-3 hover:bg-gray-800 rounded-md transition mt-4">
                     <i class="fas fa-store ml-2"></i> العودة للمتجر
                 </a>

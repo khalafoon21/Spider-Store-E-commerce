@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Store | البائعين</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Cairo','sans-serif']},colors:{primary:{500:'#06B6D4',600:'#0891B2'}}}}}</script>
+</head>
+<body id="admin-layout" class="font-sans bg-gray-50 min-h-screen text-gray-800 flex flex-col md:flex-row">
+    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full">
+        <header class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-900">البائعين</h1>
+                <p class="text-gray-500 mt-1">تفاصيل البائعين وطلبات الانضمام وإحصائياتهم.</p>
+            </div>
+            <button onclick="fetchSellers()" class="bg-white border border-gray-200 hover:bg-gray-100 px-4 py-2 rounded-md font-bold"><i class="fas fa-rotate ml-1"></i> تحديث</button>
+        </header>
+
+        <section class="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[1100px] text-right">
+                    <thead class="bg-gray-50 text-gray-600 text-sm border-b">
+                        <tr>
+                            <th class="p-4">البائع</th>
+                            <th class="p-4">الحالة</th>
+                            <th class="p-4">الانضمام</th>
+                            <th class="p-4">المنتجات</th>
+                            <th class="p-4">الطلبات</th>
+                            <th class="p-4">المبيعات</th>
+                            <th class="p-4">التقييم</th>
+                            <th class="p-4 text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sellersTable"><tr><td colspan="8" class="p-10 text-center text-primary-600 font-bold">جاري التحميل...</td></tr></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="sellerModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto">
+            <div class="p-5 border-b flex items-center justify-between sticky top-0 bg-white">
+                <h2 class="text-xl font-extrabold">تفاصيل البائع</h2>
+                <button onclick="closeSellerModal()" class="h-9 w-9 rounded-md bg-gray-100 hover:bg-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="sellerDetails" class="p-5"></div>
+        </div>
+    </div>
+
+    <script src="../../components/app-state.js"></script>
+    <script src="../../components/admin-sidebar.js"></script>
+    <script>
+        loadAdminSidebar('sellers');
+        const API_URL = '/api';
+        const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
+        let sellers = [];
+        const escapeHTML = v => String(v || '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+        const money = v => `${Number(v || 0).toFixed(2)} ج.م`;
+        const img = v => v || 'https://via.placeholder.com/96?text=Seller';
+        const statusText = s => ({ pending:'قيد المراجعة', approved:'موافق', rejected:'رفض', approved_seller:'معتمد' }[s] || s || 'pending');
+
+        function logout() {
+            if (window.AppState) window.AppState.clearToken();
+            window.location.href = '../auth/login.html';
+        }
+
+        async function fetchSellers() {
+            const table = document.getElementById('sellersTable');
+            table.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-primary-600 font-bold">جاري التحميل...</td></tr>';
+            try {
+                const response = await fetch(`${API_URL}/admin/sellers`, { headers: { Authorization: `Bearer ${token}` } });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.message || 'تعذر التحميل');
+                sellers = result.data || [];
+                renderSellers();
+            } catch (error) {
+                table.innerHTML = `<tr><td colspan="8" class="p-10 text-center text-red-600 font-bold">${escapeHTML(error.message)}</td></tr>`;
+            }
+        }
+
+        function renderSellers() {
+            const table = document.getElementById('sellersTable');
+            if (!sellers.length) {
+                table.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-gray-500">لا يوجد بائعين أو طلبات بعد.</td></tr>';
+                return;
+            }
+            table.innerHTML = sellers.map((seller, index) => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">
+                        <div class="flex items-center gap-3">
+                            <img src="${img(seller.profile_picture || seller.store_image)}" class="w-12 h-12 rounded-full object-cover border">
+                            <div>
+                                <p class="font-bold">${escapeHTML((seller.store_name || seller.request_store_name) || `${seller.first_name} ${seller.last_name}`)}</p>
+                                <p class="text-xs text-gray-500">${escapeHTML(seller.email)} - ${escapeHTML(seller.phone)}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4">${statusText(seller.request_status || seller.seller_status)}</td>
+                    <td class="p-4 text-sm text-gray-500">${escapeHTML(seller.created_at || '-')}</td>
+                    <td class="p-4">${Number(seller.product_count || 0)}</td>
+                    <td class="p-4">${Number(seller.order_count || 0)}</td>
+                    <td class="p-4 font-bold text-primary-600">${money(seller.total_sales)}</td>
+                    <td class="p-4">${Number(seller.rating_average || 0).toFixed(1)} ★</td>
+                    <td class="p-4 text-center"><button onclick="openSeller(${index})" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm">التفاصيل</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function openSeller(index) {
+            const s = sellers[index];
+            document.getElementById('sellerDetails').innerHTML = `
+                <div class="flex items-center gap-4 mb-6">
+                    <img src="${img(s.profile_picture || s.store_image)}" class="w-24 h-24 rounded-full object-cover border">
+                    <div>
+                        <h3 class="text-2xl font-extrabold">${escapeHTML((s.store_name || s.request_store_name) || `${s.first_name} ${s.last_name}`)}</h3>
+                        <p class="text-gray-500">${escapeHTML(s.email)} - ${escapeHTML(s.phone)}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                    ${detail('العنوان', s.address)}
+                    ${detail('المدينة / الدولة', `${s.city || '-'} / ${s.country || '-'}`)}
+                    ${detail('تاريخ الانضمام', s.created_at)}
+                    ${detail('المنتجات', `${s.product_count} | pending ${s.pending_products} | approved ${s.approved_products} | rejected ${s.rejected_products}`)}
+                    ${detail('الطلبات', s.order_count)}
+                    ${detail('إجمالي المبيعات', money(s.total_sales))}
+                    ${detail('متوسط التقييم', `${Number(s.rating_average || 0).toFixed(1)} ★`)}
+                    ${detail('وصف المتجر', s.store_description || s.request_description || '-')}
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    ${s.request_id ? `<button onclick="updateRequest(${s.request_id}, 'approved')" class="bg-emerald-600 text-white px-4 py-2 rounded-md font-bold">اعتماد كبائع</button>
+                    <button onclick="updateRequest(${s.request_id}, 'rejected')" class="bg-red-600 text-white px-4 py-2 rounded-md font-bold">رفض</button>` : ''}
+                    <a href="manage-products.html" class="bg-gray-100 px-4 py-2 rounded-md font-bold">مشاهدة منتجاته</a>
+                </div>
+            `;
+            document.getElementById('sellerModal').classList.remove('hidden');
+            document.getElementById('sellerModal').classList.add('flex');
+        }
+
+        function detail(label, value) {
+            return `<div class="bg-gray-50 border rounded-md p-4"><span class="block text-xs text-gray-400 mb-1">${escapeHTML(label)}</span><strong>${escapeHTML(value || '-')}</strong></div>`;
+        }
+
+        function closeSellerModal() {
+            document.getElementById('sellerModal').classList.add('hidden');
+            document.getElementById('sellerModal').classList.remove('flex');
+        }
+
+        async function updateRequest(id, status) {
+            const response = await fetch(`${API_URL}/admin/seller-requests/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ status })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) return alert(result.message || 'تعذر تحديث الطلب');
+            closeSellerModal();
+            fetchSellers();
+        }
+
+        fetchSellers();
+    </script>
+</body>
+</html>

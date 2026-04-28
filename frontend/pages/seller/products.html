@@ -62,7 +62,11 @@
                 <input id="tags" list="tagsList" placeholder="الكلمات الدلالية" class="md:col-span-2 px-4 py-3 rounded-md border border-slate-200 bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500">
                 <datalist id="tagsList"></datalist>
                 <textarea id="description" rows="4" placeholder="وصف المنتج" class="md:col-span-2 px-4 py-3 rounded-md border border-slate-200 bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-cyan-500"></textarea>
-                <input id="images" type="file" accept="image/*" multiple class="md:col-span-2 px-4 py-3 rounded-md border border-slate-200 bg-slate-50">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">الصور: صورة رئيسية + صور إضافية حتى 8 صور</label>
+                    <input id="images" type="file" accept="image/*" multiple class="w-full px-4 py-3 rounded-md border border-slate-200 bg-slate-50">
+                    <div id="imagePreviewGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3"></div>
+                </div>
                 <div class="md:col-span-2 flex gap-3 pt-2">
                     <button id="saveBtn" type="submit" class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-md font-bold"><i class="fas fa-save ml-1"></i> حفظ</button>
                     <button type="button" onclick="closeProductModal()" class="bg-slate-100 hover:bg-slate-200 px-6 py-3 rounded-md font-bold">إلغاء</button>
@@ -79,6 +83,8 @@
         const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
         let productsCache = [];
         let categoriesCache = [];
+        let selectedImageFiles = [];
+        let existingProductImages = [];
 
         const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
         const imageURL = value => {
@@ -90,6 +96,50 @@
             const map = { approved: 'bg-emerald-50 text-emerald-700', pending: 'bg-amber-50 text-amber-700', rejected: 'bg-red-50 text-red-700' };
             return `<span class="px-3 py-1 rounded-full text-xs font-bold ${map[status] || map.pending}">${escapeHTML(status || 'pending')}</span>`;
         };
+        const productImages = product => {
+            const images = [];
+            const push = value => { const clean = String(value || '').trim(); if (clean && !images.includes(clean)) images.push(clean); };
+            push(product.image_url);
+            [product.images_array, product.images_list, product.images].forEach(value => {
+                if (Array.isArray(value)) value.forEach(push);
+                else if (typeof value === 'string' && value.trim()) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        Array.isArray(parsed) ? parsed.forEach(push) : push(parsed);
+                    } catch (error) {
+                        value.split(/[,\n]/).forEach(push);
+                    }
+                }
+            });
+            return images;
+        };
+
+        function renderImagePreview() {
+            const grid = document.getElementById('imagePreviewGrid');
+            const existingHtml = existingProductImages.map((src, index) => `
+                <div class="relative border border-slate-200 rounded-md overflow-hidden bg-white">
+                    <img src="${imageURL(src)}" class="w-full h-28 object-contain bg-slate-50">
+                    <button type="button" onclick="removeExistingImage(${index})" class="absolute top-1 left-1 h-7 w-7 rounded bg-red-600 text-white"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
+            const newHtml = selectedImageFiles.map((file, index) => `
+                <div class="relative border border-slate-200 rounded-md overflow-hidden bg-white">
+                    <img src="${URL.createObjectURL(file)}" class="w-full h-28 object-contain bg-slate-50">
+                    <button type="button" onclick="removeSelectedImage(${index})" class="absolute top-1 left-1 h-7 w-7 rounded bg-red-600 text-white"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
+            grid.innerHTML = existingHtml + newHtml || '<p class="text-sm text-slate-400">لم يتم اختيار صور بعد.</p>';
+        }
+
+        function removeExistingImage(index) {
+            existingProductImages.splice(index, 1);
+            renderImagePreview();
+        }
+
+        function removeSelectedImage(index) {
+            selectedImageFiles.splice(index, 1);
+            renderImagePreview();
+        }
 
         function logout() {
             if (window.AppState) window.AppState.clearToken();
@@ -157,6 +207,8 @@
         function openProductModal(productId = null) {
             document.getElementById('productForm').reset();
             document.getElementById('productId').value = '';
+            selectedImageFiles = [];
+            existingProductImages = [];
             document.getElementById('modalTitle').textContent = productId ? 'تعديل المنتج' : 'منتج جديد';
             if (productId) {
                 const product = productsCache.find(item => Number(item.id) === Number(productId));
@@ -170,7 +222,9 @@
                 document.getElementById('category_id').value = product.category_id || '';
                 document.getElementById('tags').value = product.tags || '';
                 document.getElementById('description').value = product.description || '';
+                existingProductImages = productImages(product);
             }
+            renderImagePreview();
             document.body.classList.add('modal-open');
             document.getElementById('productModal').classList.remove('hidden');
             document.getElementById('productModal').classList.add('flex');
@@ -194,7 +248,9 @@
             formData.append('category_id', document.getElementById('category_id').value);
             formData.append('tags', document.getElementById('tags').value);
             formData.append('description', document.getElementById('description').value);
-            Array.from(document.getElementById('images').files).forEach(file => formData.append('images', file));
+            if (existingProductImages.length + selectedImageFiles.length > 8) return alert('الحد الأقصى 8 صور للمنتج');
+            formData.append('existing_images', JSON.stringify(existingProductImages));
+            selectedImageFiles.forEach(file => formData.append('images', file));
 
             const url = id ? `${API_URL}/seller/products/${id}` : `${API_URL}/seller/products`;
             const method = id ? 'PUT' : 'POST';
@@ -207,6 +263,18 @@
             closeProductModal();
             fetchTags();
             fetchProducts();
+        });
+
+        document.getElementById('images').addEventListener('change', event => {
+            const incoming = Array.from(event.target.files || []);
+            if (existingProductImages.length + selectedImageFiles.length + incoming.length > 8) {
+                alert('الحد الأقصى 8 صور للمنتج');
+                event.target.value = '';
+                return;
+            }
+            selectedImageFiles = selectedImageFiles.concat(incoming);
+            event.target.value = '';
+            renderImagePreview();
         });
 
         async function deleteProduct(id) {

@@ -41,8 +41,35 @@
             </button>
         </div>
 
+        <div id="sellerRequestCard" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">طلب التسجيل كبائع</h2>
+                    <p id="sellerRequestStatus" class="text-sm text-gray-500 mt-1">جاري تحميل حالة الطلب...</p>
+                </div>
+                <button type="button" onclick="toggleSellerForm()" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md font-bold">طلب التسجيل كبائع</button>
+            </div>
+            <form id="sellerRequestForm" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="store_name" required placeholder="اسم المتجر أو البائع" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
+                <input id="seller_phone" placeholder="رقم الهاتف" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
+                <input id="seller_city" placeholder="المدينة" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
+                <input id="seller_country" placeholder="الدولة" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
+                <textarea id="seller_address" placeholder="العنوان" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500"></textarea>
+                <textarea id="seller_description" placeholder="وصف بسيط" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500"></textarea>
+                <input id="store_image" type="file" accept="image/*" class="md:col-span-2 px-4 py-3 border border-gray-200 rounded-lg">
+                <button type="submit" class="md:col-span-2 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg transition">إرسال الطلب</button>
+            </form>
+        </div>
+
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <h2 class="text-xl font-bold text-gray-900 mb-4">بيانات الحساب</h2>
+            <div class="flex items-center gap-4 mb-5">
+                <img id="profilePreview" src="https://via.placeholder.com/96?text=User" class="w-24 h-24 rounded-full object-cover border border-gray-200 bg-gray-50">
+                <label class="cursor-pointer bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md font-bold text-sm">
+                    <i class="fas fa-camera ml-1"></i> صورة الحساب
+                    <input id="profile_picture" type="file" accept="image/*" class="hidden">
+                </label>
+            </div>
             <form id="profileForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input id="first_name" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الاسم الأول">
                 <input id="last_name" class="px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="الاسم الأخير">
@@ -99,7 +126,28 @@
                     const element = document.getElementById(id);
                     if (element) element.value = user[id] || '';
                 });
+                const preview = document.getElementById('profilePreview');
+                if (preview && user.profile_picture) preview.src = user.profile_picture;
             } catch (error) {}
+        }
+
+        function toggleSellerForm() {
+            document.getElementById('sellerRequestForm').classList.toggle('hidden');
+        }
+
+        async function fetchSellerRequest() {
+            const token = getToken();
+            const label = document.getElementById('sellerRequestStatus');
+            if (!token || !label) return;
+            try {
+                const response = await fetch(`${API_URL}/seller-request`, { headers: { Authorization: `Bearer ${token}` } });
+                const data = await response.json();
+                const request = data.data;
+                const map = { pending: 'قيد المراجعة', approved: 'تم قبولك كبائع', rejected: 'تم رفض الطلب' };
+                label.textContent = request ? `حالة الطلب: ${map[request.status] || request.status}` : 'يمكنك إرسال طلب للانضمام كبائع.';
+            } catch (error) {
+                label.textContent = 'تعذر تحميل حالة طلب البائع.';
+            }
         }
 
         async function fetchWishlist() {
@@ -131,18 +179,46 @@
         document.getElementById('profileForm').addEventListener('submit', async event => {
             event.preventDefault();
             const token = getToken();
-            const body = {};
-            ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'].forEach(id => body[id] = document.getElementById(id).value.trim());
+            const body = new FormData();
+            ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'].forEach(id => body.append(id, document.getElementById(id).value.trim()));
+            const imageFile = document.getElementById('profile_picture').files[0];
+            if (imageFile) body.append('profile_picture', imageFile);
             try {
                 const response = await fetch(`${API_URL}/profile`, {
                     method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body
                 });
                 const data = await response.json();
                 if (window.AppUI) window.AppUI.toast(data.message || (response.ok ? 'تم حفظ البيانات' : 'تعذر حفظ البيانات'), response.ok ? 'success' : 'error');
             } catch (error) {
                 if (window.AppUI) window.AppUI.toast('تعذر الاتصال بالسيرفر', 'error');
+            }
+        });
+
+        document.getElementById('profile_picture').addEventListener('change', event => {
+            const file = event.target.files[0];
+            if (file) document.getElementById('profilePreview').src = URL.createObjectURL(file);
+        });
+
+        document.getElementById('sellerRequestForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const token = getToken();
+            const formData = new FormData();
+            formData.append('store_name', document.getElementById('store_name').value.trim());
+            formData.append('phone', document.getElementById('seller_phone').value.trim());
+            formData.append('address', document.getElementById('seller_address').value.trim());
+            formData.append('city', document.getElementById('seller_city').value.trim());
+            formData.append('country', document.getElementById('seller_country').value.trim());
+            formData.append('description', document.getElementById('seller_description').value.trim());
+            const storeImage = document.getElementById('store_image').files[0];
+            if (storeImage) formData.append('store_image', storeImage);
+            const response = await fetch(`${API_URL}/seller-request`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+            const data = await response.json();
+            if (window.AppUI) window.AppUI.toast(data.message || (response.ok ? 'تم إرسال الطلب' : 'تعذر إرسال الطلب'), response.ok ? 'success' : 'error');
+            if (response.ok) {
+                document.getElementById('sellerRequestForm').classList.add('hidden');
+                fetchSellerRequest();
             }
         });
 
@@ -201,6 +277,12 @@
                 }
 
                 const orderDate = new Date(order.created_at).toLocaleDateString('ar-EG');
+                const sellerShipments = (order.seller_shipments || []).map(shipment => `
+                    <div class="mt-2 text-xs bg-gray-50 border border-gray-100 rounded-md p-3">
+                        <strong>${escapeHTML(shipment.seller_name || 'بائع')}</strong>
+                        <span class="text-gray-500 mr-2">${escapeHTML(({pending_review:'قيد المراجعة',processing:'قيد التجهيز',shipped:'تم الشحن',delivered:'تم التوصيل'}[shipment.seller_status]) || shipment.seller_status || 'قيد المراجعة')}</span>
+                    </div>
+                `).join('');
                 
                 // استخدام دالة الحماية لتنظيف العنوان
                 const safeAddress = escapeHTML(order.shipping_address);
@@ -211,6 +293,7 @@
                             <div>
                                 <h3 class="font-bold text-gray-900">طلب رقم #${order.id}</h3>
                                 <p class="text-sm text-gray-500"><i class="far fa-calendar-alt ml-1"></i> ${orderDate}</p>
+                                ${sellerShipments}
                             </div>
                             <div class="text-left">
                                 ${statusBadge}
@@ -274,6 +357,7 @@
 
         window.addEventListener('load', () => {
             fetchProfile();
+            fetchSellerRequest();
             fetchWishlist();
             fetchMyOrders();
         });
