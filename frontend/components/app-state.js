@@ -1,11 +1,35 @@
 (function () {
     'use strict';
 
+    const THEME_KEY = 'spider_theme';
     const TOKEN_KEY = 'spider_token';
     const LEGACY_TOKEN_KEY = 'token';
     const CART_KEY = 'spider_cart';
     const RETURN_TO_KEY = 'spider_return_to';
     const COOKIE_DAYS = 7;
+
+    function applyStoredThemeEarly() {
+        try {
+            const theme = window.localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+            document.documentElement.classList.toggle('dark', theme === 'dark');
+            document.documentElement.dataset.theme = theme;
+        } catch (error) {}
+    }
+
+    function ensureThemeScript() {
+        if (window.SpiderTheme || document.querySelector('script[data-spider-theme]')) return;
+
+        const script = document.createElement('script');
+        const currentScript = document.currentScript;
+        script.src = currentScript && currentScript.src
+            ? new URL('theme.js', currentScript.src).href
+            : 'components/theme.js';
+        script.dataset.spiderTheme = 'true';
+        document.head.appendChild(script);
+    }
+
+    applyStoredThemeEarly();
+    ensureThemeScript();
 
     function storageGet(key) {
         try { return window.localStorage.getItem(key); } catch (error) { return null; }

@@ -89,6 +89,8 @@
     </footer>
 
     <script>
+(() => {
+
         const API_URL = '/api';
         const BASE_SERVER = '';
         let currentProduct = null;
@@ -152,130 +154,33 @@
             if (!productId) { showError('لم يتم العثور على المنتج.'); return; }
             try {
                 const response = await fetch(`${API_URL}/products/${safeId(productId)}`);
-                const data = await response.json();
-                if (response.ok || data.success) {
-                    currentProduct = data.data || null;
-                    
-                    if (currentProduct) {
-                        renderProduct(currentProduct);
-                        document.getElementById('reviewsSection').classList.remove('hidden');
-                        fetchReviews();
-                        setupReviewForm();
-                        
-                        const categoryToSearch = currentProduct.category_id || currentProduct.category || null;
-                        if(categoryToSearch) fetchRelatedProducts(categoryToSearch, currentProduct.id);
-                    } else {
-                        showError('هذا المنتج غير موجود أو تم حذفه.');
-                    }
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok || data.success === false) {
+                    showError(data.message || 'تعذر تحميل تفاصيل المنتج.');
+                    return;
                 }
-            } catch (error) { showError('تأكد من تشغيل سيرفر الباك اند 🔌'); }
+
+                currentProduct = data.data || data.product || null;
+                
+                if (currentProduct) {
+                    renderProduct(currentProduct);
+                    document.getElementById('reviewsSection').classList.remove('hidden');
+                    fetchReviews();
+                    setupReviewForm();
+                    
+                    const categoryToSearch = currentProduct.category_id || currentProduct.category || null;
+                    if(categoryToSearch) fetchRelatedProducts(categoryToSearch, currentProduct.id);
+                } else {
+                    showError('هذا المنتج غير موجود أو تم حذفه.');
+                }
+            } catch (error) {
+                console.error(error);
+                showError('تعذر الاتصال بالخادم. حاول مرة أخرى.');
+            }
         }
 
-        function renderProduct(product) {
-            const container = document.getElementById('productContainer');
-            const price = safeNumber(product.price);
-            const discount = safeNumber(product.discount);
-            const stockQuantity = safeNumber(product.stock_quantity);
-            const isAvailable = stockQuantity > 0;
-            const hasDiscount = discount > 0;
-            const finalPrice = calcFinalPrice(price, discount);
 
-            let imagesArray = normalizeProductImages(product);
-            const mainImgUrl = buildImageUrl(imagesArray[0]);
-            
-            let thumbnailsHtml = '';
-            if (imagesArray.length > 1) {
-                thumbnailsHtml = `<div class="flex gap-3 mt-6 overflow-x-auto p-2 hide-scrollbar w-full justify-center">` + 
-                    imagesArray.map(img => `
-                        <img src="${buildImageUrl(img)}" 
-                             class="w-20 h-20 object-contain border-2 border-gray-200 hover:border-primary-500 rounded-lg cursor-pointer transition-colors bg-white shadow-sm" 
-                             onclick="document.getElementById('mainProductImage').src=this.src">
-                    `).join('') +
-                `</div>`;
-            }
-
-            const avgValue = safeNumber(product.rating_average);
-            const ratingCount = safeNumber(product.rating_count);
-            const avgRating = Math.max(0, Math.min(5, Math.round(avgValue))); 
-            let starsHtml = '';
-            for(let i=1; i<=5; i++) {
-                starsHtml += `<i class="fas fa-star ${i <= avgRating ? 'text-yellow-400' : 'text-gray-300'} text-sm"></i>`;
-            }
-            const breakdown = product.rating_breakdown || {};
-            const ratingBars = [5, 4, 3, 2, 1].map(star => {
-                const count = safeNumber(breakdown[star]);
-                const percent = ratingCount ? Math.round((count / ratingCount) * 100) : 0;
-                return `<div class="flex items-center gap-3 text-sm">
-                    <span class="w-12 text-gray-500">${star} نجوم</span>
-                    <div class="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden"><div class="h-full bg-yellow-400" style="width:${percent}%"></div></div>
-                    <span class="w-10 text-left text-gray-500">${count}</span>
-                </div>`;
-            }).join('');
-
-            container.innerHTML = `
-                <div class="flex flex-col md:flex-row w-full">
-                    <div class="md:w-1/2 bg-white flex flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-l border-gray-100 relative">
-                        ${hasDiscount ? `<span class="absolute top-6 left-6 bg-error-500 text-white text-sm font-bold px-4 py-1 rounded-full z-10 shadow-md">خصم ${discount}%</span>` : ''}
-                        <img id="mainProductImage" src="${mainImgUrl}" alt="${escapeHTML(product.title)}" class="w-full max-h-[400px] object-contain hover:scale-105 transition-transform duration-300" onerror="this.onerror=null;this.src='https://via.placeholder.com/600?text=No+Image'">
-                        ${thumbnailsHtml}
-                    </div>
-
-                    <div class="md:w-1/2 p-8 lg:p-12 flex flex-col justify-center bg-gray-50">
-                        ${isAvailable ? 
-                            `<span class="inline-block bg-success-50 text-success-600 text-sm font-bold px-3 py-1 rounded-full mb-4 w-fit border border-success-200"><i class="fas fa-check-circle mr-1"></i> متاح في المخزن</span>` : 
-                            `<span class="inline-block bg-error-50 text-error-600 text-sm font-bold px-3 py-1 rounded-full mb-4 w-fit border border-error-200"><i class="fas fa-times-circle mr-1"></i> نفذت الكمية</span>`
-                        }
-                        
-                        <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">${escapeHTML(product.title)}</h1>
-                        
-                        <div class="flex items-center gap-2 mb-6">
-                            <div class="flex">${starsHtml}</div>
-                            <span class="text-gray-400 text-sm">(تقييم عام)</span>
-                        </div>
-
-                        <div class="bg-white border border-gray-100 rounded-lg p-4 mb-6 shadow-sm">
-                            <div class="flex items-center justify-between mb-3">
-                                <strong class="text-gray-900">ملخص التقييمات</strong>
-                                <span class="text-primary-600 font-bold">${ratingCount ? avgValue.toFixed(1) : '0.0'} ★</span>
-                            </div>
-                            ${ratingCount ? `<div class="space-y-2">${ratingBars}</div>` : '<p class="text-gray-500 text-sm">لا توجد تقييمات بعد</p>'}
-                        </div>
-
-                        <div class="mb-6 flex items-end gap-3">
-                            <p class="text-4xl font-bold text-primary-600">${finalPrice} <span class="text-lg text-gray-500 font-normal">ج.م</span></p>
-                            ${hasDiscount ? `<p class="text-xl text-gray-400 line-through mb-1">${price.toFixed(0)} ج.م</p>` : ''}
-                        </div>
-                        
-                        <div class="prose prose-sm text-gray-600 mb-8">
-                            <h3 class="text-lg font-bold text-gray-800 mb-2 border-b pb-2">وصف المنتج:</h3>
-                            <p class="whitespace-pre-line leading-relaxed">${escapeHTML(product.description) || 'لا يوجد وصف متاح لهذا المنتج حتى الآن.'}</p>
-                        </div>
-                        
-                        ${isAvailable ? `
-                            <div class="flex flex-col sm:flex-row gap-4 mt-auto border-t pt-8 border-gray-200">
-                                <div class="flex items-center justify-between border border-gray-300 rounded-md w-full sm:w-32 bg-white">
-                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); changeQty(1)" class="w-10 h-12 text-gray-600 hover:text-primary-600"><i class="fas fa-plus"></i></button>
-                                    <span id="qtyDisplay" class="font-bold text-lg">1</span>
-                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); changeQty(-1)" class="w-10 h-12 text-gray-600 hover:text-error-500"><i class="fas fa-minus"></i></button>
-                                </div>
-                                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); addToCartFromDetails(this)" class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-md transition-colors text-lg flex items-center justify-center gap-2 shadow-lg shadow-primary-200">
-                                    <i class="fas fa-cart-plus pointer-events-none"></i> إضافة للسلة
-                                </button>
-                                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); addToWishlist()" class="bg-white hover:bg-red-50 text-error-500 border border-error-100 font-bold py-3 px-4 rounded-md transition-colors text-lg flex items-center justify-center">
-                                    <i class="fas fa-heart"></i>
-                                </button>
-                            </div>
-                        ` : `
-                            <div class="mt-auto border-t pt-8 border-gray-200">
-                                <button type="button" disabled class="w-full bg-gray-300 text-gray-500 font-bold py-3 px-6 rounded-md cursor-not-allowed flex items-center justify-center gap-2 text-lg">
-                                    <i class="fas fa-box-open"></i> المنتج غير متاح حالياً
-                                </button>
-                            </div>
-                        `}
-                    </div>
-                </div>
-            `;
-        }
 
         window.setMainProductImage = function(src, button) {
             const image = document.getElementById('mainProductImage');
@@ -432,9 +337,9 @@
         async function fetchRelatedProducts(categoryId, currentId) {
             try {
                 const response = await fetch(`${API_URL}/products?category=${categoryId}`);
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 
-                if (data.success && data.data) {
+                if (response.ok && data.success !== false && data.data) {
                     const related = data.data.filter(p => p.id != currentId).slice(0, 4);
                     if (related.length > 0) {
                         document.getElementById('relatedProductsSection').classList.remove('hidden');
@@ -499,9 +404,15 @@
             const list = document.getElementById('reviewsList');
             try {
                 const res = await fetch(`${API_URL}/reviews?product_id=${productId}`);
-                const data = await res.json();
-                if (data.success) renderReviews(data.data || []);
-            } catch (e) { list.innerHTML = '<p class="text-error-500">حدث خطأ في تحميل التقييمات.</p>'; }
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.success === false) {
+                    list.innerHTML = `<p class="text-error-500">${escapeHTML(data.message || 'تعذر تحميل التقييمات.')}</p>`;
+                    return;
+                }
+                renderReviews(data.data || []);
+            } catch (e) {
+                list.innerHTML = '<p class="text-error-500">حدث خطأ في تحميل التقييمات.</p>';
+            }
         }
 
         function renderReviews(reviews) {
@@ -738,7 +649,14 @@
             setTimeout(() => { toast.classList.add('translate-x-full', 'opacity-0'); setTimeout(() => toast.remove(), 500); }, 3000);
         }
 
+        window.submitReview = submitReview;
+        window.submitReply = submitReply;
+        window.updateReview = updateReview;
+        window.changeQty = changeQty;
+        window.addToCartFromDetails = addToCartFromDetails;
+        window.addToWishlist = addToWishlist;
         window.addEventListener('load', fetchProductDetails);
-    </script>
+    })();
+</script>
 </body>
 </html>
