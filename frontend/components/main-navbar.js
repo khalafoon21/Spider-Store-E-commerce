@@ -1,4 +1,6 @@
 (() => {
+    'use strict';
+
     const THEME_KEY = 'spider_theme';
 
     if (window.SpiderTheme && typeof window.SpiderTheme.applySaved === 'function') {
@@ -9,6 +11,7 @@
     function configureTailwindDarkMode() {
         window.tailwind = window.tailwind || {};
         const currentConfig = window.tailwind.config || {};
+
         window.tailwind.config = {
             ...currentConfig,
             darkMode: 'class'
@@ -20,40 +23,83 @@
 
         const style = document.createElement('style');
         style.id = 'spider-theme-styles';
+
         style.textContent = `
             html.dark {
                 color-scheme: dark;
-                --spider-dark-bg: #070B16;
+                --spider-dark-bg: #0B1020;
                 --spider-dark-surface: #111827;
-                --spider-dark-card: #1A263A;
-                --spider-dark-soft: #24324A;
-                --spider-dark-border: #3A4A63;
+                --spider-dark-card: #151F32;
+                --spider-dark-soft: #1E293B;
+                --spider-dark-soft-hover: #25344A;
+                --spider-dark-inner: #0F172A;
+                --spider-dark-border: #263449;
+                --spider-dark-border-soft: #334155;
                 --spider-dark-text: #F8FAFC;
                 --spider-dark-muted: #CBD5E1;
                 --spider-dark-subtle: #94A3B8;
-                --spider-dark-accent: #38D5E8;
+                --spider-dark-accent: #22D3EE;
+                --spider-dark-accent-soft: rgba(34, 211, 238, 0.12);
+                --spider-dark-accent-hover: rgba(34, 211, 238, 0.18);
             }
-            html.dark body { background: var(--spider-dark-bg) !important; color: var(--spider-dark-text) !important; }
+
+            html.dark body {
+                background: var(--spider-dark-bg) !important;
+                color: var(--spider-dark-text) !important;
+            }
+
             html.dark nav,
-            html.dark footer,
-            html.dark header { background-color: var(--spider-dark-surface) !important; border-color: var(--spider-dark-border) !important; color: var(--spider-dark-text) !important; }
+            html.dark header {
+                background-color: var(--spider-dark-surface) !important;
+                border-color: var(--spider-dark-border) !important;
+                color: var(--spider-dark-text) !important;
+            }
+
+            html.dark footer {
+                background-color: #090E1A !important;
+                border-color: var(--spider-dark-border) !important;
+                color: var(--spider-dark-muted) !important;
+            }
+
             html.dark .bg-white,
             html.dark .bg-white\\/95,
             html.dark .bg-white\\/90,
             html.dark .bg-white\\/80,
-            html.dark .bg-white\\/75 { background-color: var(--spider-dark-card) !important; color: var(--spider-dark-text) !important; }
+            html.dark .bg-white\\/75 {
+                background-color: var(--spider-dark-card) !important;
+                color: var(--spider-dark-text) !important;
+            }
+
             html.dark .bg-gray-50,
             html.dark .bg-gray-100,
             html.dark .bg-gray-200,
             html.dark .bg-slate-50,
             html.dark .bg-slate-100,
-            html.dark .bg-slate-200 { background-color: var(--spider-dark-soft) !important; color: var(--spider-dark-text) !important; }
+            html.dark .bg-slate-200 {
+                background-color: var(--spider-dark-soft) !important;
+                color: var(--spider-dark-text) !important;
+            }
+
+            html.dark section .bg-slate-50,
+            html.dark section .bg-gray-50,
+            html.dark article .bg-slate-50,
+            html.dark article .bg-gray-50 {
+                background-color: var(--spider-dark-inner) !important;
+            }
+
             html.dark .bg-gray-900,
             html.dark .bg-slate-900,
-            html.dark .bg-slate-950 { background-color: var(--spider-dark-surface) !important; }
+            html.dark .bg-slate-950 {
+                background-color: var(--spider-dark-surface) !important;
+            }
+
             html.dark .bg-cyan-50,
             html.dark .bg-primary-50,
-            html.dark .bg-primary-100 { background-color: rgba(56, 213, 232, 0.12) !important; color: var(--spider-dark-accent) !important; }
+            html.dark .bg-primary-100 {
+                background-color: var(--spider-dark-accent-soft) !important;
+                color: var(--spider-dark-accent) !important;
+            }
+
             html.dark .border-gray-100,
             html.dark .border-gray-200,
             html.dark .border-gray-300,
@@ -61,20 +107,33 @@
             html.dark .border-slate-100,
             html.dark .border-slate-200,
             html.dark .border-slate-300,
-            html.dark .border-slate-800 { border-color: var(--spider-dark-border) !important; }
+            html.dark .border-slate-800 {
+                border-color: var(--spider-dark-border) !important;
+            }
+
             html.dark .text-gray-900,
             html.dark .text-slate-950,
-            html.dark .text-slate-900 { color: var(--spider-dark-text) !important; }
+            html.dark .text-slate-900,
+            html.dark .text-black {
+                color: var(--spider-dark-text) !important;
+            }
+
             html.dark .text-gray-800,
-            html.dark .text-slate-800 { color: var(--spider-dark-muted) !important; }
+            html.dark .text-slate-800,
             html.dark .text-gray-700,
             html.dark .text-slate-700,
             html.dark .text-gray-600,
-            html.dark .text-slate-600 { color: var(--spider-dark-muted) !important; }
+            html.dark .text-slate-600 {
+                color: var(--spider-dark-muted) !important;
+            }
+
             html.dark .text-gray-500,
             html.dark .text-slate-500,
             html.dark .text-gray-400,
-            html.dark .text-slate-400 { color: var(--spider-dark-subtle) !important; }
+            html.dark .text-slate-400 {
+                color: var(--spider-dark-subtle) !important;
+            }
+
             html.dark .text-primary-500,
             html.dark .text-primary-600,
             html.dark .text-primary-700,
@@ -82,44 +141,97 @@
             html.dark .text-cyan-500,
             html.dark .text-cyan-600,
             html.dark .text-cyan-700,
-            html.dark [class*="text-[#06B6D4]"] { color: var(--spider-dark-accent) !important; }
+            html.dark [class*="text-[#06B6D4]"] {
+                color: var(--spider-dark-accent) !important;
+            }
+
             html.dark .bg-primary-500,
             html.dark .bg-primary-600,
             html.dark .bg-cyan-500,
             html.dark .bg-cyan-600,
-            html.dark [class*="bg-[#06B6D4]"] { background-color: var(--spider-dark-accent) !important; color: #07111F !important; }
+            html.dark [class*="bg-[#06B6D4]"] {
+                background-color: var(--spider-dark-accent) !important;
+                color: #07111F !important;
+            }
+
             html.dark .border-primary-500,
             html.dark .border-primary-600,
             html.dark .border-cyan-500,
             html.dark .border-cyan-600,
-            html.dark [class*="border-[#06B6D4]"] { border-color: var(--spider-dark-accent) !important; }
+            html.dark [class*="border-[#06B6D4]"] {
+                border-color: var(--spider-dark-accent) !important;
+            }
+
             html.dark input,
             html.dark textarea,
-            html.dark select { background-color: var(--spider-dark-soft) !important; color: var(--spider-dark-text) !important; border-color: var(--spider-dark-border) !important; }
+            html.dark select {
+                background-color: var(--spider-dark-inner) !important;
+                color: var(--spider-dark-text) !important;
+                border-color: var(--spider-dark-border-soft) !important;
+            }
+
             html.dark input:focus,
             html.dark textarea:focus,
-            html.dark select:focus { border-color: var(--spider-dark-accent) !important; box-shadow: 0 0 0 3px rgba(56, 213, 232, 0.14) !important; }
+            html.dark select:focus {
+                border-color: var(--spider-dark-accent) !important;
+                box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.14) !important;
+            }
+
             html.dark input::placeholder,
-            html.dark textarea::placeholder { color: var(--spider-dark-subtle) !important; }
+            html.dark textarea::placeholder {
+                color: var(--spider-dark-subtle) !important;
+            }
+
             html.dark table,
             html.dark th,
-            html.dark td { border-color: var(--spider-dark-border) !important; }
+            html.dark td {
+                border-color: var(--spider-dark-border) !important;
+            }
+
             html.dark .ring-slate-100,
             html.dark .ring-slate-200,
             html.dark .ring-gray-100,
             html.dark .ring-gray-200,
             html.dark .ring-primary-100,
-            html.dark .ring-cyan-100 { --tw-ring-color: var(--spider-dark-border) !important; }
+            html.dark .ring-cyan-100 {
+                --tw-ring-color: var(--spider-dark-border) !important;
+            }
+
             html.dark .hover\\:bg-cyan-50:hover,
-            html.dark .hover\\:bg-primary-50:hover,
+            html.dark .hover\\:bg-primary-50:hover {
+                background-color: var(--spider-dark-accent-hover) !important;
+                color: var(--spider-dark-accent) !important;
+            }
+
             html.dark .hover\\:bg-slate-50:hover,
-            html.dark .hover\\:bg-gray-50:hover { background-color: rgba(56, 213, 232, 0.10) !important; color: var(--spider-dark-accent) !important; }
+            html.dark .hover\\:bg-gray-50:hover {
+                background-color: var(--spider-dark-soft-hover) !important;
+            }
+
+            html.dark a:hover {
+                color: var(--spider-dark-accent) !important;
+            }
+
             html.dark .shadow-sm,
             html.dark .shadow-md,
             html.dark .shadow-lg,
             html.dark .shadow-xl,
-            html.dark .shadow-2xl { box-shadow: 0 18px 45px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important; }
+            html.dark .shadow-2xl {
+                box-shadow:
+                    0 18px 45px rgba(0, 0, 0, 0.24),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+            }
+
+            html.dark .skeleton,
+            html.dark .animate-pulse {
+                background-color: var(--spider-dark-soft) !important;
+            }
+
+            html.dark .line-through {
+                color: var(--spider-dark-subtle) !important;
+            }
         `;
+
         document.head.appendChild(style);
     }
 
@@ -132,19 +244,27 @@
         }
     }
 
-    function applyTheme(theme) {
+    function applyTheme(theme, options = {}) {
         const normalized = theme === 'dark' ? 'dark' : 'light';
+
         document.documentElement.classList.toggle('dark', normalized === 'dark');
         document.documentElement.dataset.theme = normalized;
-        try {
-            localStorage.setItem(THEME_KEY, normalized);
-        } catch (error) {}
-        window.dispatchEvent(new CustomEvent('spider:theme-changed', { detail: { theme: normalized } }));
+
+        if (options.persist !== false) {
+            try {
+                localStorage.setItem(THEME_KEY, normalized);
+            } catch (error) {}
+        }
+
+        window.dispatchEvent(new CustomEvent('spider:theme-changed', {
+            detail: { theme: normalized }
+        }));
+
         return normalized;
     }
 
     function applySavedTheme() {
-        return applyTheme(getStoredTheme());
+        return applyTheme(getStoredTheme(), { persist: false });
     }
 
     configureTailwindDarkMode();
@@ -163,13 +283,19 @@
 })();
 
 async function updateGlobalCartCount() {
-    const badge = document.getElementById('cartCountBadge');
+    const badges = document.querySelectorAll('[data-cart-count-badge]');
     const token = getStoredToken();
 
-    if (!badge) return;
+    if (!badges.length) return;
+
+    const setCount = value => {
+        badges.forEach(badge => {
+            badge.textContent = String(value);
+        });
+    };
 
     if (!token) {
-        badge.textContent = getStoredCartCount();
+        setCount(getStoredCartCount());
         return;
     }
 
@@ -179,18 +305,21 @@ async function updateGlobalCartCount() {
         });
 
         if (!response.ok) {
-            badge.textContent = '0';
+            setCount(0);
             return;
         }
 
         const data = await response.json().catch(() => ({}));
         const items = data.data || data.cart || [];
-        badge.textContent = Array.isArray(items)
+
+        const count = Array.isArray(items)
             ? items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-            : '0';
+            : 0;
+
+        setCount(count);
     } catch (error) {
         console.error('Error loading cart count:', error);
-        badge.textContent = '0';
+        setCount(0);
     }
 }
 
@@ -214,7 +343,7 @@ function loadMainNavbar() {
     mount.innerHTML = buildNavbarHTML({ token, user, routes });
 
     wireNavbarSearch(routes.home);
-    wireAccountDropdown();
+    wireDesktopAccountDropdown();
     wireMobileMenu();
     wireThemeToggle();
     updateGlobalCartCount();
@@ -258,145 +387,240 @@ function ensureNavbarContainer() {
 function buildNavbarHTML({ token, user, routes }) {
     const canSeeSeller = user.role === 'seller' || user.seller_status === 'approved_seller';
     const canSeeAdmin = user.role === 'admin';
-    const accountLabel = user.first_name ? `Hi, ${escapeHTML(user.first_name)}` : 'Account';
     const fullName = getFullName(user) || 'Your account';
+    const firstName = String(user.first_name || '').trim();
+    const accountLabel = firstName ? `Hi, ${escapeHTML(firstName)}` : 'Account';
     const initials = getInitials(fullName);
 
     return `
         <nav class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white shadow-sm" dir="ltr">
             <div class="mx-auto flex w-full max-w-[1440px] flex-col gap-3 px-3 py-3 sm:px-4 lg:px-6">
-
-                <div class="flex min-w-0 items-center gap-2 sm:gap-3 lg:gap-5">
+                
+                <div class="flex min-w-0 items-center gap-3">
                     <a href="${routes.home}" class="flex shrink-0 items-center gap-2 text-slate-950 no-underline" aria-label="Spider Store home">
-                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-[#06B6D4] text-lg font-black text-white shadow-md shadow-cyan-200">S</span>
+                        <span class="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-500 text-lg font-black text-white shadow-md shadow-cyan-200">S</span>
                         <span class="text-xl font-black tracking-normal sm:text-2xl">
-                            Spider <span class="text-[#06B6D4]">Store</span>
+                            Spider <span class="text-cyan-500">Store</span>
                         </span>
                     </a>
 
                     <form id="navbarSearchForm" class="relative hidden min-w-0 flex-1 lg:block" role="search">
-                        <i class="fas fa-search pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-[#06B6D4]"></i>
-                        <input id="navbarSearchInput" type="search" placeholder="What are you looking for?" autocomplete="off"
-                            class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-5 pr-12 text-[15px] text-slate-950 outline-none transition focus:border-[#06B6D4] focus:bg-white focus:ring-4 focus:ring-cyan-100">
+                        <i class="fas fa-search pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-cyan-500"></i>
+                        <input
+                            id="navbarSearchInput"
+                            type="search"
+                            placeholder="What are you looking for?"
+                            autocomplete="off"
+                            class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-5 pr-12 text-[15px] text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                        >
                     </form>
 
-                    <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2" dir="rtl">
-
-                        <button type="button" class="hidden h-10 items-center rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700 xl:inline-flex">
+                    <div class="ml-auto hidden items-center gap-1 lg:flex" dir="rtl">
+                        <button type="button" class="inline-flex h-10 items-center rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
                             العربية | EN
                         </button>
 
-                        <button type="button" data-theme-toggle class="hidden h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700 lg:inline-flex" aria-pressed="false">
-                            <i data-theme-icon class="fas fa-moon text-[#06B6D4]"></i>
-                            <span data-theme-label class="hidden xl:inline">Dark Mode</span>
+                        <button
+                            type="button"
+                            data-theme-toggle
+                            class="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700"
+                            aria-pressed="false"
+                        >
+                            <i data-theme-icon class="fas fa-moon text-cyan-500"></i>
+                            <span data-theme-label>Dark Mode</span>
                         </button>
 
-                        <a href="${routes.orders}" class="hidden h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700 lg:inline-flex">
-                            <i class="fas fa-bag-shopping text-[#06B6D4]"></i>
+                        ${token ? buildDesktopAccountMenu({ accountLabel, fullName, initials, routes, canSeeSeller, canSeeAdmin }) : buildGuestDesktopActions(routes)}
+
+                        <a href="${routes.orders}" class="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
+                            <i class="fas fa-bag-shopping text-cyan-500"></i>
                             <span>Orders</span>
                         </a>
 
-                        <a href="${routes.wishlist}" class="hidden h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700 lg:inline-flex">
-                            <i class="fas fa-heart text-[#06B6D4]"></i>
+                        <a href="${routes.wishlist}" class="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
+                            <i class="fas fa-heart text-cyan-500"></i>
                             <span>Wishlist</span>
                         </a>
 
-                        <a href="${routes.cart}" class="relative grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-950 transition hover:bg-cyan-50 hover:text-cyan-700" aria-label="Cart">
-                            <i class="fas fa-cart-shopping text-lg"></i>
-                            <span id="cartCountBadge" class="absolute -left-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full border-2 border-white bg-[#06B6D4] px-1 text-[11px] font-black leading-none text-white">0</span>
-                        </a>
+                        ${cartButton(routes.cart)}
+                    </div>
 
-                        ${token ? buildLoggedInAccount({ accountLabel, fullName, initials, routes, canSeeSeller, canSeeAdmin }) : buildGuestActions(routes)}
+                    <div class="ml-auto flex items-center gap-2 lg:hidden" dir="rtl">
+                        ${cartButton(routes.cart)}
 
-                        <button id="navbarMobileMenuBtn" type="button" class="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-950 transition hover:bg-cyan-50 hover:text-cyan-700 lg:hidden" aria-expanded="false" aria-controls="navbarMobileMenu" aria-label="Open menu">
-                            <i class="fas fa-bars text-lg"></i>
+                        ${
+                            token
+                                ? `
+                                    <a href="${routes.profile}" class="grid h-11 w-11 place-items-center rounded-full bg-cyan-100 text-sm font-black uppercase text-cyan-700">
+                                        <span id="navbarAvatarMobileTop">${escapeHTML(initials)}</span>
+                                    </a>
+                                `
+                                : `
+                                    <a href="${routes.login}" class="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700" aria-label="Login">
+                                        <i class="fas fa-user"></i>
+                                    </a>
+                                `
+                        }
+
+                        <button
+                            id="navbarMobileMenuBtn"
+                            type="button"
+                            class="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700"
+                            aria-expanded="false"
+                            aria-controls="navbarMobileMenu"
+                            aria-label="Open menu"
+                        >
+                            <i class="fas fa-bars"></i>
                         </button>
                     </div>
                 </div>
 
                 <form id="navbarMobileSearchForm" class="relative block lg:hidden" role="search">
-                    <i class="fas fa-search pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-[#06B6D4]"></i>
-                    <input id="navbarMobileSearchInput" type="search" placeholder="What are you looking for?" autocomplete="off"
-                        class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-5 pr-12 text-[15px] text-slate-950 outline-none transition focus:border-[#06B6D4] focus:bg-white focus:ring-4 focus:ring-cyan-100">
+                    <i class="fas fa-search pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-cyan-500"></i>
+                    <input
+                        id="navbarMobileSearchInput"
+                        type="search"
+                        placeholder="What are you looking for?"
+                        autocomplete="off"
+                        class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-5 pr-12 text-[15px] text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                    >
                 </form>
 
-                <div id="navbarMobileMenu" class="hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 lg:hidden" dir="rtl">
-                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        <a href="${routes.orders}" class="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-cyan-50 hover:text-cyan-700">
-                            <span>Orders</span>
-                            <i class="fas fa-bag-shopping text-[#06B6D4]"></i>
-                        </a>
+                <div
+                    id="navbarMobileMenu"
+                    class="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:hidden"
+                    dir="rtl"
+                >
+                    ${
+                        token
+                            ? `
+                                <div class="border-b border-slate-100 bg-slate-50 p-4">
+                                    <div class="flex items-center gap-3">
+                                        <span id="navbarAvatarMobileMenu" class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-cyan-500 text-sm font-black uppercase text-white">
+                                            ${escapeHTML(initials)}
+                                        </span>
 
-                        <a href="${routes.wishlist}" class="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-cyan-50 hover:text-cyan-700">
-                            <span>Wishlist</span>
-                            <i class="fas fa-heart text-[#06B6D4]"></i>
-                        </a>
+                                        <div class="min-w-0 flex-1">
+                                            <p id="navbarFullNameMobile" class="truncate text-base font-black text-slate-950">${escapeHTML(fullName)}</p>
+                                            <a href="${routes.profile}" class="mt-1 inline-flex items-center gap-1 text-sm font-bold text-cyan-600">
+                                                Your Profile
+                                                <i class="fas fa-chevron-left text-[10px]"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `
+                            : `
+                                <div class="border-b border-slate-100 bg-slate-50 p-4">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <a href="${routes.login}" class="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm">
+                                            <i class="fas fa-user text-cyan-500"></i>
+                                            Login
+                                        </a>
 
-                        <button type="button" class="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-cyan-50 hover:text-cyan-700">
-                            <span>العربية | EN</span>
-                            <i class="fas fa-language text-[#06B6D4]"></i>
-                        </button>
+                                        <a href="${routes.register}" class="flex items-center justify-center gap-2 rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-black text-white shadow-sm">
+                                            <i class="fas fa-user-plus"></i>
+                                            Register
+                                        </a>
+                                    </div>
+                                </div>
+                            `
+                    }
 
-                        <button type="button" data-theme-toggle class="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-cyan-50 hover:text-cyan-700" aria-pressed="false">
+                    <div class="grid gap-2 p-3">
+                        ${mobileMenuLink(routes.orders, 'fa-bag-shopping', 'Orders')}
+                        ${mobileMenuLink(routes.wishlist, 'fa-heart', 'Wishlist')}
+                        ${canSeeSeller ? mobileMenuLink(routes.seller, 'fa-store', 'Seller Dashboard', 'mobileSellerDashboardLink') : ''}
+                        ${canSeeAdmin ? mobileMenuLink(routes.admin, 'fa-gauge-high', 'Admin Panel', 'mobileAdminDashboardLink') : ''}
+
+                        <button
+                            type="button"
+                            data-theme-toggle
+                            class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+                            aria-pressed="false"
+                        >
                             <span data-theme-label>Dark Mode</span>
-                            <i data-theme-icon class="fas fa-moon text-[#06B6D4]"></i>
+                            <i data-theme-icon class="fas fa-moon text-cyan-500"></i>
                         </button>
 
-                        <a href="${routes.help}" class="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-cyan-50 hover:text-cyan-700">
-                            <span>Need Help?</span>
-                            <i class="fas fa-circle-question text-[#06B6D4]"></i>
-                        </a>
-
-                        ${canSeeSeller ? `
-                            <a href="${routes.seller}" class="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-cyan-50 hover:text-cyan-700">
-                                <span>Seller Dashboard</span>
-                                <i class="fas fa-store text-[#06B6D4]"></i>
-                            </a>
-                        ` : ''}
-
-                        ${canSeeAdmin ? `
-                            <a href="${routes.admin}" class="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-cyan-50 hover:text-cyan-700">
-                                <span>Admin Panel</span>
-                                <i class="fas fa-gauge-high text-[#06B6D4]"></i>
-                            </a>
-                        ` : ''}
+                        ${mobileMenuButton('fa-language', 'العربية | EN')}
+                        ${mobileMenuLink(routes.help, 'fa-circle-question', 'Need Help?')}
                     </div>
-                </div>
 
+                    ${
+                        token
+                            ? `
+                                <div class="border-t border-slate-100 p-3">
+                                    <button
+                                        type="button"
+                                        onclick="navbarLogout()"
+                                        class="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-600 transition hover:bg-red-100"
+                                    >
+                                        <i class="fas fa-right-from-bracket"></i>
+                                        <span>Sign Out</span>
+                                    </button>
+                                </div>
+                            `
+                            : ''
+                    }
+                </div>
             </div>
         </nav>
     `;
 }
 
-function buildGuestActions(routes) {
+function cartButton(cartUrl) {
     return `
-        <a href="${routes.login}" class="inline-flex h-10 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
-            <i class="fas fa-user text-[#06B6D4]"></i>
-            <span class="hidden sm:inline">Login</span>
+        <a href="${cartUrl}" class="relative grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700" aria-label="Cart">
+            <i class="fas fa-cart-shopping text-lg"></i>
+            <span data-cart-count-badge class="absolute -left-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full border-2 border-white bg-cyan-500 px-1 text-[11px] font-black leading-none text-white">0</span>
+        </a>
+    `;
+}
+
+function buildGuestDesktopActions(routes) {
+    return `
+        <a href="${routes.login}" class="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
+            <i class="fas fa-user text-cyan-500"></i>
+            <span>Login</span>
         </a>
 
-        <a href="${routes.register}" class="hidden h-10 items-center rounded-xl px-3 text-sm font-black text-[#06B6D4] transition hover:bg-cyan-50 sm:inline-flex">
+        <a href="${routes.register}" class="inline-flex h-10 items-center rounded-xl px-3 text-sm font-black text-cyan-600 transition hover:bg-cyan-50">
             Register
         </a>
     `;
 }
 
-function buildLoggedInAccount({ accountLabel, fullName, initials, routes, canSeeSeller, canSeeAdmin }) {
+function buildDesktopAccountMenu({ accountLabel, fullName, initials, routes, canSeeSeller, canSeeAdmin }) {
     return `
-        <div id="navbarAccountWrap" class="relative">
-            <button id="navbarAccountBtn" type="button" class="inline-flex h-11 max-w-[140px] items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700 sm:max-w-[190px]" aria-expanded="false" aria-haspopup="true">
-                <span id="navbarAvatarSmall" class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cyan-100 text-xs font-black uppercase text-cyan-700">${escapeHTML(initials)}</span>
-                <span id="navbarGreeting" class="hidden truncate sm:inline">${accountLabel}</span>
-                <i class="fas fa-chevron-down hidden text-[11px] text-slate-400 sm:inline"></i>
+        <div id="navbarAccountWrap" class="relative hidden lg:block">
+            <button
+                id="navbarAccountBtn"
+                type="button"
+                class="inline-flex h-10 max-w-[190px] items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700"
+                aria-expanded="false"
+                aria-haspopup="true"
+            >
+                <span id="navbarAvatarDesktop" class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-cyan-100 text-xs font-black uppercase text-cyan-700">
+                    ${escapeHTML(initials)}
+                </span>
+                <span id="navbarGreetingDesktop" class="truncate">${accountLabel}</span>
+                <i class="fas fa-chevron-down text-[11px] text-slate-400"></i>
             </button>
 
-            <div id="navbarAccountMenu" class="absolute left-0 top-[calc(100%+0.75rem)] z-50 hidden w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-right shadow-2xl shadow-slate-900/15 sm:left-auto sm:right-0" role="menu">
+            <div
+                id="navbarAccountMenu"
+                class="absolute right-0 top-[calc(100%+0.75rem)] z-50 hidden w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white text-right shadow-2xl shadow-slate-900/15"
+                role="menu"
+            >
                 <div class="flex items-center gap-3 border-b border-slate-100 bg-slate-50 p-4">
-                    <span id="navbarAvatarLarge" class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#06B6D4] text-sm font-black uppercase text-white">${escapeHTML(initials)}</span>
+                    <span id="navbarAvatarDesktopMenu" class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-cyan-500 text-sm font-black uppercase text-white">
+                        ${escapeHTML(initials)}
+                    </span>
 
                     <div class="min-w-0 flex-1">
-                        <p id="navbarFullName" class="truncate text-sm font-black text-slate-950">${escapeHTML(fullName)}</p>
-                        <a href="${routes.profile}" class="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#06B6D4]">
+                        <p id="navbarFullNameDesktop" class="truncate text-sm font-black text-slate-950">${escapeHTML(fullName)}</p>
+                        <a href="${routes.profile}" class="mt-1 inline-flex items-center gap-1 text-xs font-bold text-cyan-600">
                             Your Profile
                             <i class="fas fa-chevron-left text-[10px]"></i>
                         </a>
@@ -413,7 +637,12 @@ function buildLoggedInAccount({ accountLabel, fullName, initials, routes, canSee
                 </div>
 
                 <div class="border-t border-slate-100 p-2">
-                    <button type="button" onclick="navbarLogout()" class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right text-sm font-black text-red-600 transition hover:bg-red-50" role="menuitem">
+                    <button
+                        type="button"
+                        onclick="navbarLogout()"
+                        class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right text-sm font-black text-red-600 transition hover:bg-red-50"
+                        role="menuitem"
+                    >
                         <i class="fas fa-right-from-bracket"></i>
                         <span>Sign Out</span>
                     </button>
@@ -425,16 +654,46 @@ function buildLoggedInAccount({ accountLabel, fullName, initials, routes, canSee
 
 function dropdownLink(href, icon, label, id = '', visible = true) {
     return `
-        <a href="${href}" ${id ? `id="${id}"` : ''} class="${visible ? '' : 'hidden'} flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700" role="menuitem">
-            <i class="fas ${icon} w-5 text-center text-[#06B6D4]"></i>
+        <a
+            href="${href}"
+            ${id ? `id="${id}"` : ''}
+            class="${visible ? '' : 'hidden'} flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700"
+            role="menuitem"
+        >
+            <i class="fas ${icon} w-5 text-center text-cyan-500"></i>
             <span>${label}</span>
         </a>
     `;
 }
 
+function mobileMenuLink(href, icon, label, id = '') {
+    return `
+        <a
+            href="${href}"
+            ${id ? `id="${id}"` : ''}
+            class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+        >
+            <span>${label}</span>
+            <i class="fas ${icon} text-cyan-500"></i>
+        </a>
+    `;
+}
+
+function mobileMenuButton(icon, label) {
+    return `
+        <button
+            type="button"
+            class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+        >
+            <span>${label}</span>
+            <i class="fas ${icon} text-cyan-500"></i>
+        </button>
+    `;
+}
+
 function wireNavbarSearch(homePath) {
     const submitSearch = input => {
-        const query = String(input && input.value || '').trim();
+        const query = String((input && input.value) || '').trim();
         window.location.href = query ? `${homePath}?search=${encodeURIComponent(query)}` : homePath;
     };
 
@@ -454,7 +713,37 @@ function wireNavbarSearch(homePath) {
     });
 }
 
-function closeAccountDropdown() {
+function wireDesktopAccountDropdown() {
+    const wrap = document.getElementById('navbarAccountWrap');
+    const button = document.getElementById('navbarAccountBtn');
+    const menu = document.getElementById('navbarAccountMenu');
+
+    if (!wrap || !button || !menu) return;
+
+    const close = () => {
+        menu.classList.add('hidden');
+        button.setAttribute('aria-expanded', 'false');
+    };
+
+    button.addEventListener('click', event => {
+        event.stopPropagation();
+        closeMobileMenu();
+
+        const willOpen = menu.classList.contains('hidden');
+        menu.classList.toggle('hidden', !willOpen);
+        button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', event => {
+        if (!wrap.contains(event.target)) close();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') close();
+    });
+}
+
+function closeDesktopAccountDropdown() {
     const button = document.getElementById('navbarAccountBtn');
     const menu = document.getElementById('navbarAccountMenu');
 
@@ -474,37 +763,6 @@ function closeMobileMenu() {
     button.setAttribute('aria-expanded', 'false');
 }
 
-function wireAccountDropdown() {
-    const wrap = document.getElementById('navbarAccountWrap');
-    const button = document.getElementById('navbarAccountBtn');
-    const menu = document.getElementById('navbarAccountMenu');
-
-    if (!wrap || !button || !menu) return;
-
-    button.addEventListener('click', event => {
-        event.stopPropagation();
-
-        const willOpen = menu.classList.contains('hidden');
-
-        closeMobileMenu();
-
-        menu.classList.toggle('hidden', !willOpen);
-        button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-    });
-
-    document.addEventListener('click', event => {
-        if (!wrap.contains(event.target)) {
-            closeAccountDropdown();
-        }
-    });
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
-            closeAccountDropdown();
-        }
-    });
-}
-
 function wireMobileMenu() {
     const button = document.getElementById('navbarMobileMenuBtn');
     const menu = document.getElementById('navbarMobileMenu');
@@ -513,11 +771,9 @@ function wireMobileMenu() {
 
     button.addEventListener('click', event => {
         event.stopPropagation();
+        closeDesktopAccountDropdown();
 
         const willOpen = menu.classList.contains('hidden');
-
-        closeAccountDropdown();
-
         menu.classList.toggle('hidden', !willOpen);
         button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
@@ -529,9 +785,7 @@ function wireMobileMenu() {
     });
 
     document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
-            closeMobileMenu();
-        }
+        if (event.key === 'Escape') closeMobileMenu();
     });
 }
 
@@ -571,7 +825,7 @@ function updateThemeToggleUI() {
     });
 
     document.querySelectorAll('[data-theme-icon]').forEach(icon => {
-        icon.className = `fas ${isDark ? 'fa-sun' : 'fa-moon'} text-[#06B6D4]`;
+        icon.className = `fas ${isDark ? 'fa-sun' : 'fa-moon'} text-cyan-500`;
     });
 }
 
@@ -592,26 +846,40 @@ function hydrateNavbarUser(routes) {
 }
 
 function updateNavbarUser(user, routes) {
-    const fullName = getFullName(user);
-    const initials = getInitials(fullName || user.first_name || 'User');
+    const fullName = getFullName(user) || 'Your account';
+    const firstName = String(user.first_name || '').trim();
+    const initials = getInitials(fullName || 'User');
 
-    setText('navbarGreeting', user.first_name ? `Hi, ${user.first_name}` : 'Account');
-    setText('navbarFullName', fullName || 'Your account');
-    setText('navbarAvatarSmall', initials);
-    setText('navbarAvatarLarge', initials);
+    setText('navbarGreetingDesktop', firstName ? `Hi, ${firstName}` : 'Account');
+    setText('navbarFullNameDesktop', fullName);
+    setText('navbarFullNameMobile', fullName);
 
-    const sellerLink = document.getElementById('sellerDashboardLink');
-    const adminLink = document.getElementById('adminDashboardLink');
+    setText('navbarAvatarDesktop', initials);
+    setText('navbarAvatarDesktopMenu', initials);
+    setText('navbarAvatarMobileTop', initials);
+    setText('navbarAvatarMobileMenu', initials);
 
-    if (sellerLink) {
-        sellerLink.href = routes.seller;
-        sellerLink.classList.toggle('hidden', !(user.role === 'seller' || user.seller_status === 'approved_seller'));
-    }
+    const sellerLinks = [
+        document.getElementById('sellerDashboardLink'),
+        document.getElementById('mobileSellerDashboardLink')
+    ];
 
-    if (adminLink) {
-        adminLink.href = routes.admin;
-        adminLink.classList.toggle('hidden', user.role !== 'admin');
-    }
+    const adminLinks = [
+        document.getElementById('adminDashboardLink'),
+        document.getElementById('mobileAdminDashboardLink')
+    ];
+
+    sellerLinks.forEach(link => {
+        if (!link) return;
+        link.href = routes.seller;
+        link.classList.toggle('hidden', !(user.role === 'seller' || user.seller_status === 'approved_seller'));
+    });
+
+    adminLinks.forEach(link => {
+        if (!link) return;
+        link.href = routes.admin;
+        link.classList.toggle('hidden', user.role !== 'admin');
+    });
 }
 
 function setText(id, value) {
@@ -644,6 +912,7 @@ function getInitials(name) {
 function navbarLogout() {
     if (window.AppState) {
         window.AppState.clearToken();
+
         if (typeof window.AppState.clearCart === 'function') {
             window.AppState.clearCart();
         }
@@ -683,7 +952,10 @@ function getStoredToken() {
         return window.AppState.getToken();
     }
 
-    const token = localStorage.getItem('spider_token') || localStorage.getItem('token') || getCookieValue('spider_token');
+    const token =
+        localStorage.getItem('spider_token') ||
+        localStorage.getItem('token') ||
+        getCookieValue('spider_token');
 
     if (token) {
         try {
@@ -718,7 +990,9 @@ function getCookieValue(name) {
         .split(';')
         .map(part => part.trim())
         .filter(Boolean)
-        .reduce((found, part) => found || (part.startsWith(encodedName) ? decodeURIComponent(part.slice(encodedName.length)) : null), null);
+        .reduce((found, part) => {
+            return found || (part.startsWith(encodedName) ? decodeURIComponent(part.slice(encodedName.length)) : null);
+        }, null);
 }
 
 function ensureAppStateScript() {
