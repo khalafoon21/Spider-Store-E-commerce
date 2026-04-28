@@ -1,5 +1,17 @@
 const getDb = require('../config/database');
 
+function nullableText(value) {
+    const clean = String(value || '').trim();
+    return clean || null;
+}
+
+function nullableDate(value) {
+    if (!value) return null;
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    const clean = String(value).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(clean) ? clean : null;
+}
+
 class UserModel {
     static async findByEmail(email) {
         const db = getDb();
@@ -50,7 +62,19 @@ class UserModel {
                  store_name = COALESCE(?, store_name),
                  store_description = COALESCE(?, store_description)
              WHERE id = ?`,
-            [first_name, last_name, phone, address, birthdate, city, country, profile_picture, store_name, store_description, userId]
+            [
+                first_name,
+                last_name,
+                nullableText(phone),
+                nullableText(address),
+                nullableDate(birthdate),
+                nullableText(city),
+                nullableText(country),
+                profile_picture,
+                nullableText(store_name),
+                nullableText(store_description),
+                userId
+            ]
         );
     }
 

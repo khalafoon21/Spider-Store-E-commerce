@@ -1,6 +1,11 @@
 const getDb = require('../config/database');
 const CartModel = require('./cart.model');
 
+function toMoney(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+}
+
 class OrderModel {
     // التعديل 1: إضافة phone و fullName للدالة
     static async createOrder(userId, shippingAddress, phone, fullName) {
@@ -14,11 +19,11 @@ class OrderModel {
         let totalAmount = 0;
         cartItems.forEach(item => {
             // total_price جاية من الـ CartModel محسوبة وجاهزة (الكمية × السعر بعد الخصم)
-            totalAmount += item.total_price;
+            totalAmount += toMoney(item.total_price);
         });
 
         // التعديل 2: إضافة مصاريف الشحن للإجمالي عشان يتطابق مع اللي اليوزر شافه في الـ Checkout
-        totalAmount += 50; 
+        totalAmount = toMoney(totalAmount) + 50; 
 
         // التعديل 3: إدخال البيانات الجديدة (phone, full_name) في جدول الطلبات
         await db.exec('START TRANSACTION');
@@ -44,7 +49,9 @@ class OrderModel {
         // تسجيل المنتجات داخل الطلب
             for (const item of cartItems) {
             // حساب سعر القطعة الواحدة لحظة الشراء (لتسجيلها في الفاتورة التاريخية بشكل صحيح)
-            const finalPrice = item.discount > 0 ? item.price - (item.price * item.discount / 100) : item.price;
+            const price = toMoney(item.price);
+            const discount = toMoney(item.discount);
+            const finalPrice = discount > 0 ? price - (price * discount / 100) : price;
             
                 await db.run(
                     `INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)`,
