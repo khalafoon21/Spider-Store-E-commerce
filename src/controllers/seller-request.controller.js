@@ -3,6 +3,7 @@ const fs = require('fs');
 const { formidable } = require('formidable');
 const SellerRequestModel = require('../models/seller-request.model');
 const { getPostData } = require('../utils/helpers');
+const { finalizeUploadedImage } = require('../utils/upload-security');
 
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -10,9 +11,14 @@ function ensureUploadDir(folder) {
     if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
 }
 
-function imagePath(file) {
-    const fileName = path.basename(file.filepath || file.newFilename || '');
-    return fileName ? `/uploads/profiles/${fileName}` : '';
+function imagePath(file, uploadFolder) {
+    return finalizeUploadedImage(file, {
+        uploadDir: uploadFolder,
+        publicDir: '/uploads/profiles',
+        allowedMimeTypes: allowedImageTypes,
+        maxSize: 5 * 1024 * 1024,
+        filenamePrefix: 'seller-request'
+    });
 }
 
 async function getMySellerRequest(req, res) {
@@ -63,11 +69,12 @@ async function submitSellerRequest(req, res) {
             let storeImage = '';
             if (files.store_image) {
                 const file = Array.isArray(files.store_image) ? files.store_image[0] : files.store_image;
-                if (!allowedImageTypes.includes(file.mimetype)) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    return res.end(JSON.stringify({ success: false, message: 'Only image files are allowed' }));
+                try {
+                    storeImage = imagePath(file, uploadFolder);
+                } catch (uploadError) {
+                    res.writeHead(uploadError.statusCode || 400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ success: false, message: uploadError.message || 'Only image files are allowed' }));
                 }
-                storeImage = imagePath(file);
             }
 
             const requestId = await SellerRequestModel.createOrUpdate(req.user.userId, {

@@ -95,7 +95,7 @@ async function initDB() {
                 password_hash VARCHAR(255) NOT NULL,
                 phone VARCHAR(50),
                 role VARCHAR(50) DEFAULT 'user',
-                seller_status VARCHAR(50) DEFAULT 'pending',
+                seller_status VARCHAR(50) DEFAULT '',
                 profile_picture TEXT,
                 email_verified TINYINT(1) DEFAULT 1,
                 activation_token VARCHAR(255),
@@ -112,7 +112,7 @@ async function initDB() {
             CREATE TABLE IF NOT EXISTS categories (
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 name VARCHAR(255) NOT NULL,
-                icon VARCHAR(100) DEFAULT 'fa-tags'
+                icon VARCHAR(255) DEFAULT ''
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
             CREATE TABLE IF NOT EXISTS tags (
@@ -328,7 +328,7 @@ async function initDB() {
 
         await dbWrapper.run(`
             UPDATE users
-            SET seller_status = 'pending'
+            SET seller_status = ''
             WHERE seller_status IS NULL
         `);
 

@@ -387,17 +387,17 @@ function ensureNavbarContainer() {
 function buildNavbarHTML({ token, user, routes }) {
     const canSeeSeller = user.role === 'seller' || user.seller_status === 'approved_seller';
     const canSeeAdmin = user.role === 'admin';
-    const fullName = getFullName(user) || 'Your account';
+    const fullName = getFullName(user) || 'حسابك';
     const firstName = String(user.first_name || '').trim();
-    const accountLabel = firstName ? `Hi, ${escapeHTML(firstName)}` : 'Account';
+    const accountLabel = firstName ? `مرحبًا، ${escapeHTML(firstName)}` : 'الحساب';
     const initials = getInitials(fullName);
 
     return `
-        <nav class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white shadow-sm" dir="ltr">
+        <nav class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white shadow-sm" dir="rtl">
             <div class="mx-auto flex w-full max-w-[1440px] flex-col gap-3 px-3 py-3 sm:px-4 lg:px-6">
                 
                 <div class="flex min-w-0 items-center gap-3">
-                    <a href="${routes.home}" class="flex shrink-0 items-center gap-2 text-slate-950 no-underline" aria-label="Spider Store home">
+                    <a href="${routes.home}" class="flex shrink-0 items-center gap-2 text-slate-950 no-underline" aria-label="الصفحة الرئيسية">
                         <span class="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-500 text-lg font-black text-white shadow-md shadow-cyan-200">S</span>
                         <span class="text-xl font-black tracking-normal sm:text-2xl">
                             Spider <span class="text-cyan-500">Store</span>
@@ -405,21 +405,17 @@ function buildNavbarHTML({ token, user, routes }) {
                     </a>
 
                     <form id="navbarSearchForm" class="relative hidden min-w-0 flex-1 lg:block" role="search">
-                        <i class="fas fa-search pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-cyan-500"></i>
+                        <i class="fas fa-search pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-cyan-500"></i>
                         <input
                             id="navbarSearchInput"
                             type="search"
-                            placeholder="What are you looking for?"
+                            placeholder="ابحث عن منتج..."
                             autocomplete="off"
-                            class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-5 pr-12 text-[15px] text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                            class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-12 pr-5 text-[15px] text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
                         >
                     </form>
 
-                    <div class="ml-auto hidden items-center gap-1 lg:flex" dir="rtl">
-                        <button type="button" class="inline-flex h-10 items-center rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
-                            العربية | EN
-                        </button>
-
+                    <div class="mr-auto hidden items-center gap-1 lg:flex" dir="rtl">
                         <button
                             type="button"
                             data-theme-toggle
@@ -427,25 +423,25 @@ function buildNavbarHTML({ token, user, routes }) {
                             aria-pressed="false"
                         >
                             <i data-theme-icon class="fas fa-moon text-cyan-500"></i>
-                            <span data-theme-label>Dark Mode</span>
+                            <span data-theme-label>الوضع الداكن</span>
                         </button>
 
                         ${token ? buildDesktopAccountMenu({ accountLabel, fullName, initials, routes, canSeeSeller, canSeeAdmin }) : buildGuestDesktopActions(routes)}
 
                         <a href="${routes.orders}" class="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
                             <i class="fas fa-bag-shopping text-cyan-500"></i>
-                            <span>Orders</span>
+                            <span>الطلبات</span>
                         </a>
 
                         <a href="${routes.wishlist}" class="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
                             <i class="fas fa-heart text-cyan-500"></i>
-                            <span>Wishlist</span>
+                            <span>المفضلة</span>
                         </a>
 
                         ${cartButton(routes.cart)}
                     </div>
 
-                    <div class="ml-auto flex items-center gap-2 lg:hidden" dir="rtl">
+                    <div class="mr-auto flex items-center gap-2 lg:hidden" dir="rtl">
                         ${cartButton(routes.cart)}
 
                         ${
@@ -456,7 +452,7 @@ function buildNavbarHTML({ token, user, routes }) {
                                     </a>
                                 `
                                 : `
-                                    <a href="${routes.login}" class="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700" aria-label="Login">
+                                    <a href="${routes.login}" class="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700" aria-label="تسجيل الدخول">
                                         <i class="fas fa-user"></i>
                                     </a>
                                 `
@@ -468,7 +464,7 @@ function buildNavbarHTML({ token, user, routes }) {
                             class="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700"
                             aria-expanded="false"
                             aria-controls="navbarMobileMenu"
-                            aria-label="Open menu"
+                            aria-label="فتح القائمة"
                         >
                             <i class="fas fa-bars"></i>
                         </button>
@@ -476,13 +472,13 @@ function buildNavbarHTML({ token, user, routes }) {
                 </div>
 
                 <form id="navbarMobileSearchForm" class="relative block lg:hidden" role="search">
-                    <i class="fas fa-search pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-cyan-500"></i>
+                    <i class="fas fa-search pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-cyan-500"></i>
                     <input
                         id="navbarMobileSearchInput"
                         type="search"
-                        placeholder="What are you looking for?"
+                        placeholder="ابحث عن منتج..."
                         autocomplete="off"
-                        class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-5 pr-12 text-[15px] text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+                        class="h-12 w-full rounded-full border border-slate-200 bg-slate-50 py-0 pl-12 pr-5 text-[15px] text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-100"
                     >
                 </form>
 
@@ -503,7 +499,7 @@ function buildNavbarHTML({ token, user, routes }) {
                                         <div class="min-w-0 flex-1">
                                             <p id="navbarFullNameMobile" class="truncate text-base font-black text-slate-950">${escapeHTML(fullName)}</p>
                                             <a href="${routes.profile}" class="mt-1 inline-flex items-center gap-1 text-sm font-bold text-cyan-600">
-                                                Your Profile
+                                                حسابك الشخصي
                                                 <i class="fas fa-chevron-left text-[10px]"></i>
                                             </a>
                                         </div>
@@ -515,12 +511,12 @@ function buildNavbarHTML({ token, user, routes }) {
                                     <div class="grid grid-cols-2 gap-2">
                                         <a href="${routes.login}" class="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm">
                                             <i class="fas fa-user text-cyan-500"></i>
-                                            Login
+                                            تسجيل الدخول
                                         </a>
 
                                         <a href="${routes.register}" class="flex items-center justify-center gap-2 rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-black text-white shadow-sm">
                                             <i class="fas fa-user-plus"></i>
-                                            Register
+                                            إنشاء حساب
                                         </a>
                                     </div>
                                 </div>
@@ -528,10 +524,10 @@ function buildNavbarHTML({ token, user, routes }) {
                     }
 
                     <div class="grid gap-2 p-3">
-                        ${mobileMenuLink(routes.orders, 'fa-bag-shopping', 'Orders')}
-                        ${mobileMenuLink(routes.wishlist, 'fa-heart', 'Wishlist')}
-                        ${canSeeSeller ? mobileMenuLink(routes.seller, 'fa-store', 'Seller Dashboard', 'mobileSellerDashboardLink') : ''}
-                        ${canSeeAdmin ? mobileMenuLink(routes.admin, 'fa-gauge-high', 'Admin Panel', 'mobileAdminDashboardLink') : ''}
+                        ${mobileMenuLink(routes.orders, 'fa-bag-shopping', 'الطلبات')}
+                        ${mobileMenuLink(routes.wishlist, 'fa-heart', 'المفضلة')}
+                        ${canSeeSeller ? mobileMenuLink(routes.seller, 'fa-store', 'لوحة البائع', 'mobileSellerDashboardLink') : ''}
+                        ${canSeeAdmin ? mobileMenuLink(routes.admin, 'fa-gauge-high', 'لوحة الأدمن', 'mobileAdminDashboardLink') : ''}
 
                         <button
                             type="button"
@@ -539,12 +535,11 @@ function buildNavbarHTML({ token, user, routes }) {
                             class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
                             aria-pressed="false"
                         >
-                            <span data-theme-label>Dark Mode</span>
+                            <span data-theme-label>الوضع الداكن</span>
                             <i data-theme-icon class="fas fa-moon text-cyan-500"></i>
                         </button>
 
-                        ${mobileMenuButton('fa-language', 'العربية | EN')}
-                        ${mobileMenuLink(routes.help, 'fa-circle-question', 'Need Help?')}
+                        ${mobileMenuLink(routes.help, 'fa-circle-question', 'تحتاج مساعدة؟')}
                     </div>
 
                     ${
@@ -557,7 +552,7 @@ function buildNavbarHTML({ token, user, routes }) {
                                         class="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-600 transition hover:bg-red-100"
                                     >
                                         <i class="fas fa-right-from-bracket"></i>
-                                        <span>Sign Out</span>
+                                        <span>تسجيل الخروج</span>
                                     </button>
                                 </div>
                             `
@@ -571,7 +566,7 @@ function buildNavbarHTML({ token, user, routes }) {
 
 function cartButton(cartUrl) {
     return `
-        <a href="${cartUrl}" class="relative grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700" aria-label="Cart">
+        <a href="${cartUrl}" class="relative grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-cyan-50 hover:text-cyan-700" aria-label="سلة المشتريات">
             <i class="fas fa-cart-shopping text-lg"></i>
             <span data-cart-count-badge class="absolute -left-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full border-2 border-white bg-cyan-500 px-1 text-[11px] font-black leading-none text-white">0</span>
         </a>
@@ -582,11 +577,11 @@ function buildGuestDesktopActions(routes) {
     return `
         <a href="${routes.login}" class="inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-700">
             <i class="fas fa-user text-cyan-500"></i>
-            <span>Login</span>
+            <span>تسجيل الدخول</span>
         </a>
 
         <a href="${routes.register}" class="inline-flex h-10 items-center rounded-xl px-3 text-sm font-black text-cyan-600 transition hover:bg-cyan-50">
-            Register
+            إنشاء حساب
         </a>
     `;
 }
@@ -621,19 +616,19 @@ function buildDesktopAccountMenu({ accountLabel, fullName, initials, routes, can
                     <div class="min-w-0 flex-1">
                         <p id="navbarFullNameDesktop" class="truncate text-sm font-black text-slate-950">${escapeHTML(fullName)}</p>
                         <a href="${routes.profile}" class="mt-1 inline-flex items-center gap-1 text-xs font-bold text-cyan-600">
-                            Your Profile
+                            حسابك الشخصي
                             <i class="fas fa-chevron-left text-[10px]"></i>
                         </a>
                     </div>
                 </div>
 
                 <div class="p-2">
-                    ${dropdownLink(routes.profile, 'fa-user', 'My Profile')}
-                    ${dropdownLink(routes.orders, 'fa-bag-shopping', 'Orders')}
-                    ${dropdownLink(routes.wishlist, 'fa-heart', 'Wishlist')}
-                    ${dropdownLink(routes.seller, 'fa-store', 'Seller Dashboard', 'sellerDashboardLink', canSeeSeller)}
-                    ${dropdownLink(routes.admin, 'fa-gauge-high', 'Admin Panel', 'adminDashboardLink', canSeeAdmin)}
-                    ${dropdownLink(routes.help, 'fa-circle-question', 'Need Help?')}
+                    ${dropdownLink(routes.profile, 'fa-user', 'حسابي')}
+                    ${dropdownLink(routes.orders, 'fa-bag-shopping', 'الطلبات')}
+                    ${dropdownLink(routes.wishlist, 'fa-heart', 'المفضلة')}
+                    ${dropdownLink(routes.seller, 'fa-store', 'لوحة البائع', 'sellerDashboardLink', canSeeSeller)}
+                    ${dropdownLink(routes.admin, 'fa-gauge-high', 'لوحة الأدمن', 'adminDashboardLink', canSeeAdmin)}
+                    ${dropdownLink(routes.help, 'fa-circle-question', 'تحتاج مساعدة؟')}
                 </div>
 
                 <div class="border-t border-slate-100 p-2">
@@ -644,7 +639,7 @@ function buildDesktopAccountMenu({ accountLabel, fullName, initials, routes, can
                         role="menuitem"
                     >
                         <i class="fas fa-right-from-bracket"></i>
-                        <span>Sign Out</span>
+                        <span>تسجيل الخروج</span>
                     </button>
                 </div>
             </div>
@@ -679,18 +674,6 @@ function mobileMenuLink(href, icon, label, id = '') {
     `;
 }
 
-function mobileMenuButton(icon, label) {
-    return `
-        <button
-            type="button"
-            class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
-        >
-            <span>${label}</span>
-            <i class="fas ${icon} text-cyan-500"></i>
-        </button>
-    `;
-}
-
 function wireNavbarSearch(homePath) {
     const isHomepage = () => {
         const path = window.location.pathname.replace(/\/+$/, '');
@@ -704,8 +687,12 @@ function wireNavbarSearch(homePath) {
 
     const emitLiveSearch = input => {
         if (!isHomepage()) return;
+
         const query = String((input && input.value) || '').trim();
-        window.dispatchEvent(new CustomEvent('spider:live-search', { detail: { query } }));
+
+        window.dispatchEvent(new CustomEvent('spider:live-search', {
+            detail: { query }
+        }));
     };
 
     [
@@ -743,6 +730,7 @@ function wireDesktopAccountDropdown() {
         closeMobileMenu();
 
         const willOpen = menu.classList.contains('hidden');
+
         menu.classList.toggle('hidden', !willOpen);
         button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
@@ -787,6 +775,7 @@ function wireMobileMenu() {
         closeDesktopAccountDropdown();
 
         const willOpen = menu.classList.contains('hidden');
+
         menu.classList.toggle('hidden', !willOpen);
         button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
@@ -830,11 +819,11 @@ function updateThemeToggleUI() {
 
     document.querySelectorAll('[data-theme-toggle]').forEach(button => {
         button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
-        button.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+        button.setAttribute('aria-label', isDark ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن');
     });
 
     document.querySelectorAll('[data-theme-label]').forEach(label => {
-        label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+        label.textContent = isDark ? 'الوضع الفاتح' : 'الوضع الداكن';
     });
 
     document.querySelectorAll('[data-theme-icon]').forEach(icon => {
@@ -844,6 +833,7 @@ function updateThemeToggleUI() {
 
 function hydrateNavbarUser(routes) {
     const token = getStoredToken();
+
     if (!token) return;
 
     fetch('/api/profile', {
@@ -859,11 +849,11 @@ function hydrateNavbarUser(routes) {
 }
 
 function updateNavbarUser(user, routes) {
-    const fullName = getFullName(user) || 'Your account';
+    const fullName = getFullName(user) || 'حسابك';
     const firstName = String(user.first_name || '').trim();
-    const initials = getInitials(fullName || 'User');
+    const initials = getInitials(fullName || 'ح');
 
-    setText('navbarGreetingDesktop', firstName ? `Hi, ${firstName}` : 'Account');
+    setText('navbarGreetingDesktop', firstName ? `مرحبًا، ${firstName}` : 'الحساب');
     setText('navbarFullNameDesktop', fullName);
     setText('navbarFullNameMobile', fullName);
 
@@ -884,12 +874,14 @@ function updateNavbarUser(user, routes) {
 
     sellerLinks.forEach(link => {
         if (!link) return;
+
         link.href = routes.seller;
         link.classList.toggle('hidden', !(user.role === 'seller' || user.seller_status === 'approved_seller'));
     });
 
     adminLinks.forEach(link => {
         if (!link) return;
+
         link.href = routes.admin;
         link.classList.toggle('hidden', user.role !== 'admin');
     });
@@ -913,7 +905,7 @@ function getInitials(name) {
         .split(/\s+/)
         .filter(Boolean);
 
-    if (!parts.length) return 'U';
+    if (!parts.length) return 'ح';
 
     return parts
         .slice(0, 2)

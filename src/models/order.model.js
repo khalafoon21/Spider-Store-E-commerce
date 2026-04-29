@@ -53,7 +53,7 @@ class OrderModel {
 
             for (const item of cartItems) {
                 const product = await tx.get(
-                    `SELECT stock_quantity FROM products WHERE id = ?`,
+                    `SELECT stock_quantity FROM products WHERE id = ? FOR UPDATE`,
                     [item.product_id]
                 );
 
@@ -80,10 +80,16 @@ class OrderModel {
                     [orderId, item.product_id, item.quantity, finalPrice]
                 );
 
-                await tx.run(
-                    `UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?`,
-                    [item.quantity, item.product_id]
+                const stockUpdate = await tx.run(
+                    `UPDATE products
+                     SET stock_quantity = stock_quantity - ?
+                     WHERE id = ? AND stock_quantity >= ?`,
+                    [item.quantity, item.product_id, item.quantity]
                 );
+
+                if (!stockUpdate.changes) {
+                    throw new Error(`Product "${item.title}" does not have enough stock.`);
+                }
             }
 
         // مسح السلة بعد نجاح الطلب 100%
@@ -254,19 +260,22 @@ class OrderModel {
 
     static async cancelOrder(orderId, userId = null) {
         const db = getDb();
-        const order = userId
-            ? await db.get(`SELECT * FROM orders WHERE id = ? AND user_id = ?`, [orderId, userId])
-            : await db.get(`SELECT * FROM orders WHERE id = ?`, [orderId]);
-
-        if (!order) throw new Error('Order not found');
-        if (order.status === 'Delivered') throw new Error('Delivered orders cannot be cancelled');
-        if (order.status === 'Shipped' && userId) throw new Error('Shipped orders cannot be cancelled by customer');
-        if (order.status === 'Cancelled') return order;
-
         const connection = await db.pool.getConnection();
         try {
             await connection.beginTransaction();
             const tx = makeConnectionDb(connection);
+            const order = userId
+                ? await tx.get(`SELECT * FROM orders WHERE id = ? AND user_id = ? FOR UPDATE`, [orderId, userId])
+                : await tx.get(`SELECT * FROM orders WHERE id = ? FOR UPDATE`, [orderId]);
+
+            if (!order) throw new Error('Order not found');
+            if (order.status === 'Delivered') throw new Error('Delivered orders cannot be cancelled');
+            if (order.status === 'Shipped' && userId) throw new Error('Shipped orders cannot be cancelled by customer');
+            if (order.status === 'Cancelled') {
+                await connection.commit();
+                return order;
+            }
+
             const items = await tx.all(`SELECT product_id, quantity FROM order_items WHERE order_id = ?`, [orderId]);
             for (const item of items) {
                 await tx.run(

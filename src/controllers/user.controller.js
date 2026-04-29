@@ -4,6 +4,7 @@ const fs = require('fs');
 const { formidable } = require('formidable');
 const UserModel = require('../models/user.model');
 const { getPostData } = require('../utils/helpers');
+const { finalizeUploadedImage } = require('../utils/upload-security');
 
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -11,9 +12,14 @@ function fieldValue(fields, key, fallback = '') {
     return fields[key] ? fields[key][0] : fallback;
 }
 
-function uploadedProfilePath(file) {
-    const fileName = path.basename(file.filepath || file.newFilename || '');
-    return fileName ? `/uploads/profiles/${fileName}` : null;
+function uploadedProfilePath(file, uploadFolder) {
+    return finalizeUploadedImage(file, {
+        uploadDir: uploadFolder,
+        publicDir: '/uploads/profiles',
+        allowedMimeTypes: allowedImageTypes,
+        maxSize: 5 * 1024 * 1024,
+        filenamePrefix: 'profile'
+    }) || null;
 }
 
 // جلب بيانات الملف الشخصي
@@ -72,11 +78,12 @@ async function updateProfile(req, res) {
                 let profilePicture = null;
                 if (files.profile_picture) {
                     const file = Array.isArray(files.profile_picture) ? files.profile_picture[0] : files.profile_picture;
-                    if (!allowedImageTypes.includes(file.mimetype)) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        return res.end(JSON.stringify({ success: false, message: 'Only image files are allowed' }));
+                    try {
+                        profilePicture = uploadedProfilePath(file, uploadFolder);
+                    } catch (uploadError) {
+                        res.writeHead(uploadError.statusCode || 400, { 'Content-Type': 'application/json' });
+                        return res.end(JSON.stringify({ success: false, message: uploadError.message || 'Only image files are allowed' }));
                     }
-                    profilePicture = uploadedProfilePath(file);
                 }
 
                 await UserModel.updateProfile(userId, {

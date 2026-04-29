@@ -39,21 +39,23 @@
             from { width: 100%; } 
             to   { width: 0%; } 
         }
+
         .animate-progress { animation: shrinkProgress 3s linear forwards; }
 
-        /* Skeleton Loading */
         .skeleton {
             background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
             background-size: 200% 100%;
             animation: shimmer 1.5s infinite;
             border-radius: 0.5rem;
         }
+
         @keyframes shimmer {
             0%   { background-position: 200% 0; }
             100% { background-position: -200% 0; }
         }
     </style>
 </head>
+
 <body class="font-sans text-gray-800 antialiased flex flex-col min-h-screen">
 
     <div id="navbar-container"></div>
@@ -65,20 +67,26 @@
 
     <main class="mx-auto w-full max-w-[1440px] flex-1 px-3 py-4 sm:px-4 lg:px-6">
         
-        <section id="heroContainer" class="relative mb-5 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:mb-6 lg:mb-8">
-            <div id="sliderContent" class="w-full fade-in min-h-[210px] sm:min-h-[280px] lg:min-h-[360px]"></div>
+        <section id="heroContainer" class="relative mb-5 hidden overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-sm sm:mb-6 lg:mb-8">
+            <div id="sliderContent" class="w-full fade-in"></div>
             <div class="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2" id="sliderDots"></div>
         </section>
 
         <section class="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:mb-6 sm:p-4">
             <div class="mb-3 flex items-center justify-between gap-3">
                 <h2 class="flex items-center gap-2 text-base font-black text-slate-950 sm:text-lg">
-                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-cyan-50 text-primary-600"><i class="fas fa-th-large"></i></span>
+                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-cyan-50 text-primary-600">
+                        <i class="fas fa-th-large"></i>
+                    </span>
                     الأقسام
                 </h2>
-                <a href="index.html" class="text-sm font-bold text-primary-600 hover:text-primary-700">الكل</a>
+
+                <button type="button" data-category-filter="" class="text-sm font-bold text-primary-600 hover:text-primary-700">
+                    الكل
+                </button>
             </div>
-            <nav id="categoriesList" class="flex gap-3 overflow-x-auto pb-1" aria-label="Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª">
+
+            <nav id="categoriesList" class="flex gap-3 overflow-x-auto pb-1" aria-label="أقسام المنتجات">
                 <div class="flex min-w-full gap-3">
                     <div class="skeleton h-20 w-28 shrink-0 rounded-2xl"></div>
                     <div class="skeleton h-20 w-28 shrink-0 rounded-2xl"></div>
@@ -88,30 +96,8 @@
             </nav>
         </section>
 
-        <aside class="hidden">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas fa-th-large text-primary-500"></i> الأقسام
-                    </h2>
-                    <a href="index.html" class="text-sm text-primary-500 hover:underline">الكل</a>
-                </div>
-                <nav id="oldCategoriesList" aria-label="أقسام المنتجات">
-                    <div class="space-y-3">
-                        <div class="flex items-center gap-3 p-3"><div class="skeleton w-10 h-10 rounded-lg"></div><div class="skeleton h-4 w-3/4"></div></div>
-                        <div class="flex items-center gap-3 p-3"><div class="skeleton w-10 h-10 rounded-lg"></div><div class="skeleton h-4 w-3/4"></div></div>
-                    </div>
-                </nav>
-            </div>
-        </aside>
-
         <div class="flex-1">
             
-            <section id="oldHeroContainer" class="hidden">
-                <div id="oldSliderContent" class="hidden"></div>
-                <div class="hidden" id="oldSliderDots"></div>
-            </section>
-
             <section id="latestSection" class="mb-8 sm:mb-10">
                 <div class="mb-4 flex items-center justify-between gap-3 border-r-4 border-secondary-500 pr-3 sm:mb-5">
                     <h2 id="latestTitle" class="text-2xl font-bold text-gray-900">وصل حديثاً</h2>
@@ -146,12 +132,10 @@
     (() => {
         'use strict';
 
-        // الإعدادات
         const BASE_SERVER = '';
         const API_URL = '/api';
-        const TOKEN_KEY = 'spider_token';   
-        
-        // جلب مسار الصفحة الحالي لمعرفة الفلتر
+        const TOKEN_KEY = 'spider_token';
+
         const urlParams = new URLSearchParams(window.location.search);
         let currentCategoryId = urlParams.get('category') || '';
         let searchQuery = urlParams.get('search') || '';
@@ -159,45 +143,73 @@
         let wishlistProductIds = new Set();
         let liveSearchTimer = null;
 
-        // حالة الـ Slider
         let banners = [];
         let currentSlide = 0;
-        let sliderInterval = null;   
+        let sliderInterval = null;
 
-        // أدوات مساعدة
-        const escapeHTML = str => String(str || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        const escapeHTML = str => String(str || '').replace(/[&<>'"]/g, tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag]));
+
         const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
         const safeId = value => encodeURIComponent(String(value || ''));
-        const safeIconClass = value => String(value || 'fa-tags').split(/\s+/).filter(cls => /^fa[-\w]*$/.test(cls)).join(' ') || 'fa-tags';
+
+        const safeIconClass = value => String(value || 'fa-tags')
+            .split(/\s+/)
+            .filter(cls => /^fa[-\w]*$/.test(cls))
+            .join(' ') || 'fa-tags';
+
         const isCategoryImageIcon = value => {
             const clean = String(value || '').trim();
             return clean.startsWith('/uploads/') || /\.(png|jpe?g|webp|svg)$/i.test(clean);
         };
-        const safeColor = (value, fallback) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || '')) ? value : fallback;
+
+        const safeColor = (value, fallback) => {
+            return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || '')) ? value : fallback;
+        };
+
         const safeLink = value => {
             const link = String(value || '').trim();
             if (!link) return '#';
             if (/^(https?:\/\/|\.{0,2}\/|#|\?)/i.test(link) && !/^javascript:/i.test(link)) return escapeHTML(link);
             return '#';
         };
+
         const buildImageUrl = imagePath => {
             const cleanPath = String(imagePath || '').trim();
-            if (!cleanPath) return 'https://via.placeholder.com/300?text=No+Image';
-            return /^https?:\/\//i.test(cleanPath) ? cleanPath : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+            if (!cleanPath) return '';
+            return /^https?:\/\//i.test(cleanPath)
+                ? cleanPath
+                : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
         };
+
         const renderCategoryIcon = (icon, name = '') => {
             const cleanIcon = String(icon || '').trim();
 
             if (isCategoryImageIcon(cleanIcon)) {
-                return `<img src="${buildImageUrl(cleanIcon)}" class="h-7 w-7 object-contain" alt="${escapeHTML(name || 'Category icon')}" loading="lazy" onerror="this.style.display='none'">`;
+                return `
+                    <img
+                        src="${buildImageUrl(cleanIcon)}"
+                        class="h-7 w-7 object-contain"
+                        alt="${escapeHTML(name || 'Category icon')}"
+                        loading="lazy"
+                        onerror="this.style.display='none'"
+                    >
+                `;
             }
 
             return `<i class="fas ${safeIconClass(cleanIcon)}"></i>`;
         };
+
         const getProductImage = product => {
             if (product.image_url || product.image) return product.image_url || product.image;
             if (Array.isArray(product.images_array) && product.images_array.length) return product.images_array[0];
             if (Array.isArray(product.images_list) && product.images_list.length) return product.images_list[0];
+
             if (typeof product.images === 'string' && product.images.trim()) {
                 try {
                     const parsed = JSON.parse(product.images);
@@ -206,17 +218,23 @@
                     return product.images.split(/[,\n]/).find(Boolean) || '';
                 }
             }
+
             return '';
         };
+
         const calcFinalPrice = (price, discount) => {
             const basePrice = safeNumber(price);
             const discountValue = safeNumber(discount);
-            return (discountValue > 0 && discountValue <= 100) ? (basePrice - (basePrice * discountValue / 100)).toFixed(0) : basePrice.toFixed(0);
+
+            return (discountValue > 0 && discountValue <= 100)
+                ? (basePrice - (basePrice * discountValue / 100)).toFixed(0)
+                : basePrice.toFixed(0);
         };
 
         function renderProductsSkeleton(containerId, count = 6) {
             const container = document.getElementById(containerId);
             if (!container) return;
+
             container.innerHTML = Array(count).fill(`
                 <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div class="skeleton aspect-square w-full"></div>
@@ -243,90 +261,180 @@
             wireHomepageLiveFilters();
         }
 
-        // ==========================================
-        //  الـ Slider
-        // ==========================================
         async function fetchBanners() {
+            const heroContainer = document.getElementById('heroContainer');
+
             try {
                 const res = await fetch(`${API_URL}/banners`);
-                const data = await res.json();
-                if (data.success && data.data?.length > 0) {
-                    banners = data.data;
-                    document.getElementById('heroContainer').classList.remove('hidden');
+                const data = await res.json().catch(() => ({}));
+
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    banners = data.data.filter(banner => banner && (banner.image_url || banner.title || banner.description));
+
+                    if (!banners.length) {
+                        if (heroContainer) heroContainer.classList.add('hidden');
+                        return;
+                    }
+
+                    currentSlide = 0;
+
+                    if (heroContainer) heroContainer.classList.remove('hidden');
+
                     renderSlider();
                     startSliderTimer();
+                    return;
                 }
-            } catch (err) { console.error('Banners fetch error', err); }
+
+                if (heroContainer) heroContainer.classList.add('hidden');
+            } catch (err) {
+                console.error('Banners fetch error', err);
+                if (heroContainer) heroContainer.classList.add('hidden');
+            }
         }
 
         function renderSlider() {
             const container = document.getElementById('sliderContent');
-            if (!banners[currentSlide]) return;
+            const dotsContainer = document.getElementById('sliderDots');
+
+            if (!container || !banners[currentSlide]) return;
+
             const slide = banners[currentSlide];
-            const bgColor = safeColor(slide.bg_color, '#ffffff');
-            const textColor = safeColor(slide.text_color, '#1f2937');
-            const buttonColor = safeColor(slide.button_color, '#0891b2');
+
+            const title = String(slide.title || '').trim();
+            const description = String(slide.description || '').trim();
+            const imageUrl = buildImageUrl(slide.image_url || slide.image || '');
+            const buttonText = String(slide.button_text || '').trim() || 'اكتشف الآن';
+            const buttonColor = safeColor(slide.button_color, '#06B6D4');
+            const textColor = safeColor(slide.text_color, '#ffffff');
+            const bgColor = safeColor(slide.bg_color, '#0f172a');
+            const linkUrl = safeLink(slide.link_url);
+
+            const hasText = Boolean(title || description || buttonText);
+            const hasImage = Boolean(imageUrl);
 
             container.innerHTML = `
-                <div class="relative grid min-h-[210px] w-full grid-cols-1 items-center gap-4 p-5 sm:min-h-[280px] sm:p-8 lg:min-h-[360px] lg:grid-cols-[1fr_0.9fr] lg:gap-10 lg:p-10" style="background-color: ${bgColor};">
-                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.45),transparent_32%)]"></div>
-                    <div class="relative z-10 max-w-xl text-right" style="color: ${textColor};">
-                        <p class="mb-2 text-xs font-black uppercase tracking-wide opacity-75 sm:text-sm">Spider Store</p>
-                        <h2 class="mb-3 text-2xl font-black leading-tight sm:text-4xl lg:text-5xl">${escapeHTML(slide.title)}</h2>
-                        <p class="mb-5 max-w-lg text-sm font-semibold leading-7 opacity-90 sm:text-base lg:text-lg">${escapeHTML(slide.description)}</p>
-                        <a href="${safeLink(slide.link_url)}" class="inline-flex min-w-32 items-center justify-center rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 sm:min-w-36 sm:px-8" style="background-color: ${buttonColor};">
-                            ${escapeHTML(slide.button_text) || 'اكتشف الآن'}
-                        </a>
-                    </div>
-                    <div class="relative z-10 flex h-40 w-full items-center justify-center overflow-hidden sm:h-56 lg:h-72 lg:justify-end">
-                        <img src="${buildImageUrl(slide.image_url)}" class="max-h-full max-w-full object-contain drop-shadow-2xl" alt="${escapeHTML(slide.title) || 'Banner'}" onerror="this.src='https://via.placeholder.com/600x320?text=Banner'">
-                    </div>
+                <div
+                    class="relative min-h-[240px] w-full overflow-hidden bg-slate-900 sm:min-h-[310px] lg:min-h-[390px]"
+                    style="background-color:${bgColor};"
+                >
+                    ${
+                        hasImage
+                            ? `
+                                <img
+                                    src="${imageUrl}"
+                                    class="absolute inset-0 h-full w-full object-cover"
+                                    alt="${escapeHTML(title || 'Banner')}"
+                                    loading="lazy"
+                                    onerror="this.style.display='none'"
+                                >
+                            `
+                            : ''
+                    }
+
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-black/25 to-black/70"></div>
+
+                    ${
+                        hasText
+                            ? `
+                                <div class="relative z-10 min-h-[240px] w-full p-5 sm:min-h-[310px] sm:p-8 lg:min-h-[390px] lg:p-12">
+                                    <div class="absolute right-5 top-1/2 max-w-xl -translate-y-1/2 text-right sm:right-8 lg:right-12">
+                                        ${
+                                            title
+                                                ? `
+                                                    <h2 class="text-3xl font-black leading-tight sm:text-5xl lg:text-6xl" style="color:${textColor};">
+                                                        ${escapeHTML(title)}
+                                                    </h2>
+                                                `
+                                                : ''
+                                        }
+
+                                        ${
+                                            description
+                                                ? `
+                                                    <p class="mt-4 max-w-lg text-sm font-bold leading-7 text-white/90 sm:text-lg sm:leading-8">
+                                                        ${escapeHTML(description)}
+                                                    </p>
+                                                `
+                                                : ''
+                                        }
+
+                                        ${
+                                            buttonText
+                                                ? `
+                                                    <a
+                                                        href="${linkUrl}"
+                                                        class="mt-6 inline-flex min-w-36 items-center justify-center rounded-full px-7 py-3 text-sm font-black text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl sm:px-9 sm:py-3.5 sm:text-base"
+                                                        style="background-color:${buttonColor};"
+                                                    >
+                                                        ${escapeHTML(buttonText)}
+                                                    </a>
+                                                `
+                                                : ''
+                                        }
+                                    </div>
+                                </div>
+                            `
+                            : ''
+                    }
                 </div>
             `;
 
-            document.getElementById('sliderDots').innerHTML = banners.map((_, i) => `
-                <button type="button" onclick="window.goToSlide(${i})" class="h-2.5 rounded-full border border-white/70 bg-white/60 shadow-sm ${i === currentSlide ? 'w-8 bg-primary-500 border-primary-500' : 'w-2.5'} smooth-transition" aria-label="Go to slide ${i + 1}"></button>
-            `).join('');
+            if (dotsContainer) {
+                dotsContainer.innerHTML = banners.length > 1
+                    ? banners.map((_, i) => `
+                        <button
+                            type="button"
+                            onclick="window.goToSlide(${i})"
+                            class="h-2.5 rounded-full border border-white/70 bg-white/70 shadow-sm ${i === currentSlide ? 'w-8 bg-primary-500 border-primary-500' : 'w-2.5'} smooth-transition"
+                            aria-label="Go to slide ${i + 1}"
+                        ></button>
+                    `).join('')
+                    : '';
+            }
         }
 
         function startSliderTimer() {
             if (sliderInterval) clearInterval(sliderInterval);
-            sliderInterval = setInterval(() => window.goToSlide((currentSlide + 1) % banners.length), 5000);
+
+            if (banners.length <= 1) return;
+
+            sliderInterval = setInterval(() => {
+                window.goToSlide((currentSlide + 1) % banners.length);
+            }, 5000);
         }
 
         window.goToSlide = function(index) {
-            currentSlide = index;
+            if (!banners.length) return;
+
+            currentSlide = Number(index) || 0;
+
+            if (currentSlide < 0) currentSlide = 0;
+            if (currentSlide >= banners.length) currentSlide = 0;
+
             renderSlider();
             startSliderTimer(); 
         };
 
-        // ==========================================
-        //  الأقسام والمنتجات
-        // ==========================================
         async function fetchCategories() {
             const list = document.getElementById('categoriesList');
+
             try {
                 const res = await fetch(`${API_URL}/categories`);
-                const data = await res.json();
-                if (data.success && data.data?.length > 0) {
+                const data = await res.json().catch(() => ({}));
+
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     categoriesCache = data.data;
                     renderCategories();
                     return;
-                    list.innerHTML = data.data.map(cat => {
-                        const isActive = currentCategoryId == cat.id;
-                        const activeClasses = isActive ? "bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100";
-                        const activeIconBg = isActive ? "bg-white/20 text-white" : "bg-white text-primary-600 shadow-sm group-hover:bg-white";
-                        
-                        return `
-                        <a href="?category=${safeId(cat.id)}" class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${activeClasses}">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-xl transition-all ${activeIconBg}">
-                                ${renderCategoryIcon(cat.icon, cat.name)}
-                            </span>
-                            <span class="line-clamp-1 text-sm font-black">${escapeHTML(cat.name)}</span>
-                        </a>`;
-                    }).join('');
                 }
-            } catch (err) { list.innerHTML = '<p class="text-sm text-error-500 p-2">تعذر تحميل الأقسام.</p>'; }
+
+                categoriesCache = [];
+                renderCategories();
+            } catch (err) {
+                if (list) {
+                    list.innerHTML = '<p class="text-sm text-error-500 p-2">تعذر تحميل الأقسام.</p>';
+                }
+            }
         }
 
         function renderCategories() {
@@ -334,29 +442,51 @@
             if (!list) return;
 
             const allActive = !currentCategoryId;
-            const allClasses = allActive ? "bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100";
-            const allIconBg = allActive ? "bg-white/20 text-white" : "bg-white text-primary-600 shadow-sm group-hover:bg-white";
+            const allClasses = allActive
+                ? 'bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100'
+                : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100';
+
+            const allIconBg = allActive
+                ? 'bg-white/20 text-white'
+                : 'bg-white text-primary-600 shadow-sm group-hover:bg-white';
+
             const allItem = `
-                <button type="button" data-category-filter="" class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${allClasses}">
+                <button
+                    type="button"
+                    data-category-filter=""
+                    class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${allClasses}"
+                >
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl transition-all ${allIconBg}">
                         <i class="fas fa-layer-group"></i>
                     </span>
                     <span class="line-clamp-1 text-sm font-black">الكل</span>
-                </button>`;
+                </button>
+            `;
 
             const categoryItems = categoriesCache.map(cat => {
                 const categoryId = String(cat.id || '');
                 const isActive = currentCategoryId === categoryId;
-                const activeClasses = isActive ? "bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100";
-                const activeIconBg = isActive ? "bg-white/20 text-white" : "bg-white text-primary-600 shadow-sm group-hover:bg-white";
+
+                const activeClasses = isActive
+                    ? 'bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100'
+                    : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100';
+
+                const activeIconBg = isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-white text-primary-600 shadow-sm group-hover:bg-white';
                 
                 return `
-                    <button type="button" data-category-filter="${safeId(categoryId)}" class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${activeClasses}">
+                    <button
+                        type="button"
+                        data-category-filter="${safeId(categoryId)}"
+                        class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${activeClasses}"
+                    >
                         <span class="flex h-10 w-10 items-center justify-center rounded-xl transition-all ${activeIconBg}">
                             ${renderCategoryIcon(cat.icon, cat.name)}
                         </span>
                         <span class="line-clamp-1 text-sm font-black">${escapeHTML(cat.name)}</span>
-                    </button>`;
+                    </button>
+                `;
             }).join('');
 
             list.innerHTML = allItem + categoryItems;
@@ -365,44 +495,59 @@
         async function fetchProducts() {
             const grid = document.getElementById('productsGrid');
             const bestSellersGrid = document.getElementById('bestSellersGrid');
-            const latestSection = document.getElementById('latestSection');
             const bestSellersSection = document.getElementById('bestSellersSection');
             const hasFilters = Boolean(currentCategoryId || searchQuery);
-            if (document.getElementById('latestTitle')) document.getElementById('latestTitle').innerText = hasFilters ? 'نتائج البحث / التصنيف' : 'أحدث المنتجات';
-            if (bestSellersSection) bestSellersSection.style.display = hasFilters ? 'none' : '';
+
+            if (document.getElementById('latestTitle')) {
+                document.getElementById('latestTitle').innerText = hasFilters ? 'نتائج البحث / التصنيف' : 'أحدث المنتجات';
+            }
+
+            if (bestSellersSection) {
+                bestSellersSection.style.display = hasFilters ? 'none' : '';
+            }
              
             try {
                 let apiUrl = `${API_URL}/products`;
                 const queryParams = [];
+
                 if (currentCategoryId) queryParams.push(`category_id=${encodeURIComponent(currentCategoryId)}`);
                 if (searchQuery) queryParams.push(`search=${encodeURIComponent(searchQuery)}`);
                 if (queryParams.length > 0) apiUrl += `?${queryParams.join('&')}`;
 
                 const res = await fetch(apiUrl);
-                const data = await res.json();
+                const data = await res.json().catch(() => ({}));
 
-                if (data.success && data.data?.length > 0) {
-                    if (currentCategoryId || searchQuery) {
-                        document.getElementById('latestTitle').innerText = 'نتائج البحث / التصنيف';
-                        bestSellersSection.style.display = 'none'; 
-                    }
-
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     renderProductCards(data.data, grid);
 
                     if (!currentCategoryId && !searchQuery && bestSellersGrid) {
                         renderProductCards(data.data.slice(0, 5), bestSellersGrid); 
                     }
-                } else {
-                    grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">لا توجد منتجات مطابقة.</p>';
-                    if(bestSellersGrid) bestSellersGrid.innerHTML = '';
+
+                    return;
                 }
-            } catch (err) { 
-                grid.innerHTML = '<p class="col-span-full text-center text-error-500 py-8">حدث خطأ في الاتصال.</p>';
-                if(bestSellersGrid) bestSellersGrid.innerHTML = '';
+
+                if (grid) {
+                    grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">لا توجد منتجات مطابقة.</p>';
+                }
+
+                if (bestSellersGrid) {
+                    bestSellersGrid.innerHTML = '';
+                }
+            } catch (err) {
+                if (grid) {
+                    grid.innerHTML = '<p class="col-span-full text-center text-error-500 py-8">حدث خطأ في الاتصال.</p>';
+                }
+
+                if (bestSellersGrid) {
+                    bestSellersGrid.innerHTML = '';
+                }
             }
         }
 
         function renderProductCards(productsArray, container) {
+            if (!container) return;
+
             container.innerHTML = productsArray.map(product => {
                 const productId = safeId(product.id);
                 const price = safeNumber(product.price);
@@ -413,52 +558,103 @@
                 const fullStars = Math.max(0, Math.min(5, Math.round(ratingAverage)));
                 const stars = '<i class="fas fa-star"></i>'.repeat(fullStars) + '<i class="far fa-star text-gray-300"></i>'.repeat(5 - fullStars);
                 const inWishlist = wishlistProductIds.has(Number(product.id));
-                const wishlistClasses = inWishlist ? 'border-error-100 bg-error-50 text-error-500' : 'border-slate-200 bg-white/95 text-slate-500 hover:border-error-100 hover:bg-error-50 hover:text-error-500';
+
+                const wishlistClasses = inWishlist
+                    ? 'border-error-100 bg-error-50 text-error-500'
+                    : 'border-slate-200 bg-white/95 text-slate-500 hover:border-error-100 hover:bg-error-50 hover:text-error-500';
+
                 const wishlistIcon = inWishlist ? 'fas fa-heart' : 'far fa-heart';
+                const productImage = buildImageUrl(getProductImage(product)) || 'https://via.placeholder.com/300?text=No+Image';
 
                 return `
-                <div class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-lg">
-                    <div class="relative flex items-center justify-center bg-slate-50 p-3 sm:p-4">
-                        ${hasDiscount ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${discount}%</span>` : ''}
-                        <button type="button" data-action="wishlist" data-product-id="${productId}" data-in-wishlist="${inWishlist ? '1' : '0'}" class="absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border ${wishlistClasses} shadow-sm transition sm:right-3 sm:top-3" aria-label="Wishlist">
-                            <i class="${wishlistIcon} pointer-events-none"></i>
-                        </button>
-                        <a href="pages/products/product.html?id=${productId}" class="w-full">
-                            <img src="${buildImageUrl(getProductImage(product))}" class="aspect-square w-full object-contain transition-transform duration-500 group-hover:scale-105" alt="${escapeHTML(product.title)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'">
-                        </a>
-                    </div>
-                    <div class="flex flex-1 flex-col p-3 sm:p-4">
-                        <a href="pages/products/product.html?id=${productId}" class="transition-colors hover:text-primary-600">
-                            <h3 class="mb-2 line-clamp-2 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:text-base">${escapeHTML(product.title)}</h3>
-                        </a>
-                        <div class="mb-3 flex min-h-[1.25rem] items-center gap-1 text-[11px] text-secondary-500 sm:text-xs">
-                            ${ratingCount ? `${stars} <span class="text-gray-600 font-bold mr-1">${ratingAverage.toFixed(1)}</span><span class="text-gray-400">(${ratingCount} تقييم)</span>` : '<span class="text-gray-400">لا توجد تقييمات بعد</span>'}
-                        </div>
-                        <div class="mt-auto flex items-center justify-between">
-                            <div class="flex flex-col">
-                                ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${price.toFixed(0)} ج.م</span>` : ''}
-                                <span class="text-lg font-black text-primary-600 sm:text-xl">${calcFinalPrice(price, discount)} ج.م</span>
-                            </div>
-                            <button type="button" data-action="add-to-cart" data-product-id="${productId}" class="add-to-cart-btn z-20 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white shadow-lg shadow-cyan-100 transition-all hover:bg-primary-600 sm:h-11 sm:w-11">
-                                <i class="fas fa-cart-plus pointer-events-none"></i>
+                    <div class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-lg">
+                        <div class="relative flex items-center justify-center bg-slate-50 p-3 sm:p-4">
+                            ${
+                                hasDiscount
+                                    ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${discount}%</span>`
+                                    : ''
+                            }
+
+                            <button
+                                type="button"
+                                data-action="wishlist"
+                                data-product-id="${productId}"
+                                data-in-wishlist="${inWishlist ? '1' : '0'}"
+                                class="absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border ${wishlistClasses} shadow-sm transition sm:right-3 sm:top-3"
+                                aria-label="Wishlist"
+                            >
+                                <i class="${wishlistIcon} pointer-events-none"></i>
                             </button>
+
+                            <a href="pages/products/product.html?id=${productId}" class="w-full">
+                                <img
+                                    src="${productImage}"
+                                    class="aspect-square w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                                    alt="${escapeHTML(product.title)}"
+                                    onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'"
+                                >
+                            </a>
+                        </div>
+
+                        <div class="flex flex-1 flex-col p-3 sm:p-4">
+                            <a href="pages/products/product.html?id=${productId}" class="transition-colors hover:text-primary-600">
+                                <h3 class="mb-2 line-clamp-2 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:text-base">
+                                    ${escapeHTML(product.title)}
+                                </h3>
+                            </a>
+
+                            <div class="mb-3 flex min-h-[1.25rem] items-center gap-1 text-[11px] text-secondary-500 sm:text-xs">
+                                ${
+                                    ratingCount
+                                        ? `${stars} <span class="text-gray-600 font-bold mr-1">${ratingAverage.toFixed(1)}</span><span class="text-gray-400">(${ratingCount} تقييم)</span>`
+                                        : '<span class="text-gray-400">لا توجد تقييمات بعد</span>'
+                                }
+                            </div>
+
+                            <div class="mt-auto flex items-center justify-between">
+                                <div class="flex flex-col">
+                                    ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${price.toFixed(0)} ج.م</span>` : ''}
+                                    <span class="text-lg font-black text-primary-600 sm:text-xl">${calcFinalPrice(price, discount)} ج.م</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    data-action="add-to-cart"
+                                    data-product-id="${productId}"
+                                    class="add-to-cart-btn z-20 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white shadow-lg shadow-cyan-100 transition-all hover:bg-primary-600 sm:h-11 sm:w-11"
+                                >
+                                    <i class="fas fa-cart-plus pointer-events-none"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>`;
+                `;
             }).join('');
         }
 
         async function fetchWishlistState() {
-            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+            const token = window.AppState
+                ? window.AppState.getToken()
+                : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+
             if (!token) {
                 wishlistProductIds = new Set();
                 return;
             }
+
             try {
-                const response = await fetch(`${API_URL}/wishlist`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(`${API_URL}/wishlist`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
                 const data = await response.json().catch(() => ({}));
                 const items = Array.isArray(data.data) ? data.data : [];
-                wishlistProductIds = new Set(items.map(item => Number(item.id || item.product_id)).filter(Boolean));
+
+                wishlistProductIds = new Set(
+                    items
+                        .map(item => Number(item.id || item.product_id))
+                        .filter(Boolean)
+                );
             } catch (error) {
                 wishlistProductIds = new Set();
             }
@@ -467,42 +663,57 @@
         function updateWishlistButtons(productId, inWishlist) {
             document.querySelectorAll('[data-action="wishlist"]').forEach(button => {
                 if (Number(button.dataset.productId) !== Number(productId)) return;
+
                 button.dataset.inWishlist = inWishlist ? '1' : '0';
+
                 button.classList.toggle('border-error-100', inWishlist);
                 button.classList.toggle('bg-error-50', inWishlist);
                 button.classList.toggle('text-error-500', inWishlist);
+
                 button.classList.toggle('border-slate-200', !inWishlist);
                 button.classList.toggle('bg-white/95', !inWishlist);
                 button.classList.toggle('text-slate-500', !inWishlist);
+
                 const icon = button.querySelector('i');
                 if (icon) icon.className = `${inWishlist ? 'fas' : 'far'} fa-heart pointer-events-none`;
             });
         }
 
         window.toggleWishlist = async function(button, id) {
-            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+            const token = window.AppState
+                ? window.AppState.getToken()
+                : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+
             if (!token) {
                 showToast('يرجى تسجيل الدخول لاستخدام قائمة الأمنيات', 'error');
                 return;
             }
+
             if (!button || button.dataset.busy === '1') return;
+
             button.dataset.busy = '1';
+
             const productId = Number(id);
             const isActive = button.dataset.inWishlist === '1' || wishlistProductIds.has(productId);
+
             try {
                 const response = await fetch(`${API_URL}${isActive ? '/wishlist/remove' : '/wishlist'}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        Authorization: `Bearer ${token}`
                     },
                     body: JSON.stringify({ product_id: productId })
                 });
+
                 const data = await response.json().catch(() => ({}));
+
                 if (response.ok || data.success) {
                     if (isActive) wishlistProductIds.delete(productId);
                     else wishlistProductIds.add(productId);
+
                     updateWishlistButtons(productId, !isActive);
+
                     showToast(data.message || (isActive ? 'تمت الإزالة من قائمة الأمنيات' : 'تمت الإضافة لقائمة الأمنيات'));
                 } else {
                     showToast(data.message || 'تعذر تحديث قائمة الأمنيات', 'error');
@@ -515,16 +726,19 @@
             }
         };
 
-        // ==========================================
-        //  الإضافة المباشرة للباك اند (Hybrid Model)
-        // ==========================================
         window.addToCart = async function(button, id) {
-            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token')); 
+            const token = window.AppState
+                ? window.AppState.getToken()
+                : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token')); 
             
             if (!token) {
                 addGuestCartItem(id, 1);
-                showToast("تمت إضافة المنتج لسلة الزائر");
-                if (typeof window.updateGlobalCartCount === 'function') window.updateGlobalCartCount();
+                showToast('تمت إضافة المنتج لسلة الزائر');
+
+                if (typeof window.updateGlobalCartCount === 'function') {
+                    window.updateGlobalCartCount();
+                }
+
                 return;
             }
 
@@ -539,25 +753,28 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` 
+                        Authorization: `Bearer ${token}` 
                     },
-                    body: JSON.stringify({ product_id: parseInt(id), quantity: 1 })
+                    body: JSON.stringify({
+                        product_id: parseInt(id, 10),
+                        quantity: 1
+                    })
                 });
 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
 
                 if (response.ok || data.success) {
-                    showToast("تم إضافة المنتج للسلة بنجاح!");
-                    // تحديث العداد من السيرفر مباشرة عبر دالة الناف بار المحدثة
+                    showToast('تم إضافة المنتج للسلة بنجاح!');
+
                     if (typeof window.updateGlobalCartCount === 'function') {
                         window.updateGlobalCartCount();
                     }
                 } else {
-                    showToast(data.message || "حدث خطأ أثناء الإضافة", "error");
+                    showToast(data.message || 'حدث خطأ أثناء الإضافة', 'error');
                 }
             } catch (err) {
                 console.error(err);
-                showToast("خطأ في الاتصال بالخادم", "error");
+                showToast('خطأ في الاتصال بالخادم', 'error');
             } finally {
                 if (button) {
                     button.dataset.busy = '0';
@@ -571,33 +788,58 @@
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
-                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
             }
+
             if (!button || button.dataset.busy === '1') return false;
+
             window.addToCart(button, button.dataset.productId);
             return false;
         };
 
         function addGuestCartItem(id, quantity) {
             const productId = Number(id);
+
             if (!productId) return;
+
             if (window.AppState) {
                 window.AppState.addCartItem(productId, quantity);
                 return;
             }
+
             let cart = [];
-            try { cart = JSON.parse(localStorage.getItem('spider_cart') || '[]'); } catch (error) { cart = []; }
+
+            try {
+                cart = JSON.parse(localStorage.getItem('spider_cart') || '[]');
+            } catch (error) {
+                cart = [];
+            }
+
             const existing = cart.find(item => Number(item.id || item.product_id) === productId);
-            if (existing) existing.quantity = Number(existing.quantity || 0) + quantity;
-            else cart.push({ id: productId, product_id: productId, quantity });
+
+            if (existing) {
+                existing.quantity = Number(existing.quantity || 0) + quantity;
+            } else {
+                cart.push({
+                    id: productId,
+                    product_id: productId,
+                    quantity
+                });
+            }
+
             localStorage.setItem('spider_cart', JSON.stringify(cart));
         }
 
         document.addEventListener('click', event => {
             const button = event.target.closest('[data-action="wishlist"]');
             if (!button) return;
+
             event.preventDefault();
             event.stopPropagation();
+
             window.toggleWishlist(button, button.dataset.productId);
         });
 
@@ -605,10 +847,17 @@
             document.addEventListener(eventName, event => {
                 const button = event.target.closest('[data-action="add-to-cart"]');
                 if (!button) return;
+
                 event.preventDefault();
                 event.stopPropagation();
-                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-                if (eventName === 'click') window.handleProductCardCartClick(event, button);
+
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
+
+                if (eventName === 'click') {
+                    window.handleProductCardCartClick(event, button);
+                }
             }, true);
         });
 
@@ -616,24 +865,24 @@
             if (event.target && event.target.closest('#productsGrid, #bestSellersGrid')) {
                 event.preventDefault();
                 event.stopPropagation();
-                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-            }
-        }, true);
 
-        document.addEventListener('click', event => {
-            const button = event.target.closest('[data-action="add-to-cart"]');
-            if (!button) return;
-            event.preventDefault();
-            event.stopPropagation();
-            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-            window.handleProductCardCartClick(event, button);
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
+            }
         }, true);
 
         function updateHomeUrl() {
             const params = new URLSearchParams();
+
             if (currentCategoryId) params.set('category', currentCategoryId);
             if (searchQuery) params.set('search', searchQuery);
-            window.history.replaceState({}, '', params.toString() ? `index.html?${params.toString()}` : 'index.html');
+
+            window.history.replaceState(
+                {},
+                '',
+                params.toString() ? `index.html?${params.toString()}` : 'index.html'
+            );
         }
 
         function runFilteredProducts() {
@@ -651,23 +900,32 @@
 
             window.addEventListener('spider:live-search', event => {
                 searchQuery = String((event.detail && event.detail.query) || '').trim();
+
                 clearTimeout(liveSearchTimer);
+
                 liveSearchTimer = setTimeout(runFilteredProducts, 250);
             });
 
             document.addEventListener('click', event => {
                 const button = event.target.closest('[data-category-filter]');
                 if (!button) return;
+
                 event.preventDefault();
+
                 const nextCategory = decodeURIComponent(button.dataset.categoryFilter || '');
+
                 currentCategoryId = currentCategoryId === nextCategory ? '' : nextCategory;
+
                 runFilteredProducts();
             });
         }
 
         function showToast(message, type = 'success') {
             if (window.AppUI) return window.AppUI.toast(message, type);
+
             const container = document.getElementById('toast-container');
+            if (!container) return;
+
             const toast = document.createElement('div');
             const isSuccess = type === 'success';
             
@@ -677,23 +935,35 @@
                 <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${isSuccess ? 'bg-success-100 text-success-600' : 'bg-error-100 text-error-600'}">
                     <i class="fas ${isSuccess ? 'fa-check' : 'fa-exclamation'} text-lg"></i>
                 </div>
+
                 <div class="flex-1">
                     <h4 class="font-bold text-gray-800 text-sm">${isSuccess ? 'تم بنجاح' : 'تنبيه'}</h4>
                     <p class="text-xs text-gray-500 font-medium mt-0.5 leading-relaxed">${escapeHTML(message)}</p>
                 </div>
+
                 <button type="button" class="flex-shrink-0 text-gray-400 hover:text-gray-700" onclick="this.parentElement.remove()">
                     <i class="fas fa-times"></i>
                 </button>
+
                 <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-100">
                     <div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div>
                 </div>
             `;
             
             container.appendChild(toast);
-            requestAnimationFrame(() => setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10));
+
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    toast.classList.remove('translate-x-full', 'opacity-0');
+                }, 10);
+            });
+
             setTimeout(() => {
                 toast.classList.add('translate-x-full', 'opacity-0');
-                setTimeout(() => toast.remove(), 500);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 500);
             }, 3000);
         }
 

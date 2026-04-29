@@ -6,6 +6,7 @@ const ProductModel = require('../models/product.model');
 const TagModel = require('../models/tag.model');
 const getDb = require('../config/database');
 const { getPostData } = require('../utils/helpers');
+const { finalizeUploadedImage } = require('../utils/upload-security');
 
 const MAX_PRODUCT_IMAGES = 8;
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -29,9 +30,14 @@ function uniqueImages(images) {
     return result.slice(0, MAX_PRODUCT_IMAGES);
 }
 
-function imagePathFromFile(file) {
-    const fileName = path.basename(file.filepath || file.newFilename || '');
-    return fileName ? `/uploads/products/${fileName}` : '';
+function imagePathFromFile(file, uploadFolder) {
+    return finalizeUploadedImage(file, {
+        uploadDir: uploadFolder,
+        publicDir: '/uploads/products',
+        allowedMimeTypes: allowedImageTypes,
+        maxSize: 50 * 1024 * 1024,
+        filenamePrefix: 'product'
+    });
 }
 
 async function getProducts(req, res) {
@@ -152,18 +158,20 @@ async function createProduct(req, res) {
                             return res.end(JSON.stringify({ success: false, message: `Maximum ${MAX_PRODUCT_IMAGES} images are allowed` }));
                         }
 
-                        const invalidFile = uploadedFiles.find(file => !allowedImageTypes.includes(file.mimetype));
-                        if (invalidFile) {
-                            res.writeHead(400, { 'Content-Type': 'application/json' });
-                            return res.end(JSON.stringify({ success: false, message: 'Only image files are allowed' }));
+                        let uploadedImagePaths = [];
+                        try {
+                            uploadedImagePaths = uploadedFiles.map(file => imagePathFromFile(file, uploadFolder));
+                        } catch (uploadError) {
+                            res.writeHead(uploadError.statusCode || 400, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ success: false, message: uploadError.message || 'Only image files are allowed' }));
                         }
 
                         // الصورة الأولى هي الأساسية
-                        image_url = imagePathFromFile(uploadedFiles[0]);
+                        image_url = uploadedImagePaths[0] || '';
 
                         // باقي الصور تنزل كصور إضافية
-                        for (let i = 1; i < uploadedFiles.length; i++) {
-                            const addPath = imagePathFromFile(uploadedFiles[i]);
+                        for (let i = 1; i < uploadedImagePaths.length; i++) {
+                            const addPath = uploadedImagePaths[i];
                             if (addPath) additional_images.push(addPath);
                         }
                     }
@@ -398,15 +406,17 @@ async function updateProduct(req, res, productId) {
                         message: `Maximum ${MAX_PRODUCT_IMAGES} images are allowed`
                     }));
                 }
-                const invalidFile = uploadedFiles.find(file => !allowedImageTypes.includes(file.mimetype));
-                if (invalidFile) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                let uploadedImagePaths = [];
+                try {
+                    uploadedImagePaths = uploadedFiles.map(file => imagePathFromFile(file, uploadFolder));
+                } catch (uploadError) {
+                    res.writeHead(uploadError.statusCode || 400, { 'Content-Type': 'application/json' });
                     return res.end(JSON.stringify({
                         success: false,
-                        message: 'Only image files are allowed'
+                        message: uploadError.message || 'Only image files are allowed'
                     }));
                 }
-                selectedImages = uniqueImages([...selectedImages, ...uploadedFiles.map(imagePathFromFile)]);
+                selectedImages = uniqueImages([...selectedImages, ...uploadedImagePaths]);
             }
 
             selectedImages = uniqueImages(selectedImages);

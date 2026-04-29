@@ -9,11 +9,11 @@ class ProductModel {
 
         // ✨ التعديل السحري: فحص وإضافة كل عمود لوحده عشان لو واحد موجود ميعطلش الباقي
         const alterQueries = [
-            "ALTER TABLE products ADD COLUMN discount REAL DEFAULT 0",
-            "ALTER TABLE products ADD COLUMN brand TEXT",
+            "ALTER TABLE products ADD COLUMN discount DECIMAL(10, 2) DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN brand VARCHAR(100)",
             "ALTER TABLE products ADD COLUMN tags TEXT",
-            "ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'approved'",
-            "ALTER TABLE products ADD COLUMN featured INTEGER DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN status VARCHAR(50) DEFAULT 'approved'",
+            "ALTER TABLE products ADD COLUMN featured TINYINT(1) DEFAULT 0",
             "ALTER TABLE products ADD COLUMN images TEXT"
         ];
 
