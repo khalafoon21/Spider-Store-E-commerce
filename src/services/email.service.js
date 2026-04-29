@@ -1,10 +1,13 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+dns.setDefaultResultOrder('ipv4first');
 
 function getEmailConfig() {
     return {
         host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 465),
-        secure: String(process.env.SMTP_SECURE || 'true').toLowerCase() === 'true',
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
         from: process.env.MAIL_FROM || process.env.SMTP_USER
@@ -38,9 +41,17 @@ function createTransporter() {
         host: config.host,
         port: config.port,
         secure: config.secure,
+        family: 4,
+        requireTLS: !config.secure,
         auth: {
             user: config.user,
             pass: config.pass
+        },
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000,
+        tls: {
+            rejectUnauthorized: true
         }
     });
 }
