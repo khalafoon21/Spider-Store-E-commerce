@@ -280,6 +280,7 @@
         let currentStatusFilter = '';
         let editExistingImages = [];
         let editNewImages = [];
+        const featuredUpdatingIds = new Set();
 
         if (typeof window.loadAdminSidebar === 'function') {
             window.loadAdminSidebar('manage-products');
@@ -452,9 +453,16 @@
 
         function actionButtons(product) {
             const id = safeNumber(product.id);
+            const isFeatured = Number(product.featured || 0) === 1;
+            const featuredClasses = isFeatured
+                ? 'border-warning-100 bg-warning-50 text-warning-600 hover:bg-warning-500 hover:text-white'
+                : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-warning-500 hover:text-white';
 
             return `
                 <div class="flex items-center justify-center gap-2">
+                    <button type="button" onclick="updateProductFeatured(${id}, ${isFeatured ? 0 : 1})" class="grid h-10 w-10 place-items-center rounded-xl border ${featuredClasses} transition" title="${isFeatured ? 'غير مميز' : 'مميز'}">
+                        <i class="${isFeatured ? 'fas' : 'far'} fa-star"></i>
+                    </button>
                     <button type="button" onclick="openDetailsModal(${id})" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-700 hover:text-white" title="التفاصيل">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -910,6 +918,61 @@
             }
         }
 
+        async function updateProductFeatured(id, featured) {
+            const token = getToken();
+            const productId = Number(id);
+            const nextFeatured = featured ? 1 : 0;
+
+            if (!productId || featuredUpdatingIds.has(productId)) return;
+
+            try {
+                featuredUpdatingIds.add(productId);
+
+                const { response, data } = await updateProductFeaturedWithProductUpdate(productId, nextFeatured, token);
+
+                showToast(data.message || (response.ok ? 'تم تحديث تمييز المنتج' : 'تعذر تحديث تمييز المنتج'), response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const cachedProduct = productsCache.find(item => Number(item.id) === productId);
+                    if (cachedProduct) cachedProduct.featured = nextFeatured;
+                    renderProducts(productsCache);
+                }
+            } catch (error) {
+                showToast('تعذر تحديث تمييز المنتج', 'error');
+            } finally {
+                featuredUpdatingIds.delete(productId);
+            }
+        }
+
+        async function updateProductFeaturedWithProductUpdate(id, featured, token) {
+            const product = productsCache.find(item => Number(item.id) === Number(id));
+
+            if (!product) {
+                throw new Error('Product not found');
+            }
+
+            const formData = new FormData();
+            formData.append('title', product.title || '');
+            formData.append('price', safeNumber(product.price));
+            formData.append('discount', safeNumber(product.discount));
+            formData.append('stock_quantity', safeNumber(product.stock_quantity));
+            formData.append('brand', product.brand || '');
+            formData.append('category_id', product.category_id == null ? '' : product.category_id);
+            formData.append('tags', product.tags || '');
+            formData.append('description', product.description || '');
+            formData.append('status', product.status || 'approved');
+            formData.append('featured', featured ? 1 : 0);
+            formData.append('existing_images', JSON.stringify(productImages(product)));
+
+            return fetchJson(`${API_URL}/products/${id}`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
+        }
+
         async function approveSellerRequest(requestId) {
             const token = getToken();
 
@@ -1081,7 +1144,7 @@
             const existingHtml = editExistingImages.map((src, index) => `
                 <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <img src="${buildImageUrl(src)}" class="h-24 w-full bg-slate-50 object-cover">
-                    <button type="button" onclick="editExistingImages.splice(${index},1);renderEditImages()" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white">
+                    <button type="button" onclick="removeEditExistingImage(${index})" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white">
                         <i class="fas fa-times text-xs"></i>
                     </button>
                 </div>
@@ -1090,13 +1153,23 @@
             const newHtml = editNewImages.map((file, index) => `
                 <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <img src="${URL.createObjectURL(file)}" class="h-24 w-full bg-slate-50 object-cover">
-                    <button type="button" onclick="editNewImages.splice(${index},1);renderEditImages()" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white">
+                    <button type="button" onclick="removeEditNewImage(${index})" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white">
                         <i class="fas fa-times text-xs"></i>
                     </button>
                 </div>
             `).join('');
 
             grid.innerHTML = existingHtml + newHtml || '<p class="text-sm font-semibold text-slate-400">لا توجد صور.</p>';
+        }
+
+        function removeEditExistingImage(index) {
+            editExistingImages.splice(Number(index), 1);
+            renderEditImages();
+        }
+
+        function removeEditNewImage(index) {
+            editNewImages.splice(Number(index), 1);
+            renderEditImages();
         }
 
         function closeEditModal() {
@@ -1192,12 +1265,15 @@
         window.openDetailsModal = openDetailsModal;
         window.closeDetailsModal = closeDetailsModal;
         window.updateProductStatus = updateProductStatus;
+        window.updateProductFeatured = updateProductFeatured;
         window.approveSellerRequest = approveSellerRequest;
         window.openDeleteModal = openDeleteModal;
         window.closeDeleteModal = closeDeleteModal;
         window.editProduct = editProduct;
         window.closeEditModal = closeEditModal;
         window.renderEditImages = renderEditImages;
+        window.removeEditExistingImage = removeEditExistingImage;
+        window.removeEditNewImage = removeEditNewImage;
         window.logout = logout;
 
         document.getElementById('confirmDeleteBtn').addEventListener('click', deleteCurrentProduct);

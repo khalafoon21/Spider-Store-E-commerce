@@ -6,11 +6,29 @@ const { sendMail } = require('../services/email.service');
 const bcrypt = require('bcryptjs');
 
 function getAppBaseUrl(req) {
-    return process.env.APP_BASE_URL || `http://${req.headers.host}`;
+    return String(process.env.APP_BASE_URL || `http://${req.headers.host}`).replace(/\/+$/, '');
 }
 
 function makeToken() {
     return crypto.randomBytes(32).toString('hex');
+}
+
+function toMysqlDateTime(date) {
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function parseDbDate(value) {
+    if (!value) return null;
+
+    if (value instanceof Date) {
+        return value;
+    }
+
+    const clean = String(value).trim();
+
+    if (!clean) return null;
+
+    return new Date(clean.replace(' ', 'T'));
 }
 
 function normalizeRole(role) {
@@ -54,13 +72,6 @@ async function registerUser(req, res) {
         const phone = body.phone ? String(body.phone).trim() : null;
         const password = String(body.password || '');
 
-        console.log('Registration attempt:', {
-            first_name,
-            last_name,
-            email,
-            phone
-        });
-
         if (!first_name || !last_name || !email || !password) {
             return sendJson(res, 400, {
                 success: false,
@@ -87,13 +98,12 @@ async function registerUser(req, res) {
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(password, salt);
 
-        /*
-            Email activation is temporarily disabled.
-            We intentionally do NOT generate activation_token here.
-            We also pass verified/active fields in case UserModel.create supports them.
-            If UserModel.create ignores extra fields, loginUser below also no longer blocks email_verified.
-        */
-        const newUserId = await UserModel.create({
+        const activationToken = makeToken();
+        const activationExpires = toMysqlDateTime(
+            new Date(Date.now() + 24 * 60 * 60 * 1000)
+        );
+
+        await UserModel.create({
             first_name,
             last_name,
             email,
@@ -101,32 +111,46 @@ async function registerUser(req, res) {
             phone,
             role: 'user',
             seller_status: '',
-            email_verified: 1,
-            is_active: 1,
-            activation_token: null,
-            activation_expires: null
+            email_verified: 0,
+            activation_token: activationToken,
+            activation_expires: activationExpires
         });
 
-        console.log('User created with ID:', newUserId);
+        const activationUrl = `${getAppBaseUrl(req)}/pages/auth/activate.html?token=${activationToken}`;
 
-        const newUser = {
-            id: newUserId,
-            first_name,
-            last_name,
-            email,
-            role: 'user',
-            seller_status: '',
-            email_verified: 1,
-            is_active: 1
-        };
+        await sendMail({
+            to: email,
+            subject: 'تفعيل حسابك في Spider Store',
+            text: `مرحبًا ${first_name}، افتح الرابط التالي لتفعيل حسابك خلال 24 ساعة: ${activationUrl}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.8; direction: rtl; text-align: right;">
+                    <h2 style="margin:0 0 16px;color:#0f172a;">تفعيل حسابك في Spider Store</h2>
 
-        const token = createAuthToken(newUser);
+                    <p>مرحبًا ${first_name}،</p>
+
+                    <p>تم إنشاء حسابك بنجاح. اضغط على الزر التالي لتفعيل الحساب.</p>
+                    <p>الرابط صالح لمدة 24 ساعة فقط.</p>
+
+                    <p style="margin:24px 0;">
+                        <a
+                            href="${activationUrl}"
+                            style="display:inline-block;background:#06B6D4;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold;"
+                        >
+                            تفعيل الحساب
+                        </a>
+                    </p>
+
+                    <p>لو الزر لا يعمل، انسخ الرابط التالي وافتحه في المتصفح:</p>
+                    <p style="direction:ltr;text-align:left;word-break:break-all;color:#0891B2;">
+                        ${activationUrl}
+                    </p>
+                </div>
+            `
+        });
 
         return sendJson(res, 201, {
             success: true,
-            message: 'تم إنشاء الحساب بنجاح',
-            token,
-            user: getAuthUserPayload(newUser)
+            message: 'تم إنشاء الحساب بنجاح. برجاء تفعيل حسابك من رابط التفعيل المرسل إلى بريدك الإلكتروني.'
         });
 
     } catch (error) {
@@ -135,13 +159,20 @@ async function registerUser(req, res) {
         if (error.code === 'INVALID_JSON') {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Invalid JSON payload'
+                message: 'بيانات غير صالحة'
+            });
+        }
+
+        if (error.code === 'EMAIL_CONFIG_MISSING') {
+            return sendJson(res, 500, {
+                success: false,
+                message: 'إعدادات البريد الإلكتروني غير مكتملة'
             });
         }
 
         return sendJson(res, 500, {
             success: false,
-            message: 'حدث خطأ في السيرفر'
+            message: 'حدث خطأ أثناء إنشاء الحساب'
         });
     }
 }
@@ -156,7 +187,7 @@ async function loginUser(req, res) {
         if (!email || !password) {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Please enter your email address and password.'
+                message: 'برجاء إدخال البريد الإلكتروني وكلمة المرور'
             });
         }
 
@@ -165,7 +196,7 @@ async function loginUser(req, res) {
         if (!user) {
             return sendJson(res, 401, {
                 success: false,
-                message: 'Invalid email or password.'
+                message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
             });
         }
 
@@ -174,21 +205,22 @@ async function loginUser(req, res) {
         if (!isPasswordMatch) {
             return sendJson(res, 401, {
                 success: false,
-                message: 'Invalid email or password.'
+                message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
             });
         }
 
-        /*
-            Email activation is temporarily disabled.
-            Do NOT block login by email_verified for now.
-            Keep activateEmail function below for future reuse.
-        */
+        if (Number(user.email_verified) !== 1) {
+            return sendJson(res, 403, {
+                success: false,
+                message: 'برجاء تفعيل حسابك من البريد الإلكتروني قبل تسجيل الدخول'
+            });
+        }
 
         const token = createAuthToken(user);
 
         return sendJson(res, 200, {
             success: true,
-            message: 'Login successful',
+            message: 'تم تسجيل الدخول بنجاح',
             token,
             user: getAuthUserPayload(user)
         });
@@ -199,7 +231,7 @@ async function loginUser(req, res) {
         if (error.code === 'INVALID_JSON') {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Invalid JSON payload'
+                message: 'بيانات غير صالحة'
             });
         }
 
@@ -218,16 +250,17 @@ async function activateEmail(req, res) {
         if (!token) {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Activation token is required'
+                message: 'رابط التفعيل غير صحيح'
             });
         }
 
         const user = await UserModel.findByActivationToken(token);
+        const expiresAt = user ? parseDbDate(user.activation_expires) : null;
 
-        if (!user || !user.activation_expires || new Date(user.activation_expires) < new Date()) {
+        if (!user || !expiresAt || expiresAt < new Date()) {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Activation link is invalid or expired'
+                message: 'رابط التفعيل غير صحيح أو انتهت صلاحيته'
             });
         }
 
@@ -235,7 +268,7 @@ async function activateEmail(req, res) {
 
         return sendJson(res, 200, {
             success: true,
-            message: 'Email activated successfully. You can login now.'
+            message: 'تم تفعيل الحساب بنجاح'
         });
 
     } catch (error) {
@@ -243,7 +276,7 @@ async function activateEmail(req, res) {
 
         return sendJson(res, 500, {
             success: false,
-            message: 'Server error'
+            message: 'حدث خطأ أثناء تفعيل الحساب'
         });
     }
 }
@@ -256,7 +289,7 @@ async function forgotPassword(req, res) {
         if (!email) {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Email is required'
+                message: 'البريد الإلكتروني مطلوب'
             });
         }
 
@@ -264,22 +297,40 @@ async function forgotPassword(req, res) {
 
         if (user) {
             const resetToken = makeToken();
-            const resetExpires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+            const resetExpires = toMysqlDateTime(new Date(Date.now() + 60 * 60 * 1000));
+            const resetUrl = `${getAppBaseUrl(req)}/pages/auth/reset-password.html?token=${resetToken}`;
 
             await UserModel.setResetToken(user.id, resetToken, resetExpires);
 
-            const resetUrl = `${getAppBaseUrl(req)}/frontend/pages/auth/reset-password.html?token=${resetToken}`;
-
             await sendMail({
                 to: email,
-                subject: 'Reset your Spider Store password',
-                text: `Open this link within 1 hour to reset your password: ${resetUrl}`
+                subject: 'إعادة تعيين كلمة المرور - Spider Store',
+                text: `افتح الرابط التالي خلال ساعة واحدة لإعادة تعيين كلمة المرور: ${resetUrl}`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; line-height: 1.8; direction: rtl; text-align: right;">
+                        <h2>إعادة تعيين كلمة المرور</h2>
+                        <p>اضغط على الزر التالي لإعادة تعيين كلمة المرور. الرابط صالح لمدة ساعة واحدة فقط.</p>
+
+                        <p style="margin:24px 0;">
+                            <a
+                                href="${resetUrl}"
+                                style="display:inline-block;background:#06B6D4;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold;"
+                            >
+                                إعادة تعيين كلمة المرور
+                            </a>
+                        </p>
+
+                        <p style="direction:ltr;text-align:left;word-break:break-all;color:#0891B2;">
+                            ${resetUrl}
+                        </p>
+                    </div>
+                `
             });
         }
 
         return sendJson(res, 200, {
             success: true,
-            message: 'If this email exists, a reset link has been sent.'
+            message: 'إذا كان البريد الإلكتروني موجودًا، سيتم إرسال رابط إعادة التعيين.'
         });
 
     } catch (error) {
@@ -287,7 +338,7 @@ async function forgotPassword(req, res) {
 
         return sendJson(res, 500, {
             success: false,
-            message: 'Server error'
+            message: 'حدث خطأ أثناء إرسال رابط إعادة التعيين'
         });
     }
 }
@@ -301,16 +352,17 @@ async function resetPassword(req, res) {
         if (!token || !password || password.length < 6) {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Valid token and password are required'
+                message: 'رابط إعادة التعيين أو كلمة المرور غير صالح'
             });
         }
 
         const user = await UserModel.findByResetToken(token);
+        const expiresAt = user ? parseDbDate(user.reset_expires) : null;
 
-        if (!user || !user.reset_expires || new Date(user.reset_expires) < new Date()) {
+        if (!user || !expiresAt || expiresAt < new Date()) {
             return sendJson(res, 400, {
                 success: false,
-                message: 'Reset link is invalid or expired'
+                message: 'رابط إعادة التعيين غير صحيح أو انتهت صلاحيته'
             });
         }
 
@@ -320,7 +372,7 @@ async function resetPassword(req, res) {
 
         return sendJson(res, 200, {
             success: true,
-            message: 'Password updated successfully.'
+            message: 'تم تحديث كلمة المرور بنجاح'
         });
 
     } catch (error) {
@@ -328,7 +380,7 @@ async function resetPassword(req, res) {
 
         return sendJson(res, 500, {
             success: false,
-            message: 'Server error'
+            message: 'حدث خطأ أثناء تحديث كلمة المرور'
         });
     }
 }

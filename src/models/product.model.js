@@ -188,6 +188,14 @@ class ProductModel {
         );
     }
 
+    static async updateFeaturedById(productId, featured) {
+        const db = await ProductModel.ensureDb();
+        await db.run(
+            `UPDATE products SET featured = ? WHERE id = ?`,
+            [featured ? 1 : 0, productId]
+        );
+    }
+
     static async deleteById(productId) {
         const db = await ProductModel.ensureDb();
         await db.run(`DELETE FROM products WHERE id = ?`, [productId]);

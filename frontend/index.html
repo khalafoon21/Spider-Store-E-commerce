@@ -107,7 +107,7 @@
 
             <section id="bestSellersSection">
                 <div class="mb-4 flex items-center justify-between gap-3 border-r-4 border-primary-500 pr-3 sm:mb-5">
-                    <h2 class="text-2xl font-bold text-gray-900">الأكثر مبيعاً</h2>
+                    <h2 class="text-2xl font-bold text-gray-900">المنتجات المميزة</h2>
                 </div>
                 <div id="bestSellersGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"></div>
             </section>
@@ -521,7 +521,7 @@
                     renderProductCards(data.data, grid);
 
                     if (!currentCategoryId && !searchQuery && bestSellersGrid) {
-                        renderProductCards(data.data.slice(0, 5), bestSellersGrid); 
+                        await renderFeaturedProducts(bestSellersGrid);
                     }
 
                     return;
@@ -542,6 +542,29 @@
                 if (bestSellersGrid) {
                     bestSellersGrid.innerHTML = '';
                 }
+            }
+        }
+
+        async function renderFeaturedProducts(container) {
+            if (!container) return;
+            const section = document.getElementById('bestSellersSection');
+
+            try {
+                const response = await fetch(`${API_URL}/products?featured=1`);
+                const data = await response.json().catch(() => ({}));
+                const products = data.success && Array.isArray(data.data) ? data.data : [];
+
+                if (!products.length) {
+                    container.innerHTML = '';
+                    if (section) section.style.display = 'none';
+                    return;
+                }
+
+                if (section) section.style.display = '';
+                renderProductCards(products.slice(0, 5), container);
+            } catch (error) {
+                container.innerHTML = '';
+                if (section) section.style.display = 'none';
             }
         }
 
@@ -575,17 +598,6 @@
                                     : ''
                             }
 
-                            <button
-                                type="button"
-                                data-action="wishlist"
-                                data-product-id="${productId}"
-                                data-in-wishlist="${inWishlist ? '1' : '0'}"
-                                class="absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border ${wishlistClasses} shadow-sm transition sm:right-3 sm:top-3"
-                                aria-label="Wishlist"
-                            >
-                                <i class="${wishlistIcon} pointer-events-none"></i>
-                            </button>
-
                             <a href="pages/products/product.html?id=${productId}" class="w-full">
                                 <img
                                     src="${productImage}"
@@ -611,20 +623,35 @@
                                 }
                             </div>
 
-                            <div class="mt-auto flex items-center justify-between">
-                                <div class="flex flex-col">
+                            <div class="mt-auto">
+                                <div class="mb-3 flex flex-col">
                                     ${hasDiscount ? `<span class="text-gray-400 line-through text-xs">${price.toFixed(0)} ج.م</span>` : ''}
                                     <span class="text-lg font-black text-primary-600 sm:text-xl">${calcFinalPrice(price, discount)} ج.م</span>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    data-action="add-to-cart"
-                                    data-product-id="${productId}"
-                                    class="add-to-cart-btn z-20 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white shadow-lg shadow-cyan-100 transition-all hover:bg-primary-600 sm:h-11 sm:w-11"
-                                >
-                                    <i class="fas fa-cart-plus pointer-events-none"></i>
-                                </button>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        data-action="wishlist"
+                                        data-product-id="${productId}"
+                                        data-in-wishlist="${inWishlist ? '1' : '0'}"
+                                        class="flex h-10 items-center justify-center gap-1.5 rounded-xl border px-2 text-sm font-black ${wishlistClasses} shadow-sm transition sm:h-11"
+                                        aria-label="Wishlist"
+                                    >
+                                        <i class="${wishlistIcon} pointer-events-none"></i>
+                                        <span class="hidden sm:inline">المفضلة</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        data-action="add-to-cart"
+                                        data-product-id="${productId}"
+                                        class="add-to-cart-btn z-20 flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary-500 px-2 text-sm font-black text-white shadow-lg shadow-cyan-100 transition-all hover:bg-primary-600 sm:h-11"
+                                    >
+                                        <i class="fas fa-cart-plus pointer-events-none"></i>
+                                        <span class="hidden sm:inline">السلة</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

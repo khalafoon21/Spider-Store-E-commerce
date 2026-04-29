@@ -8,6 +8,7 @@ function nullableText(value) {
 function nullableDate(value) {
     if (!value) return null;
     if (value instanceof Date) return value.toISOString().slice(0, 10);
+
     const clean = String(value).trim();
     return /^\d{4}-\d{2}-\d{2}$/.test(clean) ? clean : null;
 }
@@ -30,38 +31,114 @@ class UserModel {
 
     static async create(userDATA) {
         const db = getDb();
-        const { first_name, last_name, email, password_hash, phone, activation_token = null, activation_expires = null } = userDATA;
+
+        const {
+            first_name,
+            last_name,
+            email,
+            password_hash,
+            phone = null,
+            role = 'user',
+            seller_status = '',
+            email_verified = 0,
+            activation_token = null,
+            activation_expires = null
+        } = userDATA;
+
         const result = await db.run(
-            `INSERT INTO users (first_name, last_name, email, password_hash, phone, role, email_verified, activation_token, activation_expires)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [first_name, last_name, email, password_hash, phone, 'user', activation_token ? 0 : 1, activation_token, activation_expires]
+            `
+                INSERT INTO users
+                    (
+                        first_name,
+                        last_name,
+                        email,
+                        password_hash,
+                        phone,
+                        role,
+                        seller_status,
+                        email_verified,
+                        activation_token,
+                        activation_expires
+                    )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+                first_name,
+                last_name,
+                email,
+                password_hash,
+                phone,
+                role,
+                seller_status,
+                Number(email_verified) === 1 ? 1 : 0,
+                activation_token,
+                activation_expires
+            ]
         );
-        return result.lastID;
+
+        return result.lastID || result.insertId;
     }
 
     static async getById(userId) {
         const db = getDb();
-        // ✨ تم إضافة الحقول الجديدة هنا عشان تظهر في البروفايل
+
         return await db.get(
-            `SELECT id, first_name, last_name, email, phone, role, seller_status, profile_picture, email_verified, address, birthdate, city, country, store_name, store_description
-             FROM users
-             WHERE id = ?`,
+            `
+                SELECT
+                    id,
+                    first_name,
+                    last_name,
+                    email,
+                    phone,
+                    role,
+                    seller_status,
+                    profile_picture,
+                    email_verified,
+                    address,
+                    birthdate,
+                    city,
+                    country,
+                    store_name,
+                    store_description
+                FROM users
+                WHERE id = ?
+            `,
             [userId]
         );
     }
 
     static async updateProfile(userId, profileData) {
         const db = getDb();
-        // ✨ تم إضافة الحقول الجديدة عشان تتحدث في الداتا بيز
-        const { first_name, last_name, phone, address, birthdate, city, country, profile_picture = null, store_name = null, store_description = null } = profileData;
+
+        const {
+            first_name,
+            last_name,
+            phone,
+            address,
+            birthdate,
+            city,
+            country,
+            profile_picture = null,
+            store_name = null,
+            store_description = null
+        } = profileData;
 
         await db.run(
-            `UPDATE users
-             SET first_name = ?, last_name = ?, phone = ?, address = ?, birthdate = ?, city = ?, country = ?,
-                 profile_picture = COALESCE(?, profile_picture),
-                 store_name = COALESCE(?, store_name),
-                 store_description = COALESCE(?, store_description)
-             WHERE id = ?`,
+            `
+                UPDATE users
+                SET
+                    first_name = ?,
+                    last_name = ?,
+                    phone = ?,
+                    address = ?,
+                    birthdate = ?,
+                    city = ?,
+                    country = ?,
+                    profile_picture = COALESCE(?, profile_picture),
+                    store_name = COALESCE(?, store_name),
+                    store_description = COALESCE(?, store_description)
+                WHERE id = ?
+            `,
             [
                 first_name,
                 last_name,
@@ -80,28 +157,50 @@ class UserModel {
 
     static async updatePassword(userId, passwordHash) {
         const db = getDb();
+
         await db.run(
-            `UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?`,
+            `
+                UPDATE users
+                SET
+                    password_hash = ?,
+                    reset_token = NULL,
+                    reset_expires = NULL
+                WHERE id = ?
+            `,
             [passwordHash, userId]
         );
     }
 
     static async activate(userId) {
         const db = getDb();
+
         await db.run(
-            `UPDATE users
-             SET email_verified = 1, activation_token = NULL, activation_expires = NULL
-             WHERE id = ?`,
+            `
+                UPDATE users
+                SET
+                    email_verified = 1,
+                    activation_token = NULL,
+                    activation_expires = NULL
+                WHERE id = ?
+            `,
             [userId]
         );
     }
 
     static async setResetToken(userId, token, expiresAt) {
         const db = getDb();
+
         await db.run(
-            `UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?`,
+            `
+                UPDATE users
+                SET
+                    reset_token = ?,
+                    reset_expires = ?
+                WHERE id = ?
+            `,
             [token, expiresAt, userId]
         );
     }
 }
+
 module.exports = UserModel;

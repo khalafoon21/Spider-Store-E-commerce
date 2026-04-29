@@ -312,6 +312,37 @@ async function updateProductStatusAdmin(req, res, productId) {
     }
 }
 
+async function updateProductFeaturedAdmin(req, res, productId) {
+    try {
+        if (req.user.role !== 'admin') {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Admin access only' }));
+        }
+
+        const body = await getPostData(req);
+        const featured = Number(body.featured) === 1 || body.featured === true;
+
+        const existing = await ProductModel.getById(productId);
+        if (!existing) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Product not found' }));
+        }
+
+        await ProductModel.updateFeaturedById(productId, featured);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: true,
+            message: featured ? 'Product marked as featured' : 'Product removed from featured'
+        }));
+    } catch (error) {
+        console.error(error);
+        const statusCode = error.code === 'INVALID_JSON' ? 400 : 500;
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Could not update featured product' }));
+    }
+}
+
 async function updateProduct(req, res, productId) {
     try {
         if (req.user.role !== 'seller' && req.user.role !== 'admin') {
@@ -507,6 +538,7 @@ module.exports = {
     getMyProducts,
     getAdminProducts,
     updateProductStatusAdmin,
+    updateProductFeaturedAdmin,
     updateProduct,
     deleteProduct
 };

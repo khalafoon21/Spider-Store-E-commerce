@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spider Store | My Orders</title>
+    <title>Spider Store | طلباتي</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,10 +15,28 @@
                 extend: {
                     fontFamily: { sans: ['Cairo', 'sans-serif'] },
                     colors: {
-                        primary: { 50: '#ECFEFF', 100: '#CFFAFE', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
-                        secondary: { 50: '#FFFBEB', 500: '#F59E0B' },
-                        success: { 50: '#F0FDF4', 500: '#22C55E', 600: '#16A34A' },
-                        error: { 50: '#FEF2F2', 100: '#FEE2E2', 500: '#EF4444', 600: '#DC2626' }
+                        primary: {
+                            50: '#ECFEFF',
+                            100: '#CFFAFE',
+                            500: '#06B6D4',
+                            600: '#0891B2',
+                            700: '#0E7490'
+                        },
+                        secondary: {
+                            50: '#FFFBEB',
+                            500: '#F59E0B'
+                        },
+                        success: {
+                            50: '#F0FDF4',
+                            500: '#22C55E',
+                            600: '#16A34A'
+                        },
+                        error: {
+                            50: '#FEF2F2',
+                            100: '#FEE2E2',
+                            500: '#EF4444',
+                            600: '#DC2626'
+                        }
                     }
                 }
             }
@@ -26,12 +44,23 @@
     </script>
 
     <style>
-        body { background-color: #F8FAFC; }
-        @keyframes shrinkProgress { from { width: 100%; } to { width: 0%; } }
-        .animate-progress { animation: shrinkProgress 3s linear forwards; }
+        body {
+            background-color: #F8FAFC;
+        }
+
+        @keyframes shrinkProgress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        .animate-progress {
+            animation: shrinkProgress 3s linear forwards;
+        }
     </style>
 </head>
+
 <body class="flex min-h-screen flex-col font-sans text-slate-800 antialiased">
+
     <script src="../../components/app-state.js"></script>
     <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/main-navbar.js"></script>
@@ -39,13 +68,17 @@
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
 
     <main class="mx-auto w-full max-w-[1200px] flex-1 px-3 py-4 sm:px-4 lg:px-6 lg:py-8">
+
         <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <p class="mb-2 text-sm font-black text-primary-600">Spider Store</p>
                     <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">طلباتي</h1>
-                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">تابع حالة طلباتك والشحنات الخاصة بكل بائع في مكان واحد.</p>
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+                        تابع حالة طلباتك والشحنات الخاصة بكل بائع في مكان واحد.
+                    </p>
                 </div>
+
                 <a href="../../index.html" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
                     <i class="fas fa-store"></i>
                     متابعة التسوق
@@ -56,11 +89,17 @@
         <section class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
-                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-bag-shopping"></i></span>
+                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                        <i class="fas fa-bag-shopping"></i>
+                    </span>
                     سجل الطلبات
                 </h2>
-                <span id="ordersCount" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">0 طلب</span>
+
+                <span id="ordersCount" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+                    0 طلب
+                </span>
             </div>
+
             <div id="ordersContainer" class="space-y-4">
                 <div class="py-14 text-center text-slate-500">
                     <i class="fas fa-spinner fa-spin mb-3 text-4xl text-primary-500"></i>
@@ -68,6 +107,7 @@
                 </div>
             </div>
         </section>
+
     </main>
 
     <footer class="mt-auto bg-slate-950 py-8 text-center text-white">
@@ -75,13 +115,118 @@
     </footer>
 
     <script>
-        const API_URL = '/api';
+    (() => {
+        'use strict';
+
+        const API_URLS = getApiBaseUrls();
+        const API_URL = API_URLS[0];
         const TOKEN_KEY = 'spider_token';
-        const getToken = () => window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
-        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag]));
+        let activeApiUrl = API_URL;
+
+        function getApiBaseUrls() {
+            const location = window.location || {};
+            const protocol = location.protocol || '';
+            const hostname = location.hostname || '';
+            const port = location.port || '';
+            const bases = [];
+
+            const addBase = value => {
+                if (value && !bases.includes(value)) bases.push(value);
+            };
+
+            if (protocol === 'file:') {
+                addBase('http://localhost:3000/api');
+                addBase('http://127.0.0.1:3000/api');
+                addBase('/api');
+                return bases;
+            }
+
+            const isLocalDev = isLocalDevHost(hostname);
+
+            if (isLocalDev && port && port !== '3000') {
+                const host = hostname === '::1' ? '[::1]' : hostname;
+
+                if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+                    addBase(`http://${host}:3000/api`);
+                    addBase('http://localhost:3000/api');
+                } else {
+                    addBase('http://localhost:3000/api');
+                    addBase(`http://${host}:3000/api`);
+                }
+
+                addBase('/api');
+                return bases;
+            }
+
+            addBase('/api');
+            return bases;
+        }
+
+        function isLocalDevHost(hostname) {
+            const host = String(hostname || '').toLowerCase();
+
+            return (
+                host === 'localhost' ||
+                host === '127.0.0.1' ||
+                host === '::1' ||
+                host === '0.0.0.0' ||
+                /^10\./.test(host) ||
+                /^192\.168\./.test(host) ||
+                /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+            );
+        }
+
+        function storageGet(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function getCookieValue(name) {
+            try {
+                const encodedName = `${encodeURIComponent(name)}=`;
+
+                return document.cookie
+                    .split(';')
+                    .map(part => part.trim())
+                    .filter(Boolean)
+                    .reduce((found, part) => {
+                        return found || (part.startsWith(encodedName) ? decodeURIComponent(part.slice(encodedName.length)) : null);
+                    }, null);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        const getToken = () => {
+            if (window.AppState && typeof window.AppState.getToken === 'function') {
+                const token = window.AppState.getToken();
+                if (token) return token;
+            }
+
+            return (
+                storageGet(TOKEN_KEY) ||
+                storageGet('token') ||
+                getCookieValue('spider_token') ||
+                ''
+            );
+        };
+
+        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag]));
+
         const money = value => `${(Number.isFinite(Number(value)) ? Number(value) : 0).toFixed(0)} ج.م`;
 
         function statusBadge(status) {
+            const normalized = String(status || 'Pending').trim();
+
             const map = {
                 Pending: ['قيد المراجعة', 'bg-yellow-50 text-yellow-700 border-yellow-100', 'fa-clock'],
                 Processing: ['قيد التجهيز', 'bg-blue-50 text-blue-700 border-blue-100', 'fa-box-open'],
@@ -89,8 +234,19 @@
                 Delivered: ['تم التوصيل', 'bg-green-50 text-green-700 border-green-100', 'fa-circle-check'],
                 Cancelled: ['ملغي', 'bg-red-50 text-red-700 border-red-100', 'fa-ban']
             };
-            const [label, classes, icon] = map[status] || [status || 'Pending', 'bg-slate-100 text-slate-700 border-slate-200', 'fa-circle-info'];
-            return `<span class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-black ${classes}"><i class="fas ${icon}"></i>${escapeHTML(label)}</span>`;
+
+            const [label, classes, icon] = map[normalized] || [
+                normalized || 'قيد المراجعة',
+                'bg-slate-100 text-slate-700 border-slate-200',
+                'fa-circle-info'
+            ];
+
+            return `
+                <span class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-black ${classes}">
+                    <i class="fas ${icon}"></i>
+                    ${escapeHTML(label)}
+                </span>
+            `;
         }
 
         function sellerStatusLabel(status) {
@@ -104,173 +260,448 @@
 
         function formatDate(value) {
             const date = value ? new Date(value) : null;
-            if (!date || Number.isNaN(date.getTime())) return 'غير محدد';
-            return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+
+            if (!date || Number.isNaN(date.getTime())) {
+                return 'غير محدد';
+            }
+
+            return date.toLocaleDateString('ar-EG', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function setOrdersCount(count) {
+            const counter = document.getElementById('ordersCount');
+            if (counter) counter.textContent = `${Number(count || 0)} طلب`;
+        }
+
+        function setOrdersContent(html) {
+            const container = document.getElementById('ordersContainer');
+            if (container) container.innerHTML = html;
+        }
+
+        function renderLoadingState() {
+            setOrdersContent(`
+                <div class="py-14 text-center text-slate-500">
+                    <i class="fas fa-spinner fa-spin mb-3 text-4xl text-primary-500"></i>
+                    <p class="font-bold">جاري تحميل الطلبات...</p>
+                </div>
+            `);
+        }
+
+        function parseJsonSafe(text) {
+            try {
+                return text ? JSON.parse(text) : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function extractOrders(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.orders)) return data.orders;
+            if (data.data && Array.isArray(data.data.orders)) return data.data.orders;
+
+            return [];
+        }
+
+        async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 15000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+
+                const text = await response.text();
+
+                return {
+                    response,
+                    data: parseJsonSafe(text)
+                };
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        function shouldTryNextApiBase(response, data, attemptIndex) {
+            if (attemptIndex >= API_URLS.length - 1) return false;
+            if (!response) return true;
+            if (response.status === 401 || response.status === 403) return false;
+            if (response.status === 404 || response.status === 405) return true;
+            if (!response.ok && Object.keys(data || {}).length === 0) return true;
+            return false;
+        }
+
+        async function requestOrdersHistory(token) {
+            let lastError = null;
+
+            for (const [index, baseUrl] of API_URLS.entries()) {
+                const url = `${baseUrl}/orders/history`;
+
+                try {
+                    console.log('[Orders] requesting:', url);
+
+                    const result = await fetchJsonWithTimeout(url, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }, 10000);
+
+                    console.log('[Orders] response status:', result.response.status);
+
+                    if (shouldTryNextApiBase(result.response, result.data, index)) {
+                        lastError = new Error(result.data.message || `API request failed with status ${result.response.status}`);
+                        continue;
+                    }
+
+                    activeApiUrl = baseUrl;
+                    return result;
+                } catch (error) {
+                    lastError = error;
+
+                    if (index >= API_URLS.length - 1) {
+                        throw error;
+                    }
+
+                    console.warn('[Orders] API attempt failed, trying next base URL:', error);
+                }
+            }
+
+            throw lastError || new Error('تعذر الاتصال بالسيرفر');
         }
 
         async function loadOrders() {
-            const token = getToken();
-            if (!token) {
-                renderLoginPrompt();
-                return;
-            }
+            console.log('[Orders] loadOrders fired');
+
+            setOrdersCount(0);
+            renderLoadingState();
 
             try {
-                const response = await fetch(`${API_URL}/orders/history`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                if (!response.ok || data.success === false) throw new Error(data.message || 'Could not load orders');
-                renderOrders(data.data || []);
+                const token = getToken();
+
+                console.log('[Orders] token exists:', Boolean(token));
+
+                if (!token) {
+                    renderLoginPrompt();
+                    return;
+                }
+
+                const { response, data } = await requestOrdersHistory(token);
+
+                if (!response.ok || data.success === false) {
+                    if (response.status === 401 || response.status === 403) {
+                        renderLoginPrompt();
+                        return;
+                    }
+
+                    throw new Error(data.message || 'تعذر تحميل الطلبات');
+                }
+
+                const orders = extractOrders(data);
+
+                renderOrders(orders);
+
             } catch (error) {
-                document.getElementById('ordersContainer').innerHTML = `
-                    <div class="rounded-2xl border border-error-100 bg-error-50 p-8 text-center font-bold text-error-600">
-                        تعذر تحميل الطلبات. حاول مرة أخرى.
-                    </div>
-                `;
+                console.error('Orders load error:', error);
+
+                const message = error.name === 'AbortError'
+                    ? 'السيرفر استغرق وقت طويل في تحميل الطلبات'
+                    : (error.message || 'حدث خطأ أثناء تحميل الطلبات');
+
+                renderErrorState(message);
             }
         }
 
         function renderLoginPrompt() {
-            document.getElementById('ordersCount').textContent = '0 طلب';
-            document.getElementById('ordersContainer').innerHTML = `
+            setOrdersCount(0);
+
+            setOrdersContent(`
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-14 text-center">
-                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-primary-600 shadow-sm"><i class="fas fa-user-lock"></i></span>
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-primary-600 shadow-sm">
+                        <i class="fas fa-user-lock"></i>
+                    </span>
+
                     <h2 class="text-2xl font-black text-slate-950">سجل الدخول لعرض طلباتك</h2>
-                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">طلباتك محفوظة على حسابك، سجل الدخول للمتابعة.</p>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">
+                        طلباتك محفوظة على حسابك، سجل الدخول للمتابعة.
+                    </p>
+
                     <a href="../auth/login.html" class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
                         <i class="fas fa-right-to-bracket"></i>
                         تسجيل الدخول
                     </a>
                 </div>
-            `;
+            `);
         }
 
         function renderEmptyState() {
-            document.getElementById('ordersCount').textContent = '0 طلب';
-            document.getElementById('ordersContainer').innerHTML = `
+            setOrdersCount(0);
+
+            setOrdersContent(`
                 <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-14 text-center">
-                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-slate-400 shadow-sm"><i class="fas fa-box-open"></i></span>
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-slate-400 shadow-sm">
+                        <i class="fas fa-box-open"></i>
+                    </span>
+
                     <h2 class="text-2xl font-black text-slate-950">لا توجد طلبات بعد</h2>
-                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">ابدأ التسوق وأي طلب جديد هيظهر هنا.</p>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">
+                        ابدأ التسوق وأي طلب جديد هيظهر هنا.
+                    </p>
+
                     <a href="../../index.html" class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
                         <i class="fas fa-store"></i>
                         تصفح المنتجات
                     </a>
                 </div>
-            `;
+            `);
+        }
+
+        function renderErrorState(message) {
+            setOrdersCount(0);
+
+            setOrdersContent(`
+                <div class="rounded-2xl border border-error-100 bg-error-50 px-4 py-14 text-center">
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-2xl text-error-500 shadow-sm">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </span>
+
+                    <h2 class="text-2xl font-black text-error-600">تعذر تحميل الطلبات</h2>
+
+                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-error-500">
+                        ${escapeHTML(message || 'حدث خطأ أثناء تحميل الطلبات')}
+                    </p>
+
+                    <button
+                        type="button"
+                        onclick="loadOrders()"
+                        class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-error-500 px-5 text-sm font-black text-white shadow-lg transition hover:bg-error-600"
+                    >
+                        <i class="fas fa-rotate-right"></i>
+                        إعادة المحاولة
+                    </button>
+                </div>
+            `);
         }
 
         function renderOrders(orders) {
             const container = document.getElementById('ordersContainer');
-            document.getElementById('ordersCount').textContent = `${orders.length} طلب`;
-            if (!orders.length) {
+            const cleanOrders = Array.isArray(orders) ? orders : [];
+
+            setOrdersCount(cleanOrders.length);
+
+            if (!container) return;
+
+            if (!cleanOrders.length) {
                 renderEmptyState();
                 return;
             }
 
-            container.innerHTML = [...orders].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).map(order => {
-                const items = Array.isArray(order.items) ? order.items : [];
-                const previewItems = items.slice(0, 4);
-                const shipments = Array.isArray(order.seller_shipments) ? order.seller_shipments : [];
-                return `
-                    <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary-100 hover:shadow-md">
-                        <div class="flex flex-col gap-4 border-b border-slate-100 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <div class="mb-2 flex flex-wrap items-center gap-2">
-                                    <h3 class="text-lg font-black text-slate-950">طلب #${escapeHTML(order.id)}</h3>
-                                    ${statusBadge(order.status)}
-                                </div>
-                                <p class="text-sm font-semibold text-slate-500"><i class="far fa-calendar-alt ml-1"></i>${formatDate(order.created_at)}</p>
-                            </div>
-                            <div class="text-right sm:text-left">
-                                <p class="text-xs font-bold text-slate-500">الإجمالي</p>
-                                <p class="text-2xl font-black text-primary-600">${money(order.total_amount)}</p>
-                            </div>
-                        </div>
+            container.innerHTML = [...cleanOrders]
+                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                .map(order => {
+                    const items = Array.isArray(order.items) ? order.items : [];
+                    const previewItems = items.slice(0, 4);
+                    const shipments = Array.isArray(order.seller_shipments) ? order.seller_shipments : [];
 
-                        <div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                            <div>
-                                <p class="mb-3 text-sm font-black text-slate-700">المنتجات</p>
-                                <div class="space-y-2">
-                                    ${previewItems.length ? previewItems.map(item => `
-                                        <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                            <div class="min-w-0">
-                                                <p class="truncate text-sm font-black text-slate-800">${escapeHTML(item.title || 'Product')}</p>
-                                                <p class="text-xs font-semibold text-slate-500">الكمية: ${Number(item.quantity || 1)}</p>
-                                            </div>
-                                            <span class="shrink-0 text-sm font-black text-slate-900">${money((Number(item.price_at_purchase || 0) * Number(item.quantity || 1)))}</span>
-                                        </div>
-                                    `).join('') : `
-                                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm font-semibold text-slate-500">تفاصيل المنتجات غير متاحة.</div>
-                                    `}
-                                    ${items.length > 4 ? `<p class="text-xs font-bold text-slate-500">+ ${items.length - 4} منتجات أخرى</p>` : ''}
-                                </div>
-                            </div>
-
-                            <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                                <p class="mb-2 text-sm font-black text-slate-700">عنوان الشحن</p>
-                                <p class="mb-4 line-clamp-3 text-sm font-semibold leading-7 text-slate-500">${escapeHTML(order.shipping_address || 'غير محدد')}</p>
-                                ${shipments.length ? `
-                                    <p class="mb-2 text-sm font-black text-slate-700">شحنات البائعين</p>
-                                    <div class="space-y-2">
-                                        ${shipments.map(shipment => `
-                                            <div class="rounded-xl bg-white p-3 text-xs font-bold text-slate-600">
-                                                <span class="block text-slate-900">${escapeHTML(shipment.seller_name || 'بائع')}</span>
-                                                <span>${escapeHTML(sellerStatusLabel(shipment.seller_status))}</span>
-                                            </div>
-                                        `).join('')}
+                    return `
+                        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary-100 hover:shadow-md">
+                            <div class="flex flex-col gap-4 border-b border-slate-100 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                                        <h3 class="text-lg font-black text-slate-950">طلب #${escapeHTML(order.id)}</h3>
+                                        ${statusBadge(order.status)}
                                     </div>
-                                ` : ''}
-                                ${['Pending', 'Processing'].includes(order.status || 'Pending') ? `
-                                    <button type="button" onclick="cancelMyOrder(${Number(order.id)})" class="mt-4 w-full rounded-xl border border-error-100 bg-white px-4 py-2.5 text-sm font-black text-error-600 transition hover:bg-error-500 hover:text-white">
-                                        إلغاء الطلب
-                                    </button>
-                                ` : ''}
+
+                                    <p class="text-sm font-semibold text-slate-500">
+                                        <i class="far fa-calendar-alt ml-1"></i>
+                                        ${formatDate(order.created_at)}
+                                    </p>
+                                </div>
+
+                                <div class="text-right sm:text-left">
+                                    <p class="text-xs font-bold text-slate-500">الإجمالي</p>
+                                    <p class="text-2xl font-black text-primary-600">${money(order.total_amount)}</p>
+                                </div>
                             </div>
-                        </div>
-                    </article>
-                `;
-            }).join('');
+
+                            <div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                                <div>
+                                    <p class="mb-3 text-sm font-black text-slate-700">المنتجات</p>
+
+                                    <div class="space-y-2">
+                                        ${
+                                            previewItems.length
+                                                ? previewItems.map(item => `
+                                                    <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3">
+                                                        <div class="min-w-0">
+                                                            <p class="truncate text-sm font-black text-slate-800">
+                                                                ${escapeHTML(item.title || item.product_title || 'منتج')}
+                                                            </p>
+
+                                                            <p class="text-xs font-semibold text-slate-500">
+                                                                الكمية: ${Number(item.quantity || 1)}
+                                                            </p>
+                                                        </div>
+
+                                                        <span class="shrink-0 text-sm font-black text-slate-900">
+                                                            ${money(Number(item.price_at_purchase || item.price || 0) * Number(item.quantity || 1))}
+                                                        </span>
+                                                    </div>
+                                                `).join('')
+                                                : `
+                                                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm font-semibold text-slate-500">
+                                                        تفاصيل المنتجات غير متاحة.
+                                                    </div>
+                                                `
+                                        }
+
+                                        ${
+                                            items.length > 4
+                                                ? `<p class="text-xs font-bold text-slate-500">+ ${items.length - 4} منتجات أخرى</p>`
+                                                : ''
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                    <p class="mb-2 text-sm font-black text-slate-700">عنوان الشحن</p>
+
+                                    <p class="mb-4 line-clamp-3 text-sm font-semibold leading-7 text-slate-500">
+                                        ${escapeHTML(order.shipping_address || 'غير محدد')}
+                                    </p>
+
+                                    ${
+                                        shipments.length
+                                            ? `
+                                                <p class="mb-2 text-sm font-black text-slate-700">شحنات البائعين</p>
+
+                                                <div class="space-y-2">
+                                                    ${shipments.map(shipment => `
+                                                        <div class="rounded-xl bg-white p-3 text-xs font-bold text-slate-600">
+                                                            <span class="block text-slate-900">
+                                                                ${escapeHTML(shipment.seller_name || 'بائع')}
+                                                            </span>
+
+                                                            <span>${escapeHTML(sellerStatusLabel(shipment.seller_status))}</span>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            `
+                                            : ''
+                                    }
+
+                                    ${
+                                        ['Pending', 'Processing'].includes(order.status || 'Pending')
+                                            ? `
+                                                <button
+                                                    type="button"
+                                                    onclick="cancelMyOrder(${Number(order.id)})"
+                                                    class="mt-4 w-full rounded-xl border border-error-100 bg-white px-4 py-2.5 text-sm font-black text-error-600 transition hover:bg-error-500 hover:text-white"
+                                                >
+                                                    إلغاء الطلب
+                                                </button>
+                                            `
+                                            : ''
+                                    }
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                })
+                .join('');
         }
 
         async function cancelMyOrder(orderId) {
-            const ok = window.AppUI ? await window.AppUI.modal({
-                type: 'warning',
-                title: 'إلغاء الطلب',
-                message: 'يمكن إلغاء الطلب قبل الشحن فقط. هل تريد المتابعة؟',
-                showCancel: true,
-                confirmText: 'إلغاء الطلب',
-                cancelText: 'رجوع'
-            }) : confirm('Cancel this order?');
+            const ok = window.AppUI
+                ? await window.AppUI.modal({
+                    type: 'warning',
+                    title: 'إلغاء الطلب',
+                    message: 'يمكن إلغاء الطلب قبل الشحن فقط. هل تريد المتابعة؟',
+                    showCancel: true,
+                    confirmText: 'إلغاء الطلب',
+                    cancelText: 'رجوع'
+                })
+                : confirm('هل تريد إلغاء هذا الطلب؟');
+
             if (!ok) return;
 
             try {
-                const response = await fetch(`${API_URL}/orders/cancel`, {
+                const response = await fetch(`${activeApiUrl}/orders/cancel`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-                    body: JSON.stringify({ order_id: Number(orderId) })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify({
+                        order_id: Number(orderId)
+                    })
                 });
-                const data = await response.json().catch(() => ({}));
-                showToast(data.message || (response.ok ? 'تم إلغاء الطلب' : 'تعذر إلغاء الطلب'), response.ok ? 'success' : 'error');
-                if (response.ok) loadOrders();
+
+                const data = parseJsonSafe(await response.text());
+
+                showToast(
+                    data.message || (response.ok ? 'تم إلغاء الطلب' : 'تعذر إلغاء الطلب'),
+                    response.ok ? 'success' : 'error'
+                );
+
+                if (response.ok) {
+                    loadOrders();
+                }
+
             } catch (error) {
                 showToast('خطأ في الاتصال بالسيرفر', 'error');
             }
         }
 
         function showToast(message, type = 'success') {
-            if (window.AppUI) return window.AppUI.toast(message, type);
+            if (window.AppUI && typeof window.AppUI.toast === 'function') {
+                return window.AppUI.toast(message, type);
+            }
+
             const container = document.getElementById('toast-container');
+            if (!container) return;
+
             const toast = document.createElement('div');
             const isSuccess = type === 'success';
+
             toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${isSuccess ? 'border-success-500' : 'border-error-500'}`;
-            toast.innerHTML = `<p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p><div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100"><div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div></div>`;
+
+            toast.innerHTML = `
+                <p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">
+                    ${escapeHTML(message)}
+                </p>
+
+                <div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100">
+                    <div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div>
+                </div>
+            `;
+
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
 
-        window.addEventListener('load', loadOrders);
+        window.loadOrders = loadOrders;
+        window.cancelMyOrder = cancelMyOrder;
+
+        function bootOrdersPage() {
+            console.log('[Orders] bootOrdersPage fired');
+            loadOrders();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootOrdersPage);
+        } else {
+            bootOrdersPage();
+        }
+    })();
     </script>
 </body>
 </html>
