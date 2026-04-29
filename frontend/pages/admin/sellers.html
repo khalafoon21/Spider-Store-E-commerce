@@ -1,166 +1,553 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spider Store | البائعين</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spider Store | إدارة البائعين</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Cairo','sans-serif']},colors:{primary:{500:'#06B6D4',600:'#0891B2'}}}}}</script>
-</head>
-<body id="admin-layout" class="font-sans bg-gray-50 min-h-screen text-gray-800 flex flex-col md:flex-row">
-    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full">
-        <header class="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-900">البائعين</h1>
-                <p class="text-gray-500 mt-1">تفاصيل البائعين وطلبات الانضمام وإحصائياتهم.</p>
-            </div>
-            <button onclick="fetchSellers()" class="bg-white border border-gray-200 hover:bg-gray-100 px-4 py-2 rounded-md font-bold"><i class="fas fa-rotate ml-1"></i> تحديث</button>
-        </header>
 
-        <section class="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[1100px] text-right">
-                    <thead class="bg-gray-50 text-gray-600 text-sm border-b">
-                        <tr>
-                            <th class="p-4">البائع</th>
-                            <th class="p-4">الحالة</th>
-                            <th class="p-4">الانضمام</th>
-                            <th class="p-4">المنتجات</th>
-                            <th class="p-4">الطلبات</th>
-                            <th class="p-4">المبيعات</th>
-                            <th class="p-4">التقييم</th>
-                            <th class="p-4 text-center">إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sellersTable"><tr><td colspan="8" class="p-10 text-center text-primary-600 font-bold">جاري التحميل...</td></tr></tbody>
-                </table>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#ECFEFF', 100: '#CFFAFE', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
+                        success: { 50: '#F0FDF4', 100: '#DCFCE7', 500: '#22C55E', 600: '#16A34A' },
+                        error: { 50: '#FEF2F2', 100: '#FEE2E2', 500: '#EF4444', 600: '#DC2626' },
+                        warning: { 50: '#FFFBEB', 100: '#FEF3C7', 500: '#F59E0B', 600: '#D97706' }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        body { background-color: #F8FAFC; }
+        @keyframes shrinkProgress { from { width: 100%; } to { width: 0%; } }
+        .animate-progress { animation: shrinkProgress 3s linear forwards; }
+    </style>
+</head>
+
+<body id="admin-layout" class="min-h-screen overflow-x-hidden bg-slate-50 font-sans text-slate-800 antialiased">
+
+    <script src="../../components/app-state.js"></script>
+    <script src="../../components/ui-feedback.js"></script>
+    <script src="../../components/admin-sidebar.js"></script>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
+
+    <main class="min-h-screen w-full overflow-x-hidden px-3 py-5 sm:px-4 md:mr-64 md:w-[calc(100%-16rem)] lg:px-6 lg:py-8">
+
+        <section class="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="mb-2 text-sm font-black text-primary-600">Admin Panel</p>
+                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">إدارة طلبات البائعين</h1>
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+                        راجع طلبات التسجيل كبائع، وافق على الطلبات المناسبة أو ارفض الطلبات غير المكتملة.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <a href="manage-products.html" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700">
+                        <i class="fas fa-box"></i>
+                        المنتجات
+                    </a>
+
+                    <button type="button" onclick="window.reloadSellerRequests()" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                        <i class="fas fa-rotate-right"></i>
+                        تحديث
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p class="text-sm font-bold text-slate-500">إجمالي الطلبات</p>
+                <p id="totalCount" class="mt-2 text-2xl font-black text-slate-950">0</p>
+            </div>
+
+            <div class="rounded-2xl border border-warning-100 bg-warning-50 p-4 shadow-sm">
+                <p class="text-sm font-bold text-warning-600">قيد المراجعة</p>
+                <p id="pendingCount" class="mt-2 text-2xl font-black text-warning-600">0</p>
+            </div>
+
+            <div class="rounded-2xl border border-success-100 bg-success-50 p-4 shadow-sm">
+                <p class="text-sm font-bold text-success-600">مقبول</p>
+                <p id="approvedCount" class="mt-2 text-2xl font-black text-success-600">0</p>
+            </div>
+
+            <div class="rounded-2xl border border-error-100 bg-error-50 p-4 shadow-sm">
+                <p class="text-sm font-bold text-error-600">مرفوض</p>
+                <p id="rejectedCount" class="mt-2 text-2xl font-black text-error-600">0</p>
+            </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                        <i class="fas fa-store"></i>
+                    </span>
+                    طلبات التسجيل كبائع
+                </h2>
+
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" data-filter="all" class="seller-filter-btn rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-white">الكل</button>
+                    <button type="button" data-filter="pending" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">قيد المراجعة</button>
+                    <button type="button" data-filter="approved" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">مقبول</button>
+                    <button type="button" data-filter="rejected" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">مرفوض</button>
+                </div>
+            </div>
+
+            <div id="sellerRequestsContainer" class="grid gap-4">
+                <div class="py-14 text-center text-slate-500">
+                    <i class="fas fa-circle-notch fa-spin mb-3 text-4xl text-primary-500"></i>
+                    <p class="font-bold">جاري تحميل طلبات البائعين...</p>
+                </div>
             </div>
         </section>
     </main>
 
-    <div id="sellerModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto">
-            <div class="p-5 border-b flex items-center justify-between sticky top-0 bg-white">
-                <h2 class="text-xl font-extrabold">تفاصيل البائع</h2>
-                <button onclick="closeSellerModal()" class="h-9 w-9 rounded-md bg-gray-100 hover:bg-gray-200"><i class="fas fa-times"></i></button>
-            </div>
-            <div id="sellerDetails" class="p-5"></div>
-        </div>
-    </div>
-
-    <script src="../../components/app-state.js"></script>
-    <script src="../../components/admin-sidebar.js"></script>
     <script>
-        loadAdminSidebar('sellers');
+    (() => {
         const API_URL = '/api';
-        const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
-        let sellers = [];
-        const escapeHTML = v => String(v || '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
-        const money = v => `${Number(v || 0).toFixed(2)} ج.م`;
-        const img = v => v || 'https://via.placeholder.com/96?text=Seller';
-        const statusText = s => ({ pending:'قيد المراجعة', approved:'موافق', rejected:'رفض', approved_seller:'معتمد' }[s] || s || 'pending');
 
-        function logout() {
-            if (window.AppState) window.AppState.clearToken();
-            window.location.href = '../auth/login.html';
+        let sellerRequests = [];
+        let currentFilter = 'all';
+        let isLoading = false;
+
+        if (typeof window.loadAdminSidebar === 'function') {
+            window.loadAdminSidebar('sellers');
         }
 
-        async function fetchSellers() {
-            const table = document.getElementById('sellersTable');
-            table.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-primary-600 font-bold">جاري التحميل...</td></tr>';
-            try {
-                const response = await fetch(`${API_URL}/admin/sellers`, { headers: { Authorization: `Bearer ${token}` } });
-                const result = await response.json();
-                if (!response.ok || !result.success) throw new Error(result.message || 'تعذر التحميل');
-                sellers = result.data || [];
-                renderSellers();
-            } catch (error) {
-                table.innerHTML = `<tr><td colspan="8" class="p-10 text-center text-red-600 font-bold">${escapeHTML(error.message)}</td></tr>`;
+        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag]));
+
+        function getToken() {
+            if (window.AppState && typeof window.AppState.getToken === 'function') {
+                return window.AppState.getToken();
             }
+
+            return localStorage.getItem('spider_token') || localStorage.getItem('token');
         }
 
-        function renderSellers() {
-            const table = document.getElementById('sellersTable');
-            if (!sellers.length) {
-                table.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-gray-500">لا يوجد بائعين أو طلبات بعد.</td></tr>';
-                return;
+        function showToast(message, type = 'success') {
+            if (window.AppUI && typeof window.AppUI.toast === 'function') {
+                return window.AppUI.toast(message, type);
             }
-            table.innerHTML = sellers.map((seller, index) => `
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="p-4">
-                        <div class="flex items-center gap-3">
-                            <img src="${img(seller.profile_picture || seller.store_image)}" class="w-12 h-12 rounded-full object-cover border">
-                            <div>
-                                <p class="font-bold">${escapeHTML((seller.store_name || seller.request_store_name) || `${seller.first_name} ${seller.last_name}`)}</p>
-                                <p class="text-xs text-gray-500">${escapeHTML(seller.email)} - ${escapeHTML(seller.phone)}</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-4">${statusText(seller.request_status || seller.seller_status)}</td>
-                    <td class="p-4 text-sm text-gray-500">${escapeHTML(seller.created_at || '-')}</td>
-                    <td class="p-4">${Number(seller.product_count || 0)}</td>
-                    <td class="p-4">${Number(seller.order_count || 0)}</td>
-                    <td class="p-4 font-bold text-primary-600">${money(seller.total_sales)}</td>
-                    <td class="p-4">${Number(seller.rating_average || 0).toFixed(1)} ★</td>
-                    <td class="p-4 text-center"><button onclick="openSeller(${index})" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm">التفاصيل</button></td>
-                </tr>
-            `).join('');
-        }
 
-        function openSeller(index) {
-            const s = sellers[index];
-            document.getElementById('sellerDetails').innerHTML = `
-                <div class="flex items-center gap-4 mb-6">
-                    <img src="${img(s.profile_picture || s.store_image)}" class="w-24 h-24 rounded-full object-cover border">
-                    <div>
-                        <h3 class="text-2xl font-extrabold">${escapeHTML((s.store_name || s.request_store_name) || `${s.first_name} ${s.last_name}`)}</h3>
-                        <p class="text-gray-500">${escapeHTML(s.email)} - ${escapeHTML(s.phone)}</p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-                    ${detail('العنوان', s.address)}
-                    ${detail('المدينة / الدولة', `${s.city || '-'} / ${s.country || '-'}`)}
-                    ${detail('تاريخ الانضمام', s.created_at)}
-                    ${detail('المنتجات', `${s.product_count} | pending ${s.pending_products} | approved ${s.approved_products} | rejected ${s.rejected_products}`)}
-                    ${detail('الطلبات', s.order_count)}
-                    ${detail('إجمالي المبيعات', money(s.total_sales))}
-                    ${detail('متوسط التقييم', `${Number(s.rating_average || 0).toFixed(1)} ★`)}
-                    ${detail('وصف المتجر', s.store_description || s.request_description || '-')}
-                </div>
-                <div class="flex flex-wrap gap-3">
-                    ${s.request_id ? `<button onclick="updateRequest(${s.request_id}, 'approved')" class="bg-emerald-600 text-white px-4 py-2 rounded-md font-bold">اعتماد كبائع</button>
-                    <button onclick="updateRequest(${s.request_id}, 'rejected')" class="bg-red-600 text-white px-4 py-2 rounded-md font-bold">رفض</button>` : ''}
-                    <a href="manage-products.html" class="bg-gray-100 px-4 py-2 rounded-md font-bold">مشاهدة منتجاته</a>
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            const isSuccess = type === 'success';
+
+            toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
+                isSuccess ? 'border-success-500' : 'border-error-500'
+            }`;
+
+            toast.innerHTML = `
+                <p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
+                <div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100">
+                    <div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div>
                 </div>
             `;
-            document.getElementById('sellerModal').classList.remove('hidden');
-            document.getElementById('sellerModal').classList.add('flex');
+
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
 
-        function detail(label, value) {
-            return `<div class="bg-gray-50 border rounded-md p-4"><span class="block text-xs text-gray-400 mb-1">${escapeHTML(label)}</span><strong>${escapeHTML(value || '-')}</strong></div>`;
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const data = await response.json().catch(() => ({}));
+            return { response, data };
         }
 
-        function closeSellerModal() {
-            document.getElementById('sellerModal').classList.add('hidden');
-            document.getElementById('sellerModal').classList.remove('flex');
+        function normalizeStatus(status) {
+            const value = String(status || '').toLowerCase().trim();
+
+            if (['approved', 'accepted', 'approve', 'approved_seller'].includes(value)) {
+                return 'approved';
+            }
+
+            if (['rejected', 'reject', 'declined'].includes(value)) {
+                return 'rejected';
+            }
+
+            return 'pending';
         }
 
-        async function updateRequest(id, status) {
-            const response = await fetch(`${API_URL}/admin/seller-requests/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ status })
+        function getStatusMeta(status) {
+            const normalized = normalizeStatus(status);
+
+            if (normalized === 'approved') {
+                return {
+                    label: 'مقبول',
+                    className: 'bg-success-50 text-success-600 border-success-100',
+                    icon: 'fa-circle-check'
+                };
+            }
+
+            if (normalized === 'rejected') {
+                return {
+                    label: 'مرفوض',
+                    className: 'bg-error-50 text-error-600 border-error-100',
+                    icon: 'fa-circle-xmark'
+                };
+            }
+
+            return {
+                label: 'قيد المراجعة',
+                className: 'bg-warning-50 text-warning-600 border-warning-100',
+                icon: 'fa-clock'
+            };
+        }
+
+        function getRequestStatus(request) {
+            return request.request_status || request.status || request.seller_status || 'pending';
+        }
+
+        function getRequestId(request) {
+            return request.request_id || request.seller_request_id || request.id;
+        }
+
+        function getUserName(request) {
+            return (
+                request.user_name ||
+                request.full_name ||
+                [request.first_name, request.last_name].filter(Boolean).join(' ') ||
+                request.name ||
+                'مستخدم'
+            );
+        }
+
+        function getStoreName(request) {
+            return request.request_store_name || request.store_name || request.shop_name || request.business_name || 'غير محدد';
+        }
+
+        function getDescription(request) {
+            return request.request_description || request.store_description || request.description || '';
+        }
+
+        function getEmail(request) {
+            return request.email || request.user_email || 'غير متاح';
+        }
+
+        function getPhone(request) {
+            return request.phone || request.user_phone || 'غير متاح';
+        }
+
+        function getCreatedAt(request) {
+            const raw = request.request_created_at || request.created_at || request.createdAt || request.requested_at;
+
+            if (!raw) return 'غير متاح';
+
+            const date = new Date(raw);
+
+            if (Number.isNaN(date.getTime())) {
+                return String(raw);
+            }
+
+            return date.toLocaleString('ar-EG', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
-            const result = await response.json();
-            if (!response.ok || !result.success) return alert(result.message || 'تعذر تحديث الطلب');
-            closeSellerModal();
-            fetchSellers();
         }
 
-        fetchSellers();
+        function updateStats() {
+            const total = sellerRequests.length;
+            const pending = sellerRequests.filter(item => normalizeStatus(getRequestStatus(item)) === 'pending').length;
+            const approved = sellerRequests.filter(item => normalizeStatus(getRequestStatus(item)) === 'approved').length;
+            const rejected = sellerRequests.filter(item => normalizeStatus(getRequestStatus(item)) === 'rejected').length;
+
+            setText('totalCount', total);
+            setText('pendingCount', pending);
+            setText('approvedCount', approved);
+            setText('rejectedCount', rejected);
+        }
+
+        function setText(id, value) {
+            const element = document.getElementById(id);
+            if (element) element.textContent = String(value);
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+
+            document.querySelectorAll('.seller-filter-btn').forEach(button => {
+                const active = button.dataset.filter === currentFilter;
+
+                button.className = active
+                    ? 'seller-filter-btn rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-white'
+                    : 'seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600';
+            });
+
+            renderSellerRequests();
+        }
+
+        function renderLoading() {
+            const container = document.getElementById('sellerRequestsContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="py-14 text-center text-slate-500">
+                    <i class="fas fa-circle-notch fa-spin mb-3 text-4xl text-primary-500"></i>
+                    <p class="font-bold">جاري تحميل طلبات البائعين...</p>
+                </div>
+            `;
+        }
+
+        function renderEmptyState(message = 'لا توجد طلبات تسجيل كبائع حاليًا.') {
+            const container = document.getElementById('sellerRequestsContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-16 text-center">
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-3xl text-slate-300 shadow-sm">
+                        <i class="fas fa-store-slash"></i>
+                    </span>
+                    <h3 class="text-xl font-black text-slate-950">لا توجد بيانات</h3>
+                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">${escapeHTML(message)}</p>
+                    <button type="button" onclick="window.reloadSellerRequests()" class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                        <i class="fas fa-rotate-right"></i>
+                        إعادة التحميل
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderSellerRequests() {
+            const container = document.getElementById('sellerRequestsContainer');
+            if (!container) return;
+
+            const filtered = sellerRequests.filter(request => {
+                if (currentFilter === 'all') return true;
+                return normalizeStatus(getRequestStatus(request)) === currentFilter;
+            });
+
+            if (!filtered.length) {
+                renderEmptyState(currentFilter === 'all' ? 'لا توجد طلبات تسجيل كبائع حاليًا.' : 'لا توجد طلبات في هذا التصنيف.');
+                return;
+            }
+
+            container.innerHTML = filtered.map(request => {
+                const id = getRequestId(request);
+                const status = normalizeStatus(getRequestStatus(request));
+                const statusMeta = getStatusMeta(status);
+                const isPending = status === 'pending';
+                const description = getDescription(request);
+
+                return `
+                    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-primary-100 hover:shadow-md sm:p-5">
+                        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                            <div class="min-w-0 flex-1">
+                                <div class="mb-4 flex flex-wrap items-center gap-3">
+                                    <span class="grid h-12 w-12 place-items-center rounded-2xl bg-primary-50 text-primary-600">
+                                        <i class="fas fa-store"></i>
+                                    </span>
+
+                                    <div class="min-w-0">
+                                        <h3 class="truncate text-lg font-black text-slate-950">${escapeHTML(getStoreName(request))}</h3>
+                                        <p class="mt-1 text-sm font-bold text-slate-500">مقدم الطلب: ${escapeHTML(getUserName(request))}</p>
+                                    </div>
+
+                                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${statusMeta.className}">
+                                        <i class="fas ${statusMeta.icon}"></i>
+                                        ${statusMeta.label}
+                                    </span>
+                                </div>
+
+                                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                    <div class="rounded-xl bg-slate-50 p-3">
+                                        <p class="mb-1 text-xs font-black text-slate-400">البريد الإلكتروني</p>
+                                        <p class="truncate text-sm font-bold text-slate-700" dir="ltr">${escapeHTML(getEmail(request))}</p>
+                                    </div>
+
+                                    <div class="rounded-xl bg-slate-50 p-3">
+                                        <p class="mb-1 text-xs font-black text-slate-400">الهاتف</p>
+                                        <p class="truncate text-sm font-bold text-slate-700" dir="ltr">${escapeHTML(getPhone(request))}</p>
+                                    </div>
+
+                                    <div class="rounded-xl bg-slate-50 p-3">
+                                        <p class="mb-1 text-xs font-black text-slate-400">تاريخ الطلب</p>
+                                        <p class="truncate text-sm font-bold text-slate-700">${escapeHTML(getCreatedAt(request))}</p>
+                                    </div>
+
+                                    <div class="rounded-xl bg-slate-50 p-3">
+                                        <p class="mb-1 text-xs font-black text-slate-400">رقم الطلب</p>
+                                        <p class="truncate text-sm font-bold text-slate-700">#${escapeHTML(id || '-')}</p>
+                                    </div>
+                                </div>
+
+                                ${description ? `
+                                    <div class="mt-3 rounded-xl bg-slate-50 p-3">
+                                        <p class="mb-1 text-xs font-black text-slate-400">وصف المتجر</p>
+                                        <p class="text-sm font-semibold leading-7 text-slate-600">${escapeHTML(description)}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="flex shrink-0 flex-col gap-2 sm:flex-row xl:w-52 xl:flex-col">
+                                <button
+                                    type="button"
+                                    onclick="window.updateSellerRequestStatus(${Number(id)}, 'approved', this)"
+                                    ${isPending && id ? '' : 'disabled'}
+                                    class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-success-500 px-4 text-sm font-black text-white shadow-lg shadow-green-100 transition hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <i class="fas fa-check"></i>
+                                    موافقة
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onclick="window.updateSellerRequestStatus(${Number(id)}, 'rejected', this)"
+                                    ${isPending && id ? '' : 'disabled'}
+                                    class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-error-500 px-4 text-sm font-black text-white shadow-lg shadow-red-100 transition hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <i class="fas fa-xmark"></i>
+                                    رفض
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function loadSellerRequests() {
+            if (isLoading) return;
+
+            const token = getToken();
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            isLoading = true;
+            renderLoading();
+
+            try {
+                const { response, data } = await fetchJson(`${API_URL}/admin/sellers`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    showToast('غير مسموح لك بالدخول لهذه الصفحة', 'error');
+                    window.location.href = '../../index.html';
+                    return;
+                }
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر تحميل طلبات البائعين');
+                }
+
+                sellerRequests = Array.isArray(data.data)
+                    ? data.data
+                    : Array.isArray(data.requests)
+                        ? data.requests
+                        : Array.isArray(data.sellers)
+                            ? data.sellers
+                            : [];
+
+                updateStats();
+                renderSellerRequests();
+            } catch (error) {
+                console.error('Load sellers error:', error);
+                sellerRequests = [];
+                updateStats();
+                renderEmptyState(error.message || 'تعذر تحميل طلبات البائعين.');
+                showToast(error.message || 'تعذر تحميل طلبات البائعين', 'error');
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        async function updateSellerRequestStatus(id, status, button) {
+            const token = getToken();
+
+            if (!token || !id || !status || !button) return;
+
+            const normalizedStatus = normalizeStatus(status);
+            const confirmMessage = normalizedStatus === 'approved'
+                ? 'هل تريد الموافقة على هذا الطلب وتحويل المستخدم إلى بائع؟'
+                : 'هل تريد رفض هذا الطلب؟';
+
+            if (!window.confirm(confirmMessage)) return;
+
+            const originalHTML = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري التنفيذ...';
+
+            try {
+                const { response, data } = await fetchJson(`${API_URL}/admin/seller-requests/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status: normalizedStatus })
+                });
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر تحديث حالة الطلب');
+                }
+
+                sellerRequests = sellerRequests.map(request => {
+                    if (Number(getRequestId(request)) !== Number(id)) return request;
+                    return { ...request, status: normalizedStatus, request_status: normalizedStatus };
+                });
+
+                updateStats();
+                renderSellerRequests();
+
+                showToast(
+                    normalizedStatus === 'approved'
+                        ? 'تمت الموافقة على الطلب وتحويل المستخدم إلى بائع'
+                        : 'تم رفض الطلب بنجاح',
+                    'success'
+                );
+            } catch (error) {
+                console.error('Update seller request error:', error);
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+                showToast(error.message || 'تعذر تحديث حالة الطلب', 'error');
+            }
+        }
+
+        function wireFilters() {
+            document.querySelectorAll('.seller-filter-btn').forEach(button => {
+                button.addEventListener('click', () => setFilter(button.dataset.filter || 'all'));
+            });
+        }
+
+        window.reloadSellerRequests = loadSellerRequests;
+        window.updateSellerRequestStatus = updateSellerRequestStatus;
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                wireFilters();
+                loadSellerRequests();
+            }, { once: true });
+        } else {
+            wireFilters();
+            loadSellerRequests();
+        }
+    })();
     </script>
 </body>
 </html>

@@ -692,9 +692,20 @@ function mobileMenuButton(icon, label) {
 }
 
 function wireNavbarSearch(homePath) {
+    const isHomepage = () => {
+        const path = window.location.pathname.replace(/\/+$/, '');
+        return !path.includes('/pages/') && (path === '' || path === '/' || path.endsWith('/index.html'));
+    };
+
     const submitSearch = input => {
         const query = String((input && input.value) || '').trim();
         window.location.href = query ? `${homePath}?search=${encodeURIComponent(query)}` : homePath;
+    };
+
+    const emitLiveSearch = input => {
+        if (!isHomepage()) return;
+        const query = String((input && input.value) || '').trim();
+        window.dispatchEvent(new CustomEvent('spider:live-search', { detail: { query } }));
     };
 
     [
@@ -710,6 +721,8 @@ function wireNavbarSearch(homePath) {
             event.preventDefault();
             submitSearch(input);
         });
+
+        input.addEventListener('input', () => emitLiveSearch(input));
     });
 }
 

@@ -4,89 +4,509 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spider Store | إدارة الوسوم</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script>
-        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Cairo', 'sans-serif'] }, colors: { primary: { 50: '#ECFEFF', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' }, error: { 50: '#FEF2F2', 500: '#EF4444' }, success: { 50: '#F0FDF4', 500: '#22C55E' } } } } }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif']
+                    },
+                    colors: {
+                        primary: {
+                            50: '#ECFEFF',
+                            100: '#CFFAFE',
+                            500: '#06B6D4',
+                            600: '#0891B2',
+                            700: '#0E7490'
+                        },
+                        success: {
+                            50: '#F0FDF4',
+                            100: '#DCFCE7',
+                            500: '#22C55E',
+                            600: '#16A34A'
+                        },
+                        error: {
+                            50: '#FEF2F2',
+                            100: '#FEE2E2',
+                            500: '#EF4444',
+                            600: '#DC2626'
+                        },
+                        warning: {
+                            50: '#FFFBEB',
+                            100: '#FEF3C7',
+                            500: '#F59E0B',
+                            600: '#D97706'
+                        }
+                    }
+                }
+            }
+        };
     </script>
+
+    <style>
+        body {
+            background-color: #F8FAFC;
+        }
+
+        @keyframes shrinkProgress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        .animate-progress {
+            animation: shrinkProgress 3s linear forwards;
+        }
+    </style>
 </head>
-<body id="admin-layout" class="font-sans bg-gray-50 text-gray-800 min-h-screen flex flex-col md:flex-row">
-    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full">
-        <header class="mb-8 border-b border-gray-200 pb-4">
-            <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900">إدارة الوسوم</h1>
-            <p class="text-gray-500 mt-1">أضف الوسوم المستخدمة في البحث والفلترة وربطها بالمنتجات.</p>
+
+<body id="admin-layout" class="min-h-screen overflow-x-hidden bg-slate-50 font-sans text-slate-800 antialiased">
+
+    <main class="min-h-screen w-full overflow-x-hidden px-3 pb-6 pt-28 sm:px-4 sm:pt-28 md:mr-64 md:w-[calc(100%-16rem)] md:pt-6 lg:px-6 lg:py-8">
+
+        <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
+
+        <header class="mb-5 scroll-mt-28 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="mb-2 text-sm font-black text-primary-600">Admin Panel</p>
+                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">إدارة الوسوم</h1>
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+                        أضف الوسوم المستخدمة في البحث والفلترة وربطها بالمنتجات. الوسم لا يحتاج علامة # أثناء الكتابة.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onclick="fetchTags()"
+                    class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 sm:w-auto"
+                >
+                    <i class="fas fa-rotate-right"></i>
+                    تحديث الوسوم
+                </button>
+            </div>
         </header>
 
-        <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-            <form id="tagForm" class="flex flex-col sm:flex-row gap-3">
-                <input id="tagName" required class="flex-1 px-4 py-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-500" placeholder="مثال: gaming">
-                <button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white font-bold px-6 py-3 rounded-lg transition">حفظ الوسم</button>
-            </form>
-        </section>
+        <section class="grid grid-cols-1 gap-5 xl:grid-cols-[420px_1fr]">
 
-        <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div id="tagsList" class="flex flex-wrap gap-3 text-sm text-gray-500">جاري التحميل...</div>
+            <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div class="mb-5 flex items-center gap-3">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                        <i class="fas fa-hashtag"></i>
+                    </span>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-950">إضافة وسم جديد</h2>
+                        <p class="text-xs font-semibold text-slate-500">اكتب اسم الوسم فقط بدون #.</p>
+                    </div>
+                </div>
+
+                <form id="tagForm" class="space-y-4">
+                    <div>
+                        <label for="tagName" class="mb-2 block text-sm font-black text-slate-700">
+                            اسم الوسم <span class="text-error-500">*</span>
+                        </label>
+
+                        <input
+                            id="tagName"
+                            type="text"
+                            required
+                            maxlength="50"
+                            placeholder="مثال: gaming"
+                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"
+                        >
+
+                        <p class="mt-2 text-xs font-semibold leading-6 text-slate-500">
+                            مثال: <span class="font-black text-slate-700">gaming</span> أو
+                            <span class="font-black text-slate-700">headphones</span> أو
+                            <span class="font-black text-slate-700">apple</span>
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-bold leading-6 text-slate-500">
+                            سيتم تنظيف الوسم تلقائيًا: إزالة علامة #، حذف المسافات الزائدة، ومنع التكرار في الواجهة قبل الإرسال.
+                        </p>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="submitBtn"
+                        class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 text-base font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <i class="fas fa-plus-circle"></i>
+                        حفظ الوسم
+                    </button>
+                </form>
+            </section>
+
+            <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
+                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                            <i class="fas fa-tags"></i>
+                        </span>
+                        الوسوم الحالية
+                    </h2>
+
+                    <span id="tagCount" class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-sm font-black text-primary-700">
+                        <i class="fas fa-hashtag"></i>
+                        0 وسم
+                    </span>
+                </div>
+
+                <div class="mb-4">
+                    <div class="relative">
+                        <input
+                            id="tagSearch"
+                            type="search"
+                            placeholder="ابحث في الوسوم..."
+                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-11 text-sm font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"
+                        >
+
+                        <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                            <i class="fas fa-search"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div id="tagsList" class="min-h-[260px]">
+                    <div class="py-14 text-center text-primary-600">
+                        <i class="fas fa-circle-notch fa-spin mb-3 text-4xl"></i>
+                        <p class="font-bold">جاري تحميل الوسوم...</p>
+                    </div>
+                </div>
+            </section>
+
         </section>
     </main>
 
     <script src="../../components/app-state.js"></script>
+    <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/admin-sidebar.js"></script>
-    <script>
-        loadAdminSidebar('manage-tags');
-        const API_URL = '/api';
-        const token = () => localStorage.getItem('spider_token');
 
-        function logout() {
-            if (window.AppState) window.AppState.clearToken();
-            else localStorage.removeItem('spider_token');
-            window.location.href = '../auth/login.html';
+    <script>
+    (() => {
+        const API_URL = '/api';
+
+        let tagsCache = [];
+        let isSubmitting = false;
+
+        if (typeof window.loadAdminSidebar === 'function') {
+            window.loadAdminSidebar('manage-tags');
+        }
+
+        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[char]));
+
+        function getToken() {
+            if (window.AppState && typeof window.AppState.getToken === 'function') {
+                return window.AppState.getToken();
+            }
+
+            return localStorage.getItem('spider_token') || localStorage.getItem('token');
+        }
+
+        function showToast(message, type = 'success') {
+            if (window.AppUI && typeof window.AppUI.toast === 'function') {
+                return window.AppUI.toast(message, type);
+            }
+
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            const isSuccess = type === 'success';
+
+            toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
+                isSuccess ? 'border-success-500' : 'border-error-500'
+            }`;
+
+            toast.innerHTML = `
+                <p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
+                <div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100">
+                    <div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const data = await response.json().catch(() => ({}));
+            return { response, data };
+        }
+
+        function normalizeTagName(value) {
+            return String(value || '')
+                .trim()
+                .replace(/^#+/, '')
+                .replace(/\s+/g, ' ')
+                .toLowerCase();
+        }
+
+        function displayTagName(value) {
+            return String(value || '')
+                .trim()
+                .replace(/^#+/, '')
+                .replace(/\s+/g, ' ');
+        }
+
+        function setSubmitLoading(isLoading) {
+            const button = document.getElementById('submitBtn');
+            if (!button) return;
+
+            isSubmitting = isLoading;
+
+            if (isLoading) {
+                button.dataset.originalHtml = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري الحفظ...';
+                return;
+            }
+
+            button.disabled = false;
+            button.innerHTML = button.dataset.originalHtml || '<i class="fas fa-plus-circle"></i> حفظ الوسم';
+        }
+
+        function updateTagCount(count = tagsCache.length) {
+            const tagCount = document.getElementById('tagCount');
+            if (!tagCount) return;
+
+            tagCount.innerHTML = `<i class="fas fa-hashtag"></i> ${count} وسم`;
+        }
+
+        function renderLoading() {
+            const list = document.getElementById('tagsList');
+            if (!list) return;
+
+            list.innerHTML = `
+                <div class="py-14 text-center text-primary-600">
+                    <i class="fas fa-circle-notch fa-spin mb-3 text-4xl"></i>
+                    <p class="font-bold">جاري تحميل الوسوم...</p>
+                </div>
+            `;
+        }
+
+        function renderEmpty(message = 'لا توجد وسوم بعد.') {
+            const list = document.getElementById('tagsList');
+            if (!list) return;
+
+            list.innerHTML = `
+                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-14 text-center">
+                    <span class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-white text-3xl text-slate-300 shadow-sm">
+                        <i class="fas fa-tags"></i>
+                    </span>
+                    <h3 class="text-lg font-black text-slate-950">لا توجد بيانات</h3>
+                    <p class="mt-2 text-sm font-semibold text-slate-500">${escapeHTML(message)}</p>
+                </div>
+            `;
+        }
+
+        function renderTags() {
+            const list = document.getElementById('tagsList');
+            const searchInput = document.getElementById('tagSearch');
+
+            if (!list) return;
+
+            const searchValue = normalizeTagName(searchInput ? searchInput.value : '');
+
+            const filteredTags = tagsCache.filter(tag => {
+                const name = normalizeTagName(tag.name);
+                return !searchValue || name.includes(searchValue);
+            });
+
+            updateTagCount(tagsCache.length);
+
+            if (!tagsCache.length) {
+                renderEmpty('لا توجد وسوم بعد.');
+                return;
+            }
+
+            if (!filteredTags.length) {
+                renderEmpty('لا توجد وسوم مطابقة للبحث.');
+                return;
+            }
+
+            list.innerHTML = `
+                <div class="flex flex-wrap gap-3">
+                    ${filteredTags.map(tag => `
+                        <span class="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700">
+                            <span class="text-primary-600">#</span>
+                            ${escapeHTML(tag.name)}
+                            <button
+                                type="button"
+                                onclick="deleteTag(${Number(tag.id)})"
+                                class="grid h-7 w-7 place-items-center rounded-full bg-white text-error-500 shadow-sm transition hover:bg-error-500 hover:text-white"
+                                title="حذف الوسم"
+                                aria-label="حذف الوسم"
+                            >
+                                <i class="fas fa-times text-xs"></i>
+                            </button>
+                        </span>
+                    `).join('')}
+                </div>
+            `;
         }
 
         async function fetchTags() {
-            const list = document.getElementById('tagsList');
+            renderLoading();
+
             try {
-                const res = await fetch(`${API_URL}/tags`);
-                const data = await res.json();
-                const tags = data.data || [];
-                list.innerHTML = tags.length ? tags.map(tag => `
-                    <span class="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 font-bold text-gray-700">
-                        #${tag.name}
-                        <button type="button" onclick="deleteTag(${tag.id})" class="text-error-500 hover:text-red-700"><i class="fas fa-times"></i></button>
-                    </span>
-                `).join('') : 'لا توجد وسوم بعد.';
+                const { response, data } = await fetchJson(`${API_URL}/tags`);
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر تحميل الوسوم');
+                }
+
+                tagsCache = Array.isArray(data.data) ? data.data : [];
+                renderTags();
             } catch (error) {
-                list.textContent = 'تعذر تحميل الوسوم.';
+                console.error('Fetch tags error:', error);
+                tagsCache = [];
+                updateTagCount(0);
+                renderEmpty(error.message || 'تعذر تحميل الوسوم.');
+                showToast(error.message || 'تعذر تحميل الوسوم', 'error');
             }
         }
 
-        document.getElementById('tagForm').addEventListener('submit', async event => {
+        async function handleTagSubmit(event) {
             event.preventDefault();
-            try {
-                const res = await fetch(`${API_URL}/tags`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
-                    body: JSON.stringify({ name: document.getElementById('tagName').value.trim() })
-                });
-                const data = await res.json();
-                if (window.AppUI) window.AppUI.toast(data.message || (res.ok ? 'تم حفظ الوسم' : 'تعذر حفظ الوسم'), res.ok ? 'success' : 'error');
-                if (res.ok) document.getElementById('tagForm').reset();
-                fetchTags();
-            } catch (error) {
-                if (window.AppUI) window.AppUI.toast('خطأ في الاتصال بالسيرفر', 'error');
+
+            if (isSubmitting) return;
+
+            const token = getToken();
+            const input = document.getElementById('tagName');
+            const rawName = input.value;
+            const cleanName = displayTagName(rawName);
+            const normalizedName = normalizeTagName(rawName);
+
+            if (!token) {
+                showToast('يرجى تسجيل الدخول كأدمن أولًا', 'error');
+                window.location.href = '../auth/login.html';
+                return;
             }
-        });
+
+            if (!cleanName) {
+                showToast('اسم الوسم مطلوب', 'error');
+                input.focus();
+                return;
+            }
+
+            if (cleanName.length > 50) {
+                showToast('اسم الوسم طويل جدًا. الحد الأقصى 50 حرفًا', 'error');
+                input.focus();
+                return;
+            }
+
+            const alreadyExists = tagsCache.some(tag => normalizeTagName(tag.name) === normalizedName);
+
+            if (alreadyExists) {
+                showToast('هذا الوسم موجود بالفعل', 'error');
+                input.focus();
+                return;
+            }
+
+            setSubmitLoading(true);
+
+            try {
+                const { response, data } = await fetchJson(`${API_URL}/tags`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name: cleanName })
+                });
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر حفظ الوسم');
+                }
+
+                showToast(data.message || 'تم حفظ الوسم بنجاح', 'success');
+                document.getElementById('tagForm').reset();
+                await fetchTags();
+            } catch (error) {
+                console.error('Create tag error:', error);
+                showToast(error.message || 'خطأ في الاتصال بالسيرفر', 'error');
+            } finally {
+                setSubmitLoading(false);
+            }
+        }
 
         async function deleteTag(id) {
-            const ok = window.AppUI ? await window.AppUI.confirmDelete('هل تريد حذف هذا الوسم؟') : true;
-            if (!ok) return;
-            const res = await fetch(`${API_URL}/tags/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token()}` } });
-            const data = await res.json();
-            if (window.AppUI) window.AppUI.toast(data.message || (res.ok ? 'تم حذف الوسم' : 'تعذر حذف الوسم'), res.ok ? 'success' : 'error');
-            fetchTags();
+            const token = getToken();
+
+            if (!token) {
+                showToast('يرجى تسجيل الدخول كأدمن أولًا', 'error');
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            const tag = tagsCache.find(item => Number(item.id) === Number(id));
+            const tagName = tag ? tag.name : 'هذا الوسم';
+
+            const confirmed = window.AppUI && typeof window.AppUI.confirmDelete === 'function'
+                ? await window.AppUI.confirmDelete(`هل تريد حذف الوسم "${tagName}"؟`)
+                : window.confirm(`هل تريد حذف الوسم "${tagName}"؟`);
+
+            if (!confirmed) return;
+
+            try {
+                const { response, data } = await fetchJson(`${API_URL}/tags/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر حذف الوسم');
+                }
+
+                showToast(data.message || 'تم حذف الوسم بنجاح', 'success');
+                await fetchTags();
+            } catch (error) {
+                console.error('Delete tag error:', error);
+                showToast(error.message || 'خطأ أثناء حذف الوسم', 'error');
+            }
         }
 
-        fetchTags();
+        function logout() {
+            if (window.AppState && typeof window.AppState.clearToken === 'function') {
+                window.AppState.clearToken();
+            } else {
+                localStorage.removeItem('spider_token');
+                localStorage.removeItem('token');
+            }
+
+            window.location.href = '../auth/login.html';
+        }
+
+        window.fetchTags = fetchTags;
+        window.deleteTag = deleteTag;
+        window.logout = logout;
+
+        document.getElementById('tagForm').addEventListener('submit', handleTagSubmit);
+        document.getElementById('tagSearch').addEventListener('input', renderTags);
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fetchTags, { once: true });
+        } else {
+            fetchTags();
+        }
+    })();
     </script>
 </body>
 </html>

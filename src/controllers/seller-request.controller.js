@@ -28,6 +28,17 @@ async function getMySellerRequest(req, res) {
 
 async function submitSellerRequest(req, res) {
     try {
+        if (req.user.role === 'seller' || req.user.seller_status === 'approved_seller') {
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'You are already registered as a seller' }));
+        }
+
+        const existingRequest = await SellerRequestModel.getLatestForUser(req.user.userId);
+        if (existingRequest && ['pending', 'approved', 'rejected'].includes(existingRequest.status)) {
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Seller request already exists', data: existingRequest }));
+        }
+
         const uploadFolder = path.join(__dirname, '../../uploads/profiles');
         ensureUploadDir(uploadFolder);
 

@@ -123,4 +123,32 @@ async function updateReview(req, res, reviewId) {
     }
 }
 
-module.exports = { createReview, getReviews, replyToReview, updateReview };
+async function deleteReview(req, res, reviewId) {
+    try {
+        if (!reviewId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Review id is required' }));
+        }
+
+        const review = await ReviewModel.getById(reviewId);
+        if (!review) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Review not found' }));
+        }
+
+        const canDelete = req.user.role === 'admin' || Number(review.user_id) === Number(req.user.userId);
+        if (!canDelete) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, message: 'Not allowed to delete this review' }));
+        }
+
+        await ReviewModel.deleteReview(reviewId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'تم حذف التقييم بنجاح' }));
+    } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'تعذر حذف التقييم' }));
+    }
+}
+
+module.exports = { createReview, getReviews, replyToReview, updateReview, deleteReview };

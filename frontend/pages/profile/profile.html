@@ -86,6 +86,14 @@
                     <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-user-pen"></i></span>
                     بيانات الحساب
                 </h2>
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <button id="editProfileBtn" type="button" class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 text-sm font-black text-white transition hover:bg-primary-700">
+                        <i class="fas fa-pen"></i> تعديل البيانات
+                    </button>
+                    <button id="cancelProfileEditBtn" type="button" class="hidden h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        إلغاء
+                    </button>
+                </div>
                 <form id="profileForm" class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <input id="first_name" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="الاسم الأول">
                     <input id="last_name" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="الاسم الأخير">
@@ -94,7 +102,7 @@
                     <input id="city" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="المدينة">
                     <input id="country" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" placeholder="الدولة">
                     <textarea id="address" rows="4" class="resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50 md:col-span-2" placeholder="العنوان"></textarea>
-                    <button type="submit" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-700 md:col-span-2">
+                    <button id="saveProfileBtn" type="submit" class="hidden h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-700 md:col-span-2">
                         <i class="fas fa-floppy-disk"></i> حفظ البيانات
                     </button>
                 </form>
@@ -147,6 +155,9 @@
 
     <script>
         const API_URL = '/api';
+        let currentProfileData = {};
+        let profileEditMode = false;
+        const profileFields = ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'];
 
         // دالة الحماية من ثغرات XSS
         function escapeHTML(str) {
@@ -171,6 +182,37 @@
             return name || user.email || 'مستخدم Spider Store';
         }
 
+        function fillProfileForm(user) {
+            profileFields.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.value = id === 'birthdate' && user[id] ? String(user[id]).slice(0, 10) : (user[id] || '');
+            });
+        }
+
+        function setProfileEditMode(enabled) {
+            profileEditMode = enabled;
+            profileFields.forEach(id => {
+                const element = document.getElementById(id);
+                if (!element) return;
+                element.readOnly = !enabled;
+                element.classList.toggle('opacity-75', !enabled);
+                element.classList.toggle('cursor-not-allowed', !enabled);
+            });
+
+            const editBtn = document.getElementById('editProfileBtn');
+            const cancelBtn = document.getElementById('cancelProfileEditBtn');
+            const saveBtn = document.getElementById('saveProfileBtn');
+            if (editBtn) editBtn.classList.toggle('hidden', enabled);
+            if (cancelBtn) {
+                cancelBtn.classList.toggle('hidden', !enabled);
+                cancelBtn.classList.toggle('inline-flex', enabled);
+            }
+            if (saveBtn) {
+                saveBtn.classList.toggle('hidden', !enabled);
+                saveBtn.classList.toggle('flex', enabled);
+            }
+        }
+
         function updateAccountHeader(user) {
             const name = displayName(user);
             document.getElementById('accountName').textContent = name;
@@ -191,10 +233,9 @@
                 const data = await response.json();
                 if (!response.ok || !data.success) return;
                 const user = data.data || {};
-                ['first_name', 'last_name', 'phone', 'birthdate', 'city', 'country', 'address'].forEach(id => {
-                    const element = document.getElementById(id);
-                    if (element) element.value = id === 'birthdate' && user[id] ? String(user[id]).slice(0, 10) : (user[id] || '');
-                });
+                currentProfileData = { ...user };
+                fillProfileForm(currentProfileData);
+                setProfileEditMode(false);
                 updateAccountHeader(user);
                 const preview = document.getElementById('profilePreview');
                 if (preview) preview.src = buildImageUrl(user.profile_picture);
@@ -205,16 +246,43 @@
             document.getElementById('sellerRequestForm').classList.toggle('hidden');
         }
 
+        function updateSellerRequestUI(status) {
+            const label = document.getElementById('sellerRequestStatus');
+            const form = document.getElementById('sellerRequestForm');
+            const button = document.querySelector('button[onclick="toggleSellerForm()"]');
+            if (!label) return;
+
+            const map = {
+                none: 'يمكنك إرسال طلب للانضمام كبائع.',
+                pending: 'الطلب قيد المراجعة',
+                rejected: 'تم رفض طلبك',
+                approved: 'أنت مسجل كبائع',
+                seller: 'أنت مسجل كبائع'
+            };
+            label.textContent = map[status] || map.none;
+
+            const canRequest = status === 'none';
+            if (button) button.classList.toggle('hidden', !canRequest);
+            if (!canRequest && form) form.classList.add('hidden');
+        }
+
         async function fetchSellerRequest() {
             const token = getToken();
             const label = document.getElementById('sellerRequestStatus');
             if (!token || !label) return;
             try {
+                if (currentProfileData.role === 'seller' || currentProfileData.seller_status === 'approved_seller') {
+                    updateSellerRequestUI('seller');
+                    return;
+                }
                 const response = await fetch(`${API_URL}/seller-request`, { headers: { Authorization: `Bearer ${token}` } });
                 const data = await response.json();
                 const request = data.data;
                 const map = { pending: 'قيد المراجعة', approved: 'تم قبولك كبائع', rejected: 'تم رفض الطلب' };
                 label.textContent = request ? `حالة الطلب: ${map[request.status] || request.status}` : 'يمكنك إرسال طلب للانضمام كبائع.';
+                if (request && request.status) updateSellerRequestUI(request.status);
+                else if (currentProfileData.seller_status === 'rejected') updateSellerRequestUI('rejected');
+                else updateSellerRequestUI('none');
             } catch (error) {
                 label.textContent = 'تعذر تحميل حالة طلب البائع.';
             }
@@ -246,8 +314,15 @@
             }
         }
 
+        document.getElementById('editProfileBtn').addEventListener('click', () => setProfileEditMode(true));
+        document.getElementById('cancelProfileEditBtn').addEventListener('click', () => {
+            fillProfileForm(currentProfileData);
+            setProfileEditMode(false);
+        });
+
         document.getElementById('profileForm').addEventListener('submit', async event => {
             event.preventDefault();
+            if (!profileEditMode) return;
             const token = getToken();
             const body = new FormData();
             ['first_name', 'last_name', 'phone', 'city', 'country', 'address'].forEach(id => body.append(id, document.getElementById(id).value.trim()));
@@ -264,6 +339,9 @@
                 const data = await response.json();
                 if (window.AppUI) window.AppUI.toast(data.message || (response.ok ? 'تم حفظ البيانات' : 'تعذر حفظ البيانات'), response.ok ? 'success' : 'error');
                 if (response.ok && data.data) {
+                    currentProfileData = { ...data.data };
+                    fillProfileForm(currentProfileData);
+                    setProfileEditMode(false);
                     updateAccountHeader(data.data);
                     const preview = document.getElementById('profilePreview');
                     if (preview) preview.src = buildImageUrl(data.data.profile_picture);
@@ -443,8 +521,8 @@
             }
         }
 
-        window.addEventListener('load', () => {
-            fetchProfile();
+        window.addEventListener('load', async () => {
+            await fetchProfile();
             fetchSellerRequest();
             fetchWishlist();
             fetchMyOrders();

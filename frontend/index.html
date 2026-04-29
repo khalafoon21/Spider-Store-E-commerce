@@ -153,8 +153,11 @@
         
         // جلب مسار الصفحة الحالي لمعرفة الفلتر
         const urlParams = new URLSearchParams(window.location.search);
-        const currentCategoryId = urlParams.get('category');
-        const searchQuery = urlParams.get('search');
+        let currentCategoryId = urlParams.get('category') || '';
+        let searchQuery = urlParams.get('search') || '';
+        let categoriesCache = [];
+        let wishlistProductIds = new Set();
+        let liveSearchTimer = null;
 
         // حالة الـ Slider
         let banners = [];
@@ -166,6 +169,10 @@
         const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
         const safeId = value => encodeURIComponent(String(value || ''));
         const safeIconClass = value => String(value || 'fa-tags').split(/\s+/).filter(cls => /^fa[-\w]*$/.test(cls)).join(' ') || 'fa-tags';
+        const isCategoryImageIcon = value => {
+            const clean = String(value || '').trim();
+            return clean.startsWith('/uploads/') || /\.(png|jpe?g|webp|svg)$/i.test(clean);
+        };
         const safeColor = (value, fallback) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || '')) ? value : fallback;
         const safeLink = value => {
             const link = String(value || '').trim();
@@ -177,6 +184,15 @@
             const cleanPath = String(imagePath || '').trim();
             if (!cleanPath) return 'https://via.placeholder.com/300?text=No+Image';
             return /^https?:\/\//i.test(cleanPath) ? cleanPath : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+        };
+        const renderCategoryIcon = (icon, name = '') => {
+            const cleanIcon = String(icon || '').trim();
+
+            if (isCategoryImageIcon(cleanIcon)) {
+                return `<img src="${buildImageUrl(cleanIcon)}" class="h-7 w-7 object-contain" alt="${escapeHTML(name || 'Category icon')}" loading="lazy" onerror="this.style.display='none'">`;
+            }
+
+            return `<i class="fas ${safeIconClass(cleanIcon)}"></i>`;
         };
         const getProductImage = product => {
             if (product.image_url || product.image) return product.image_url || product.image;
@@ -219,9 +235,12 @@
 
             await Promise.allSettled([
                 fetchBanners(),
-                fetchCategories(),
-                fetchProducts()
+                fetchWishlistState(),
+                fetchCategories()
             ]);
+
+            await fetchProducts();
+            wireHomepageLiveFilters();
         }
 
         // ==========================================
@@ -290,6 +309,9 @@
                 const res = await fetch(`${API_URL}/categories`);
                 const data = await res.json();
                 if (data.success && data.data?.length > 0) {
+                    categoriesCache = data.data;
+                    renderCategories();
+                    return;
                     list.innerHTML = data.data.map(cat => {
                         const isActive = currentCategoryId == cat.id;
                         const activeClasses = isActive ? "bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100";
@@ -298,7 +320,7 @@
                         return `
                         <a href="?category=${safeId(cat.id)}" class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${activeClasses}">
                             <span class="flex h-10 w-10 items-center justify-center rounded-xl transition-all ${activeIconBg}">
-                                <i class="fas ${safeIconClass(cat.icon)}"></i>
+                                ${renderCategoryIcon(cat.icon, cat.name)}
                             </span>
                             <span class="line-clamp-1 text-sm font-black">${escapeHTML(cat.name)}</span>
                         </a>`;
@@ -307,12 +329,48 @@
             } catch (err) { list.innerHTML = '<p class="text-sm text-error-500 p-2">تعذر تحميل الأقسام.</p>'; }
         }
 
+        function renderCategories() {
+            const list = document.getElementById('categoriesList');
+            if (!list) return;
+
+            const allActive = !currentCategoryId;
+            const allClasses = allActive ? "bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100";
+            const allIconBg = allActive ? "bg-white/20 text-white" : "bg-white text-primary-600 shadow-sm group-hover:bg-white";
+            const allItem = `
+                <button type="button" data-category-filter="" class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${allClasses}">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl transition-all ${allIconBg}">
+                        <i class="fas fa-layer-group"></i>
+                    </span>
+                    <span class="line-clamp-1 text-sm font-black">الكل</span>
+                </button>`;
+
+            const categoryItems = categoriesCache.map(cat => {
+                const categoryId = String(cat.id || '');
+                const isActive = currentCategoryId === categoryId;
+                const activeClasses = isActive ? "bg-primary-500 text-white border-primary-500 shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-700 border-slate-100 hover:bg-cyan-50 hover:text-primary-700 hover:border-primary-100";
+                const activeIconBg = isActive ? "bg-white/20 text-white" : "bg-white text-primary-600 shadow-sm group-hover:bg-white";
+                
+                return `
+                    <button type="button" data-category-filter="${safeId(categoryId)}" class="group flex min-w-[112px] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border px-3 py-4 text-center transition-all sm:min-w-[136px] ${activeClasses}">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl transition-all ${activeIconBg}">
+                            ${renderCategoryIcon(cat.icon, cat.name)}
+                        </span>
+                        <span class="line-clamp-1 text-sm font-black">${escapeHTML(cat.name)}</span>
+                    </button>`;
+            }).join('');
+
+            list.innerHTML = allItem + categoryItems;
+        }
+
         async function fetchProducts() {
             const grid = document.getElementById('productsGrid');
             const bestSellersGrid = document.getElementById('bestSellersGrid');
             const latestSection = document.getElementById('latestSection');
             const bestSellersSection = document.getElementById('bestSellersSection');
-            
+            const hasFilters = Boolean(currentCategoryId || searchQuery);
+            if (document.getElementById('latestTitle')) document.getElementById('latestTitle').innerText = hasFilters ? 'نتائج البحث / التصنيف' : 'أحدث المنتجات';
+            if (bestSellersSection) bestSellersSection.style.display = hasFilters ? 'none' : '';
+             
             try {
                 let apiUrl = `${API_URL}/products`;
                 const queryParams = [];
@@ -354,13 +412,16 @@
                 const ratingCount = safeNumber(product.rating_count);
                 const fullStars = Math.max(0, Math.min(5, Math.round(ratingAverage)));
                 const stars = '<i class="fas fa-star"></i>'.repeat(fullStars) + '<i class="far fa-star text-gray-300"></i>'.repeat(5 - fullStars);
+                const inWishlist = wishlistProductIds.has(Number(product.id));
+                const wishlistClasses = inWishlist ? 'border-error-100 bg-error-50 text-error-500' : 'border-slate-200 bg-white/95 text-slate-500 hover:border-error-100 hover:bg-error-50 hover:text-error-500';
+                const wishlistIcon = inWishlist ? 'fas fa-heart' : 'far fa-heart';
 
                 return `
                 <div class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-lg">
                     <div class="relative flex items-center justify-center bg-slate-50 p-3 sm:p-4">
                         ${hasDiscount ? `<span class="absolute top-3 left-3 bg-error-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم ${discount}%</span>` : ''}
-                        <button type="button" data-action="wishlist" data-product-id="${productId}" class="absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white/95 text-slate-500 shadow-sm transition hover:border-error-100 hover:bg-error-50 hover:text-error-500 sm:right-3 sm:top-3" aria-label="Add to wishlist">
-                            <i class="far fa-heart pointer-events-none"></i>
+                        <button type="button" data-action="wishlist" data-product-id="${productId}" data-in-wishlist="${inWishlist ? '1' : '0'}" class="absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border ${wishlistClasses} shadow-sm transition sm:right-3 sm:top-3" aria-label="Wishlist">
+                            <i class="${wishlistIcon} pointer-events-none"></i>
                         </button>
                         <a href="pages/products/product.html?id=${productId}" class="w-full">
                             <img src="${buildImageUrl(getProductImage(product))}" class="aspect-square w-full object-contain transition-transform duration-500 group-hover:scale-105" alt="${escapeHTML(product.title)}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'">
@@ -387,36 +448,68 @@
             }).join('');
         }
 
+        async function fetchWishlistState() {
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+            if (!token) {
+                wishlistProductIds = new Set();
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/wishlist`, { headers: { Authorization: `Bearer ${token}` } });
+                const data = await response.json().catch(() => ({}));
+                const items = Array.isArray(data.data) ? data.data : [];
+                wishlistProductIds = new Set(items.map(item => Number(item.id || item.product_id)).filter(Boolean));
+            } catch (error) {
+                wishlistProductIds = new Set();
+            }
+        }
+
+        function updateWishlistButtons(productId, inWishlist) {
+            document.querySelectorAll('[data-action="wishlist"]').forEach(button => {
+                if (Number(button.dataset.productId) !== Number(productId)) return;
+                button.dataset.inWishlist = inWishlist ? '1' : '0';
+                button.classList.toggle('border-error-100', inWishlist);
+                button.classList.toggle('bg-error-50', inWishlist);
+                button.classList.toggle('text-error-500', inWishlist);
+                button.classList.toggle('border-slate-200', !inWishlist);
+                button.classList.toggle('bg-white/95', !inWishlist);
+                button.classList.toggle('text-slate-500', !inWishlist);
+                const icon = button.querySelector('i');
+                if (icon) icon.className = `${inWishlist ? 'fas' : 'far'} fa-heart pointer-events-none`;
+            });
+        }
+
         window.toggleWishlist = async function(button, id) {
             const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
             if (!token) {
-                showToast('Please login to use wishlist', 'error');
+                showToast('يرجى تسجيل الدخول لاستخدام قائمة الأمنيات', 'error');
                 return;
             }
             if (!button || button.dataset.busy === '1') return;
             button.dataset.busy = '1';
+            const productId = Number(id);
+            const isActive = button.dataset.inWishlist === '1' || wishlistProductIds.has(productId);
             try {
-                const response = await fetch(`${API_URL}/wishlist`, {
+                const response = await fetch(`${API_URL}${isActive ? '/wishlist/remove' : '/wishlist'}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ product_id: parseInt(id) })
+                    body: JSON.stringify({ product_id: productId })
                 });
                 const data = await response.json().catch(() => ({}));
                 if (response.ok || data.success) {
-                    button.classList.toggle('text-error-500', true);
-                    button.classList.toggle('bg-error-50', true);
-                    const icon = button.querySelector('i');
-                    if (icon) icon.className = 'fas fa-heart pointer-events-none';
-                    showToast(data.message || 'Added to wishlist');
+                    if (isActive) wishlistProductIds.delete(productId);
+                    else wishlistProductIds.add(productId);
+                    updateWishlistButtons(productId, !isActive);
+                    showToast(data.message || (isActive ? 'تمت الإزالة من قائمة الأمنيات' : 'تمت الإضافة لقائمة الأمنيات'));
                 } else {
-                    showToast(data.message || 'Could not update wishlist', 'error');
+                    showToast(data.message || 'تعذر تحديث قائمة الأمنيات', 'error');
                 }
             } catch (err) {
                 console.error(err);
-                showToast('Could not update wishlist', 'error');
+                showToast('تعذر تحديث قائمة الأمنيات', 'error');
             } finally {
                 button.dataset.busy = '0';
             }
@@ -535,6 +628,42 @@
             if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
             window.handleProductCardCartClick(event, button);
         }, true);
+
+        function updateHomeUrl() {
+            const params = new URLSearchParams();
+            if (currentCategoryId) params.set('category', currentCategoryId);
+            if (searchQuery) params.set('search', searchQuery);
+            window.history.replaceState({}, '', params.toString() ? `index.html?${params.toString()}` : 'index.html');
+        }
+
+        function runFilteredProducts() {
+            updateHomeUrl();
+            renderCategories();
+            renderProductsSkeleton('productsGrid');
+            fetchProducts();
+        }
+
+        function wireHomepageLiveFilters() {
+            ['navbarSearchInput', 'navbarMobileSearchInput'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.value = searchQuery;
+            });
+
+            window.addEventListener('spider:live-search', event => {
+                searchQuery = String((event.detail && event.detail.query) || '').trim();
+                clearTimeout(liveSearchTimer);
+                liveSearchTimer = setTimeout(runFilteredProducts, 250);
+            });
+
+            document.addEventListener('click', event => {
+                const button = event.target.closest('[data-category-filter]');
+                if (!button) return;
+                event.preventDefault();
+                const nextCategory = decodeURIComponent(button.dataset.categoryFilter || '');
+                currentCategoryId = currentCategoryId === nextCategory ? '' : nextCategory;
+                runFilteredProducts();
+            });
+        }
 
         function showToast(message, type = 'success') {
             if (window.AppUI) return window.AppUI.toast(message, type);

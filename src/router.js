@@ -11,7 +11,7 @@ const { getSellerProducts, getSellerOrders, getSellerStats, getSellerReviews } =
 const { authenticate } = require('./middleware/auth.middleware');
 const { getProfile, updateProfile } = require('./controllers/user.controller');
 const { registerUser, loginUser, activateEmail, forgotPassword, resetPassword } = require('./controllers/auth.controller');
-const { createReview, getReviews, replyToReview, updateReview } = require('./controllers/review.controller');
+const { createReview, getReviews, replyToReview, updateReview, deleteReview } = require('./controllers/review.controller');
 const { getAllCategories, createCategory, updateCategory, deleteCategory } = require('./controllers/category.controller');
 const { getWishlist, addWishlist, removeWishlist } = require('./controllers/wishlist.controller');
 const { getAllTags, createTag, updateTag, deleteTag } = require('./controllers/tag.controller');
@@ -29,10 +29,19 @@ const router = async (req, res) => {
     const method = req.method;
 
     if (path.startsWith('/uploads/') && method === 'GET') {
-        const requestedPath = path.replace(/^\/uploads\/?/, '');
-        const filePath = sysPath.resolve(uploadsRoot, requestedPath);
+        let requestedPath = '';
 
-        if (!filePath.startsWith(uploadsRoot + sysPath.sep)) {
+        try {
+            requestedPath = decodeURIComponent(path.slice('/uploads/'.length));
+        } catch (error) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, error: 'Bad request' }));
+        }
+
+        const filePath = sysPath.resolve(uploadsRoot, requestedPath);
+        const relativePath = sysPath.relative(uploadsRoot, filePath);
+
+        if (relativePath.startsWith('..') || sysPath.isAbsolute(relativePath)) {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ success: false, error: 'Forbidden' }));
         }
@@ -44,6 +53,7 @@ const router = async (req, res) => {
                 if (ext === '.png') contentType = 'image/png';
                 else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
                 else if (ext === '.webp') contentType = 'image/webp';
+                else if (ext === '.svg') contentType = 'image/svg+xml';
                 else if (ext === '.gif') contentType = 'image/gif';
 
                 res.writeHead(200, { 'Content-Type': contentType });
@@ -120,6 +130,7 @@ const router = async (req, res) => {
     if (path === '/api/reviews' && method === 'GET') return getReviews(req, res);
     if (path === '/api/reviews' && method === 'POST') { try { await authenticate(req, res); return createReview(req, res); } catch (e) { return; } }
     if (path.startsWith('/api/reviews/') && !path.endsWith('/reply') && method === 'PUT') { try { await authenticate(req, res); const id = path.split('/').pop(); return updateReview(req, res, Number(id)); } catch (e) { return; } }
+    if (path.startsWith('/api/reviews/') && !path.endsWith('/reply') && method === 'DELETE') { try { await authenticate(req, res); const id = path.split('/').pop(); return deleteReview(req, res, Number(id)); } catch (e) { return; } }
     if (path.startsWith('/api/reviews/') && path.endsWith('/reply') && method === 'PUT') { try { await authenticate(req, res); const id = path.split('/')[3]; return replyToReview(req, res, Number(id)); } catch (e) { return; } }
     if (path === '/api/reviews/reply' && method === 'POST') { try { await authenticate(req, res); return replyToReview(req, res); } catch (e) { return; } }
 

@@ -97,6 +97,7 @@
         let selectedQuantity = 1;
         let userRating = 0;
         let currentUserRole = null; 
+        let wishlistProductIds = new Set();
 
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
@@ -164,6 +165,7 @@
                 currentProduct = data.data || data.product || null;
                 
                 if (currentProduct) {
+                    await fetchWishlistState();
                     renderProduct(currentProduct);
                     document.getElementById('reviewsSection').classList.remove('hidden');
                     fetchReviews();
@@ -210,6 +212,9 @@
             const roundedRating = Math.max(0, Math.min(5, Math.round(avgValue)));
             const sellerName = product.seller_name || product.store_name || product.seller || product.vendor_name || '';
             const categoryName = product.category_name || product.category || '';
+            const inWishlist = wishlistProductIds.has(Number(product.id));
+            const wishlistIcon = inWishlist ? 'fas fa-heart' : 'far fa-heart';
+            const wishlistClasses = inWishlist ? 'border-error-100 bg-error-50 text-error-500' : 'border-error-100 bg-white text-error-500 hover:bg-error-50';
             let breakdown = product.rating_breakdown || {};
 
             if (typeof breakdown === 'string') {
@@ -304,8 +309,8 @@
                                         <button type="button" onclick="event.preventDefault(); event.stopPropagation(); addToCartFromDetails(this)" class="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 text-base font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
                                             <i class="fas fa-cart-plus pointer-events-none"></i> إضافة للسلة
                                         </button>
-                                        <button type="button" onclick="event.preventDefault(); event.stopPropagation(); addToWishlist()" class="flex h-12 items-center justify-center rounded-xl border border-error-100 bg-white px-5 text-error-500 transition hover:bg-error-50">
-                                            <i class="fas fa-heart"></i>
+                                        <button id="productWishlistBtn" type="button" data-in-wishlist="${inWishlist ? '1' : '0'}" onclick="event.preventDefault(); event.stopPropagation(); toggleProductWishlist(this)" class="flex h-12 items-center justify-center rounded-xl border px-5 transition ${wishlistClasses}">
+                                            <i class="${wishlistIcon}"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -428,7 +433,7 @@
                 for(let i=1; i<=5; i++) starsHtml += `<i class="fas fa-star ${i <= rev.rating ? 'text-yellow-400' : 'text-gray-300'} text-sm"></i>`;
                 
                 let replyHtml = '';
-                const canEditReview = currentUserRole === 'admin' || currentUserRole === 'seller' || Number(rev.user_id) === Number(currentUserId);
+                const canEditReview = currentUserRole === 'admin' || Number(rev.user_id) === Number(currentUserId);
                 if (rev.reply) {
                     replyHtml = `<div class="mt-4 bg-primary-50 p-4 rounded-md border border-primary-100 mr-8">
                                     <p class="text-xs font-bold text-primary-700 mb-1"><i class="fas fa-store"></i> رد الإدارة:</p>
@@ -448,12 +453,37 @@
                                     <div><h4 class="font-bold text-gray-800 text-sm">${escapeHTML(rev.customer_name) || 'عميل'}</h4><div class="flex gap-1 mt-1">${starsHtml}</div></div>
                                 </div>
                             </div>
-                            <p class="text-gray-600 text-sm mt-3 leading-relaxed pl-12">${escapeHTML(rev.comment)}</p>
+                            <p id="reviewText-${rev.id}" class="text-gray-600 text-sm mt-3 leading-relaxed pl-12">${escapeHTML(rev.comment)}</p>
                             ${canEditReview ? `<div class="mt-3 pl-12"><textarea id="reviewEdit-${rev.id}" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded text-sm mb-2 outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(rev.comment)}</textarea><button type="button" onclick="updateReview(${rev.id}, ${rev.rating})" class="text-xs bg-primary-600 text-white px-3 py-1 rounded hover:bg-primary-700 transition-colors">تعديل التقييم</button></div>` : ''}
                             ${replyHtml}
                         </div>`;
             });
             list.innerHTML = html;
+            enhanceReviewControls(reviews);
+        }
+
+        function enhanceReviewControls(reviews) {
+            reviews.forEach(rev => {
+                const legacyEdit = document.getElementById(`reviewEdit-${rev.id}`);
+                if (!legacyEdit) return;
+                const legacyWrap = legacyEdit.parentElement;
+                if (legacyWrap) legacyWrap.classList.add('hidden');
+
+                const commentText = document.getElementById(`reviewText-${rev.id}`);
+                if (!commentText || document.getElementById(`reviewActions-${rev.id}`)) return;
+
+                commentText.insertAdjacentHTML('afterend', `
+                    <div id="reviewActions-${rev.id}" class="mt-3 flex gap-2 pl-12">
+                        <button type="button" onclick="startReviewEdit(${rev.id}, ${Number(rev.rating)}, decodeURIComponent('${encodeURIComponent(rev.comment || '')}'))" class="inline-flex items-center gap-1 rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-black text-primary-600 transition hover:bg-primary-100">
+                            <i class="fas fa-pen"></i> تعديل
+                        </button>
+                        <button type="button" onclick="deleteReview(${rev.id})" class="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-black text-red-600 transition hover:bg-red-100">
+                            <i class="fas fa-trash"></i> حذف
+                        </button>
+                    </div>
+                    <div id="reviewEditBox-${rev.id}" class="mt-3 hidden pl-12"></div>
+                `);
+            });
         }
 
         async function submitReview() {
@@ -505,8 +535,49 @@
             } catch(e) { showToast('حدث خطأ أثناء الرد', 'error'); }
         }
 
+        function startReviewEdit(reviewId, rating, comment) {
+            const box = document.getElementById(`reviewEditBox-${reviewId}`);
+            if (!box) return;
+            box.classList.remove('hidden');
+            box.dataset.rating = String(rating);
+            box.innerHTML = `
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div class="mb-3 flex gap-1" id="reviewEditStars-${reviewId}">
+                        ${[1, 2, 3, 4, 5].map(star => `<button type="button" data-edit-rating="${star}" onclick="setReviewEditRating(${reviewId}, ${star})" class="text-xl ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}"><i class="fas fa-star"></i></button>`).join('')}
+                    </div>
+                    <textarea id="reviewEditComment-${reviewId}" rows="3" class="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary-500">${escapeHTML(comment)}</textarea>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="updateReview(${reviewId})" class="rounded-lg bg-primary-600 px-4 py-2 text-xs font-black text-white transition hover:bg-primary-700">حفظ التعديل</button>
+                        <button type="button" onclick="cancelReviewEdit(${reviewId})" class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50">إلغاء</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setReviewEditRating(reviewId, rating) {
+            const box = document.getElementById(`reviewEditBox-${reviewId}`);
+            if (box) box.dataset.rating = String(rating);
+            document.querySelectorAll(`#reviewEditStars-${reviewId} [data-edit-rating]`).forEach(button => {
+                button.classList.toggle('text-yellow-400', Number(button.dataset.editRating) <= rating);
+                button.classList.toggle('text-gray-300', Number(button.dataset.editRating) > rating);
+            });
+        }
+
+        function cancelReviewEdit(reviewId) {
+            const box = document.getElementById(`reviewEditBox-${reviewId}`);
+            if (!box) return;
+            box.classList.add('hidden');
+            box.innerHTML = '';
+        }
+
         async function updateReview(reviewId, rating) {
-            const comment = document.getElementById(`reviewEdit-${reviewId}`).value.trim();
+            const box = document.getElementById(`reviewEditBox-${reviewId}`);
+            rating = Number(box && box.dataset.rating);
+            const comment = String(document.getElementById(`reviewEditComment-${reviewId}`)?.value || '').trim();
+            if (!rating || rating < 1 || rating > 5) {
+                showToast('يرجى اختيار تقييم صحيح', 'error');
+                return;
+            }
             if (!comment) {
                 showToast('اكتب نص التقييم قبل الحفظ', 'error');
                 return;
@@ -520,7 +591,30 @@
                 });
                 const data = await res.json();
                 showToast(data.message || (res.ok ? 'تم تعديل التقييم' : 'تعذر تعديل التقييم'), res.ok ? 'success' : 'error');
-                if (res.ok) fetchReviews();
+                if (res.ok) {
+                    cancelReviewEdit(reviewId);
+                    fetchReviews();
+                    fetchProductDetails();
+                }
+            } catch (error) {
+                showToast('تعذر الاتصال بالسيرفر', 'error');
+            }
+        }
+
+        async function deleteReview(reviewId) {
+            if (!window.confirm('هل تريد حذف هذا التقييم؟')) return;
+            const token = window.AppState ? window.AppState.getToken() : localStorage.getItem('spider_token');
+            try {
+                const res = await fetch(`${API_URL}/reviews/${reviewId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json().catch(() => ({}));
+                showToast(data.message || (res.ok ? 'تم حذف التقييم' : 'تعذر حذف التقييم'), res.ok ? 'success' : 'error');
+                if (res.ok) {
+                    fetchReviews();
+                    fetchProductDetails();
+                }
             } catch (error) {
                 showToast('تعذر الاتصال بالسيرفر', 'error');
             }
@@ -601,6 +695,62 @@
             }
         }
 
+        async function fetchWishlistState() {
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
+            if (!token) {
+                wishlistProductIds = new Set();
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/wishlist`, { headers: { Authorization: `Bearer ${token}` } });
+                const data = await res.json().catch(() => ({}));
+                const items = Array.isArray(data.data) ? data.data : [];
+                wishlistProductIds = new Set(items.map(item => Number(item.id || item.product_id)).filter(Boolean));
+            } catch (error) {
+                wishlistProductIds = new Set();
+            }
+        }
+
+        function updateProductWishlistButton(inWishlist) {
+            const button = document.getElementById('productWishlistBtn');
+            if (!button) return;
+            button.dataset.inWishlist = inWishlist ? '1' : '0';
+            button.classList.toggle('bg-error-50', inWishlist);
+            button.classList.toggle('bg-white', !inWishlist);
+            const icon = button.querySelector('i');
+            if (icon) icon.className = inWishlist ? 'fas fa-heart' : 'far fa-heart';
+        }
+
+        async function toggleProductWishlist(button) {
+            const token = window.AppState ? window.AppState.getToken() : (localStorage.getItem('spider_token') || localStorage.getItem('token'));
+            if (!token) {
+                showToast('يجب تسجيل الدخول لاستخدام قائمة الأمنيات', 'error');
+                return;
+            }
+            if (!button || button.dataset.busy === '1') return;
+            button.dataset.busy = '1';
+            const productId = Number(currentProduct.id);
+            const isActive = button.dataset.inWishlist === '1' || wishlistProductIds.has(productId);
+            try {
+                const res = await fetch(`${API_URL}${isActive ? '/wishlist/remove' : '/wishlist'}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ product_id: productId })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok || data.success) {
+                    if (isActive) wishlistProductIds.delete(productId);
+                    else wishlistProductIds.add(productId);
+                    updateProductWishlistButton(!isActive);
+                }
+                showToast(data.message || (res.ok ? (isActive ? 'تمت الإزالة من قائمة الأمنيات' : 'تمت الإضافة لقائمة الأمنيات') : 'تعذر تحديث قائمة الأمنيات'), res.ok ? 'success' : 'error');
+            } catch (error) {
+                showToast('تعذر الاتصال بالسيرفر', 'error');
+            } finally {
+                button.dataset.busy = '0';
+            }
+        }
+
         function addGuestCartItem(id, quantity) {
             const productId = Number(id);
             if (!productId) return;
@@ -651,10 +801,15 @@
 
         window.submitReview = submitReview;
         window.submitReply = submitReply;
+        window.startReviewEdit = startReviewEdit;
+        window.setReviewEditRating = setReviewEditRating;
+        window.cancelReviewEdit = cancelReviewEdit;
         window.updateReview = updateReview;
+        window.deleteReview = deleteReview;
         window.changeQty = changeQty;
         window.addToCartFromDetails = addToCartFromDetails;
         window.addToWishlist = addToWishlist;
+        window.toggleProductWishlist = toggleProductWishlist;
         window.addEventListener('load', fetchProductDetails);
     })();
 </script>

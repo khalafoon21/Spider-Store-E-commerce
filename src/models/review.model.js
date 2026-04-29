@@ -56,6 +56,12 @@ class ReviewModel {
             [data.rating, data.comment, reviewId]
         );
     }
+
+    static async deleteReview(reviewId) {
+        const db = getDb();
+        const result = await db.run(`DELETE FROM reviews WHERE id = ?`, [reviewId]);
+        return result.changes > 0;
+    }
 }
 
 module.exports = ReviewModel;
