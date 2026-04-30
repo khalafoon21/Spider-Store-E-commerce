@@ -7,11 +7,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
     <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Cairo','sans-serif']}}}}</script>
     <style>body{background:#f8fafc}</style>
 </head>
 <body id="seller-layout" class="font-sans text-slate-800 antialiased flex flex-col md:flex-row min-h-screen">
-    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full overflow-hidden">
+    <main class="flex-1 p-4 md:p-8 md:mr-64 w-full min-w-0">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4 mb-8">
             <div>
                 <h1 class="text-2xl md:text-3xl font-extrabold text-slate-950">طلبات منتجاتي</h1>
@@ -88,13 +89,13 @@
             container.innerHTML = orders.map(order => `
                 <article class="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden">
                     <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <div class="cursor-pointer" onclick="openOrderDetails(${order.id})">
+                        <div class="min-w-0 cursor-pointer" onclick="openOrderDetails(${order.id})">
                             <h2 class="text-lg font-extrabold text-slate-950">طلب #${order.id}</h2>
                             <p class="text-sm text-slate-500">${escapeHTML(order.full_name)} - ${escapeHTML(order.phone)} - ${escapeHTML(order.status)}</p>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end">
                             <strong class="text-cyan-600">${money(order.seller_subtotal)}</strong>
-                            <select onchange="updateSellerStatus(${order.id}, this.value)" class="px-3 py-2 rounded-md border border-slate-200 bg-white text-sm font-bold">
+                            <select onchange="updateSellerStatus(${order.id}, this.value)" class="min-w-0 flex-1 px-3 py-2 rounded-md border border-slate-200 bg-white text-sm font-bold md:flex-none">
                                 ${statusOptions(order.seller_status || 'pending_review')}
                             </select>
                             <button type="button" onclick="openOrderDetails(${order.id})" class="h-9 w-9 rounded-md bg-slate-100 hover:bg-slate-800 hover:text-white"><i class="fas fa-eye"></i></button>
@@ -102,12 +103,12 @@
                     </div>
                     <div class="divide-y divide-slate-100">
                         ${(order.items || []).map(item => `
-                            <div class="p-5 flex items-center justify-between gap-4">
-                                <div>
-                                    <p class="font-bold text-slate-900">${escapeHTML(item.title)}</p>
+                            <div class="seller-order-line p-4 sm:p-5">
+                                <div class="seller-order-line__content">
+                                    <p class="seller-order-line__title font-bold text-slate-900">${escapeHTML(item.title)}</p>
                                     <p class="text-sm text-slate-500">الكمية: ${item.quantity} × ${money(item.price_at_purchase)}</p>
                                 </div>
-                                <span class="font-bold text-slate-700">${money(Number(item.quantity) * Number(item.price_at_purchase))}</span>
+                                <span class="seller-order-line__price font-bold text-slate-700">${money(Number(item.quantity) * Number(item.price_at_purchase))}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -136,9 +137,9 @@
                     <div class="bg-slate-50 p-4 font-extrabold text-slate-950">منتجاتك داخل الطلب فقط</div>
                     <div class="divide-y divide-slate-100">
                         ${items.map(item => `
-                            <div class="p-4 flex justify-between gap-4">
-                                <div><p class="font-bold text-slate-900">${escapeHTML(item.title)}</p><p class="text-sm text-slate-500">الكمية: ${item.quantity} × ${money(item.price_at_purchase)}</p></div>
-                                <strong class="text-cyan-600">${money(Number(item.quantity) * Number(item.price_at_purchase))}</strong>
+                            <div class="seller-order-line p-4">
+                                <div class="seller-order-line__content"><p class="seller-order-line__title font-bold text-slate-900">${escapeHTML(item.title)}</p><p class="text-sm text-slate-500">الكمية: ${item.quantity} × ${money(item.price_at_purchase)}</p></div>
+                                <strong class="seller-order-line__price text-cyan-600">${money(Number(item.quantity) * Number(item.price_at_purchase))}</strong>
                             </div>
                         `).join('') || '<p class="p-4 text-slate-500">لا توجد منتجات لهذا البائع.</p>'}
                     </div>
@@ -159,7 +160,7 @@
         }
 
         function detailItem(label, value) {
-            return `<div class="bg-slate-50 border border-slate-100 rounded-md p-4"><span class="block text-slate-400 text-xs mb-1">${escapeHTML(label)}</span><strong class="text-slate-800">${escapeHTML(value)}</strong></div>`;
+            return `<div class="min-w-0 bg-slate-50 border border-slate-100 rounded-md p-4"><span class="block text-slate-400 text-xs mb-1">${escapeHTML(label)}</span><strong class="text-slate-800 break-words">${escapeHTML(value)}</strong></div>`;
         }
 
         function closeOrderDetails() {

@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
 
     <script>
         tailwind.config = {
@@ -28,12 +29,50 @@
     </script>
 
     <style>
-        html, body { max-width: 100%; overflow-x: hidden; }
-        body { background-color: #F8FAFC; }
-        .custom-scrollbar::-webkit-scrollbar { height: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            background-color: #F8FAFC;
+        }
+
+        img,
+        video,
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 999px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .safe-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
     </style>
 </head>
 
@@ -41,20 +80,20 @@
 
     <main class="min-h-screen w-full overflow-x-hidden px-3 pb-6 pt-20 sm:px-4 md:mr-64 md:w-[calc(100%-16rem)] md:pt-6 lg:px-6 lg:py-8">
 
-        <div id="toast" class="fixed top-20 left-1/2 z-[80] flex -translate-x-1/2 -translate-y-4 items-center gap-2 rounded-xl px-5 py-3 text-sm font-black opacity-0 shadow-xl transition-all duration-300 pointer-events-none md:top-5 md:text-base">
+        <div id="toast" class="pointer-events-none fixed top-20 left-1/2 z-[80] flex -translate-x-1/2 -translate-y-4 items-center gap-2 rounded-xl px-5 py-3 text-sm font-black opacity-0 shadow-xl transition-all duration-300 md:top-5 md:text-base">
             <i id="toastIcon" class="fas"></i>
             <span id="toastMessage">رسالة الإشعار هنا</span>
         </div>
 
         <header class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div>
+                <div class="min-w-0">
                     <p class="mb-2 text-sm font-black text-primary-600">Admin Panel</p>
-                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">إدارة الطلبات المباشرة</h1>
-                    <p class="mt-2 text-sm font-semibold leading-7 text-slate-500">متابعة وتحديث حالات طلبات العملاء ومراجعة تفاصيل كل طلب.</p>
+                    <h1 class="safe-text text-2xl font-black text-slate-950 sm:text-3xl">إدارة الطلبات المباشرة</h1>
+                    <p class="safe-text mt-2 text-sm font-semibold leading-7 text-slate-500">متابعة وتحديث حالات طلبات العملاء ومراجعة تفاصيل كل طلب.</p>
                 </div>
 
-                <button type="button" onclick="fetchAllOrders()" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                <button type="button" id="refreshDashboardBtn" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
                     <i class="fas fa-sync-alt"></i>
                     تحديث البيانات
                 </button>
@@ -62,29 +101,32 @@
         </header>
 
         <section id="analyticsCards" class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-sm font-bold text-slate-500">إجمالي المبيعات</p>
-                <strong id="totalSales" class="mt-2 block text-2xl font-black text-primary-600">0 ج.م</strong>
+                <strong id="totalSales" class="safe-text mt-2 block text-2xl font-black text-primary-600">0 ج.م</strong>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-sm font-bold text-slate-500">عدد الطلبات</p>
-                <strong id="orderCount" class="mt-2 block text-2xl font-black text-slate-950">0</strong>
+                <strong id="orderCount" class="safe-text mt-2 block text-2xl font-black text-slate-950">0</strong>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-sm font-bold text-slate-500">عدد المنتجات</p>
-                <strong id="productCount" class="mt-2 block text-2xl font-black text-slate-950">0</strong>
+                <strong id="productCount" class="safe-text mt-2 block text-2xl font-black text-slate-950">0</strong>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-sm font-bold text-slate-500">عدد المستخدمين</p>
-                <strong id="userCount" class="mt-2 block text-2xl font-black text-slate-950">0</strong>
+                <strong id="userCount" class="safe-text mt-2 block text-2xl font-black text-slate-950">0</strong>
             </div>
         </section>
 
         <section class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <h2 class="mb-4 flex items-center gap-2 text-xl font-black text-slate-950">
-                <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-ranking-star"></i></span>
-                أفضل المنتجات مبيعًا
+            <h2 class="mb-4 flex min-w-0 items-center gap-2 text-xl font-black text-slate-950">
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                    <i class="fas fa-ranking-star"></i>
+                </span>
+                <span class="safe-text">أفضل المنتجات مبيعًا</span>
             </h2>
+
             <div id="bestProductsList" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 <p class="text-sm font-bold text-slate-500">جاري التحميل...</p>
             </div>
@@ -92,11 +134,14 @@
 
         <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
-                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600"><i class="fas fa-receipt"></i></span>
-                    الطلبات
+                <h2 class="flex min-w-0 items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                        <i class="fas fa-receipt"></i>
+                    </span>
+                    <span class="safe-text">الطلبات</span>
                 </h2>
-                <p class="text-sm font-bold text-slate-500">على الموبايل تظهر ككروت، وعلى الديسكتوب تظهر كجدول.</p>
+
+                <p class="safe-text text-sm font-bold text-slate-500">على الموبايل تظهر ككروت، وعلى الديسكتوب تظهر كجدول.</p>
             </div>
 
             <div id="ordersMobileContainer" class="grid gap-3 lg:hidden">
@@ -134,10 +179,10 @@
     </main>
 
     <div id="orderDetailsModal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-black/50 p-3 sm:p-4">
-        <div class="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+        <div id="orderDetailsBox" class="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
             <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white p-4 sm:p-5">
-                <h2 class="text-lg font-black text-slate-950 sm:text-xl">تفاصيل الطلب</h2>
-                <button type="button" onclick="closeOrderDetails()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 transition hover:bg-slate-200">
+                <h2 class="safe-text text-lg font-black text-slate-950 sm:text-xl">تفاصيل الطلب</h2>
+                <button type="button" data-action="close-modal" aria-label="إغلاق تفاصيل الطلب" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 transition hover:bg-slate-200">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -154,28 +199,59 @@
         const API_URL = '/api';
         let ordersCache = [];
 
+        const STATUS_LIST = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+
+        const STATUS_CLASSES = {
+            Pending: 'bg-warning-50 text-warning-700 border-warning-100',
+            Processing: 'bg-info-50 text-info-700 border-info-100',
+            Shipped: 'bg-purple-50 text-purple-700 border-purple-100',
+            Delivered: 'bg-success-50 text-success-700 border-success-100',
+            Cancelled: 'bg-error-50 text-error-700 border-error-100'
+        };
+
+        const STATUS_LABELS = {
+            Pending: 'قيد المراجعة',
+            Processing: 'جاري التجهيز',
+            Shipped: 'تم الشحن',
+            Delivered: 'تم التوصيل',
+            Cancelled: 'ملغي'
+        };
+
         if (typeof window.loadAdminSidebar === 'function') {
-            window.loadAdminSidebar('dashboard');
+            window.loadAdminSidebar('orders');
         }
 
-        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag]));
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
+
+        function safeDomId(value) {
+            return String(value ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
+        }
+
+        function getPayloadOrderId(orderId) {
+            const value = String(orderId ?? '');
+            return /^\d+$/.test(value) ? Number(value) : value;
+        }
 
         function getToken() {
             if (window.AppState && typeof window.AppState.getToken === 'function') {
                 return window.AppState.getToken();
             }
+
             return localStorage.getItem('spider_token') || localStorage.getItem('token');
         }
 
         function showToast(message, type = 'success') {
             if (window.AppUI && typeof window.AppUI.toast === 'function') {
-                return window.AppUI.toast(message, type);
+                window.AppUI.toast(message, type);
+                return;
             }
 
             const toast = document.getElementById('toast');
@@ -184,83 +260,59 @@
 
             if (!toast || !toastIcon || !toastMessage) return;
 
-            toast.className = 'fixed top-20 left-1/2 z-[80] flex -translate-x-1/2 -translate-y-4 items-center gap-2 rounded-xl px-5 py-3 text-sm font-black opacity-0 shadow-xl transition-all duration-300 pointer-events-none md:top-5 md:text-base';
+            toast.className = 'pointer-events-none fixed top-20 left-1/2 z-[80] flex -translate-x-1/2 -translate-y-4 items-center gap-2 rounded-xl border px-5 py-3 text-sm font-black opacity-0 shadow-xl transition-all duration-300 md:top-5 md:text-base';
             toastIcon.className = 'fas text-lg';
 
             if (type === 'success') {
-                toast.classList.add('bg-success-50', 'text-success-700', 'border', 'border-success-100');
+                toast.classList.add('bg-success-50', 'text-success-700', 'border-success-100');
                 toastIcon.classList.add('fa-check-circle');
             } else {
-                toast.classList.add('bg-error-50', 'text-error-700', 'border', 'border-error-100');
+                toast.classList.add('bg-error-50', 'text-error-700', 'border-error-100');
                 toastIcon.classList.add('fa-exclamation-circle');
             }
 
             toastMessage.textContent = message;
             toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
 
-            setTimeout(() => {
+            window.clearTimeout(showToast.timer);
+            showToast.timer = window.setTimeout(() => {
                 toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
             }, 3000);
         }
 
         async function fetchJson(url, options = {}) {
             const response = await fetch(url, options);
-            const data = await response.json().catch(() => ({}));
-            return { response, data };
-        }
+            const text = await response.text();
 
-        async function fetchAllOrders() {
-            const token = getToken();
-            if (!token) {
-                window.location.href = '../auth/login.html';
-                return;
-            }
-
-            renderOrdersLoading();
+            let data = {};
 
             try {
-                const { response, data } = await fetchJson(`${API_URL}/orders/all`, {
-                    method: 'GET',
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-
-                if (response.ok && data.success !== false) {
-                    ordersCache = Array.isArray(data.data) ? data.data : [];
-                    renderAdminOrders(ordersCache);
-                } else {
-                    renderOrdersError(data.message || 'لست بصلاحية مسؤول (Admin)');
-                }
+                data = text ? JSON.parse(text) : {};
             } catch (error) {
-                renderOrdersError('حدث خطأ في الاتصال بالسيرفر');
+                console.error('[Non JSON Response]', {
+                    url,
+                    status: response.status,
+                    text
+                });
             }
+
+            return { response, data, text };
         }
 
-        async function fetchAnalytics() {
-            const token = getToken();
-            if (!token) return;
+        function extractArrayResponse(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.orders)) return data.orders;
+            if (Array.isArray(data.result)) return data.result;
+            return [];
+        }
 
-            try {
-                const { response, data } = await fetchJson(`${API_URL}/admin/analytics`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+        function getStatusClasses(status) {
+            return STATUS_CLASSES[status] || 'bg-slate-50 text-slate-700 border-slate-100';
+        }
 
-                if (!response.ok || data.success === false) return;
-
-                const analytics = data.data || {};
-                document.getElementById('totalSales').textContent = `${Number(analytics.total_sales || 0).toFixed(2)} ج.م`;
-                document.getElementById('orderCount').textContent = analytics.order_count || 0;
-                document.getElementById('productCount').textContent = analytics.product_count || 0;
-                document.getElementById('userCount').textContent = analytics.user_count || 0;
-
-                const best = analytics.best_products || [];
-                document.getElementById('bestProductsList').innerHTML = best.length ? best.map(item => `
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <p class="line-clamp-1 font-black text-slate-800">${escapeHTML(item.title || 'منتج')}</p>
-                        <p class="mt-1 text-sm font-bold text-slate-500">${Number(item.sold_quantity || 0)} قطعة</p>
-                        <p class="text-sm font-black text-primary-600">${Number(item.sales_total || 0).toFixed(2)} ج.م</p>
-                    </div>
-                `).join('') : '<p class="text-sm font-bold text-slate-500">لا توجد مبيعات بعد.</p>';
-            } catch (error) {}
+        function statusLabel(status) {
+            return STATUS_LABELS[status] || 'غير معروف';
         }
 
         function renderOrdersLoading() {
@@ -289,6 +341,7 @@
         }
 
         function renderOrdersError(message) {
+            const safeMessage = escapeHTML(message || 'حدث خطأ غير معروف');
             const mobile = document.getElementById('ordersMobileContainer');
             const table = document.getElementById('adminOrdersContainer');
 
@@ -296,48 +349,126 @@
                 mobile.innerHTML = `
                     <div class="rounded-2xl border border-error-100 bg-error-50 p-8 text-center text-error-700">
                         <i class="fas fa-triangle-exclamation mb-3 text-4xl"></i>
-                        <p class="font-black">${escapeHTML(message)}</p>
+                        <p class="safe-text font-black">${safeMessage}</p>
                     </div>
                 `;
             }
 
             if (table) {
-                table.innerHTML = `<tr><td colspan="6" class="p-12 text-center font-black text-error-700">${escapeHTML(message)}</td></tr>`;
+                table.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-12 text-center font-black text-error-700">
+                            ${safeMessage}
+                        </td>
+                    </tr>
+                `;
             }
         }
 
-        function getStatusClasses(status) {
-            if (status === 'Pending') return 'bg-warning-50 text-warning-700 border-warning-100';
-            if (status === 'Processing') return 'bg-info-50 text-info-700 border-info-100';
-            if (status === 'Shipped') return 'bg-purple-50 text-purple-700 border-purple-100';
-            if (status === 'Delivered') return 'bg-success-50 text-success-700 border-success-100';
-            if (status === 'Cancelled') return 'bg-error-50 text-error-700 border-error-100';
-            return 'bg-slate-50 text-slate-700 border-slate-100';
+        async function fetchAllOrders() {
+            const token = getToken();
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            renderOrdersLoading();
+
+            try {
+                const { response, data } = await fetchJson(`${API_URL}/orders/all`, {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '../auth/login.html';
+                    return;
+                }
+
+                if (response.ok && data.success !== false) {
+                    ordersCache = extractArrayResponse(data);
+                    renderAdminOrders(ordersCache);
+                } else {
+                    console.error('[Fetch Orders Error]', response.status, data);
+                    renderOrdersError(data.message || 'لست بصلاحية مسؤول Admin أو حدث خطأ أثناء تحميل الطلبات');
+                }
+            } catch (error) {
+                console.error('[Fetch Orders Network Error]', error);
+                renderOrdersError('حدث خطأ في الاتصال بالسيرفر');
+            }
         }
 
-        function statusLabel(status) {
-            return {
-                Pending: 'قيد المراجعة',
-                Processing: 'جاري التجهيز',
-                Shipped: 'تم الشحن',
-                Delivered: 'تم التوصيل',
-                Cancelled: 'ملغي'
-            }[status] || status || 'Pending';
+        async function fetchAnalytics() {
+            const token = getToken();
+            if (!token) return;
+
+            try {
+                const { response, data } = await fetchJson(`${API_URL}/admin/analytics`, {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok || data.success === false) {
+                    console.error('[Analytics Error]', response.status, data);
+                    return;
+                }
+
+                const analytics = data.data || data || {};
+
+                document.getElementById('totalSales').textContent = `${Number(analytics.total_sales || 0).toFixed(2)} ج.م`;
+                document.getElementById('orderCount').textContent = analytics.order_count || 0;
+                document.getElementById('productCount').textContent = analytics.product_count || 0;
+                document.getElementById('userCount').textContent = analytics.user_count || 0;
+
+                const best = Array.isArray(analytics.best_products) ? analytics.best_products : [];
+                const bestProductsList = document.getElementById('bestProductsList');
+
+                bestProductsList.innerHTML = best.length ? best.map(item => `
+                    <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="safe-text line-clamp-1 font-black text-slate-800">${escapeHTML(item.title || 'منتج')}</p>
+                        <p class="mt-1 text-sm font-bold text-slate-500">${Number(item.sold_quantity || 0)} قطعة</p>
+                        <p class="safe-text text-sm font-black text-primary-600">${Number(item.sales_total || 0).toFixed(2)} ج.م</p>
+                    </div>
+                `).join('') : '<p class="text-sm font-bold text-slate-500">لا توجد مبيعات بعد.</p>';
+            } catch (error) {
+                console.error('[Analytics Network Error]', error);
+            }
+        }
+
+        function refreshDashboard() {
+            fetchAnalytics();
+            fetchAllOrders();
         }
 
         function renderAdminOrders(orders) {
             const table = document.getElementById('adminOrdersContainer');
             const mobile = document.getElementById('ordersMobileContainer');
 
-            if (!orders.length) {
-                const empty = `
+            if (!Array.isArray(orders) || !orders.length) {
+                const emptyMobile = `
                     <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center text-slate-500">
                         <i class="fas fa-box-open mb-4 text-5xl text-slate-300"></i>
                         <p class="text-lg font-black">لا توجد طلبات في المتجر حاليًا.</p>
                     </div>
                 `;
-                if (mobile) mobile.innerHTML = empty;
-                if (table) table.innerHTML = '<tr><td colspan="6" class="p-12 text-center text-slate-500 font-black">لا توجد طلبات في المتجر حاليًا.</td></tr>';
+
+                if (mobile) mobile.innerHTML = emptyMobile;
+
+                if (table) {
+                    table.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="p-12 text-center text-slate-500 font-black">
+                                لا توجد طلبات في المتجر حاليًا.
+                            </td>
+                        </tr>
+                    `;
+                }
+
                 return;
             }
 
@@ -350,45 +481,99 @@
             }
         }
 
+        function statusSelect(order, view) {
+            const status = STATUS_LIST.includes(order.status) ? order.status : 'Pending';
+            const selectId = `status-${view}-${safeDomId(order.id)}`;
+
+            return `
+                <select
+                    id="${escapeHTML(selectId)}"
+                    data-status-select="true"
+                    data-order-id="${escapeHTML(order.id)}"
+                    data-view="${escapeHTML(view)}"
+                    class="h-11 min-w-0 w-full rounded-xl border px-3 text-sm font-black outline-none transition focus:ring-2 ${getStatusClasses(status)}"
+                >
+                    ${STATUS_LIST.map(item => `
+                        <option value="${escapeHTML(item)}" ${status === item ? 'selected' : ''}>
+                            ${escapeHTML(statusLabel(item))}
+                        </option>
+                    `).join('')}
+                </select>
+            `;
+        }
+
         function renderMobileOrderCard(order) {
-            const status = order.status || 'Pending';
+            const status = STATUS_LIST.includes(order.status) ? order.status : 'Pending';
             const customerName = order.full_name || 'غير مسجل';
             const customerPhone = order.phone || 'غير مسجل';
             const totalAmount = Number(order.total_amount || 0).toFixed(2);
 
             return `
-                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div class="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                            <button type="button" onclick="openOrderDetails(${Number(order.id)})" class="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-black text-slate-700">#${escapeHTML(order.id)}</button>
-                            <h3 class="mt-3 text-base font-black text-slate-950">${escapeHTML(customerName)}</h3>
-                            <p class="mt-1 text-sm font-bold text-slate-500" dir="ltr">${escapeHTML(customerPhone)}</p>
+                <article class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="mb-3 flex min-w-0 items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <button
+                                type="button"
+                                data-action="open-details"
+                                data-order-id="${escapeHTML(order.id)}"
+                                class="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-black text-slate-700"
+                            >
+                                #${escapeHTML(order.id)}
+                            </button>
+
+                            <h3 class="safe-text mt-3 text-base font-black text-slate-950">${escapeHTML(customerName)}</h3>
+                            <p class="safe-text mt-1 text-sm font-bold text-slate-500" dir="ltr">${escapeHTML(customerPhone)}</p>
                         </div>
-                        <span class="rounded-full border px-3 py-1 text-xs font-black ${getStatusClasses(status)}">${statusLabel(status)}</span>
+
+                        <span class="shrink-0 rounded-full border px-3 py-1 text-xs font-black ${getStatusClasses(status)}">
+                            ${escapeHTML(statusLabel(status))}
+                        </span>
                     </div>
 
                     <div class="mb-3 rounded-xl bg-slate-50 p-3">
                         <p class="mb-1 text-xs font-black text-slate-400">العنوان</p>
-                        <p class="line-clamp-2 text-sm font-bold text-slate-600">${escapeHTML(order.shipping_address || 'لم يتم تحديد عنوان')}</p>
+                        <p class="safe-text line-clamp-2 text-sm font-bold text-slate-600">${escapeHTML(order.shipping_address || 'لم يتم تحديد عنوان')}</p>
                     </div>
 
-                    <div class="mb-4 flex items-center justify-between rounded-xl bg-primary-50 p-3">
-                        <span class="text-sm font-black text-slate-700">الإجمالي</span>
-                        <strong class="text-lg font-black text-primary-600">${totalAmount} ج.م</strong>
+                    <div class="mb-4 flex items-center justify-between gap-3 rounded-xl bg-primary-50 p-3">
+                        <span class="shrink-0 text-sm font-black text-slate-700">الإجمالي</span>
+                        <strong class="safe-text text-lg font-black text-primary-600">${totalAmount} ج.م</strong>
                     </div>
 
-                    <div class="grid grid-cols-[1fr_auto_auto] gap-2">
-                        ${statusSelect(order)}
-                        <button type="button" onclick="updateStatus(${Number(order.id)})" class="grid h-11 w-11 place-items-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600 transition hover:bg-primary-600 hover:text-white" title="حفظ التعديل">
+                    <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
+                        ${statusSelect(order, 'mobile')}
+
+                        <button
+                            type="button"
+                            data-action="update-status"
+                            data-order-id="${escapeHTML(order.id)}"
+                            data-view="mobile"
+                            class="grid h-11 w-11 place-items-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600 transition hover:bg-primary-600 hover:text-white"
+                            title="حفظ التعديل"
+                            aria-label="حفظ تعديل حالة الطلب"
+                        >
                             <i class="fas fa-save"></i>
                         </button>
-                        <button type="button" onclick="openOrderDetails(${Number(order.id)})" class="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-700 hover:text-white" title="التفاصيل">
+
+                        <button
+                            type="button"
+                            data-action="open-details"
+                            data-order-id="${escapeHTML(order.id)}"
+                            class="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-700 hover:text-white"
+                            title="التفاصيل"
+                            aria-label="عرض تفاصيل الطلب"
+                        >
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
 
                     ${status !== 'Cancelled' && status !== 'Delivered' ? `
-                        <button type="button" onclick="cancelOrder(${Number(order.id)})" class="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-error-100 bg-error-50 text-sm font-black text-error-700 transition hover:bg-error-500 hover:text-white">
+                        <button
+                            type="button"
+                            data-action="cancel-order"
+                            data-order-id="${escapeHTML(order.id)}"
+                            class="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-error-100 bg-error-50 text-sm font-black text-error-700 transition hover:bg-error-500 hover:text-white"
+                        >
                             <i class="fas fa-ban"></i>
                             إلغاء الطلب
                         </button>
@@ -398,7 +583,7 @@
         }
 
         function renderDesktopOrderRow(order) {
-            const status = order.status || 'Pending';
+            const status = STATUS_LIST.includes(order.status) ? order.status : 'Pending';
             const customerName = order.full_name || 'غير مسجل';
             const customerPhone = order.phone || 'غير مسجل';
             const totalAmount = Number(order.total_amount || 0).toFixed(2);
@@ -406,52 +591,115 @@
             return `
                 <tr class="transition hover:bg-slate-50">
                     <td class="p-4 font-bold text-slate-800">
-                        <button type="button" onclick="openOrderDetails(${Number(order.id)})" class="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-black text-slate-700 transition hover:bg-white">#${escapeHTML(order.id)}</button>
-                    </td>
-                    <td class="p-4">
-                        <button type="button" onclick="openOrderDetails(${Number(order.id)})" class="flex items-center gap-3 text-right">
-                            <span class="grid h-10 w-10 place-items-center rounded-full bg-primary-100 text-primary-600"><i class="fas fa-user"></i></span>
-                            <span class="font-black text-slate-700">${escapeHTML(customerName)}</span>
+                        <button
+                            type="button"
+                            data-action="open-details"
+                            data-order-id="${escapeHTML(order.id)}"
+                            class="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-black text-slate-700 transition hover:bg-white"
+                        >
+                            #${escapeHTML(order.id)}
                         </button>
                     </td>
-                    <td class="p-4 font-bold text-slate-600" dir="ltr">${escapeHTML(customerPhone)}</td>
+
+                    <td class="p-4">
+                        <button
+                            type="button"
+                            data-action="open-details"
+                            data-order-id="${escapeHTML(order.id)}"
+                            class="flex min-w-0 items-center gap-3 text-right"
+                        >
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-100 text-primary-600">
+                                <i class="fas fa-user"></i>
+                            </span>
+
+                            <span class="safe-text font-black text-slate-700">${escapeHTML(customerName)}</span>
+                        </button>
+                    </td>
+
+                    <td class="safe-text p-4 font-bold text-slate-600" dir="ltr">${escapeHTML(customerPhone)}</td>
+
                     <td class="max-w-[260px] truncate p-4 text-slate-500" title="${escapeHTML(order.shipping_address || '')}">
                         <i class="fas fa-map-marker-alt ml-1 text-slate-400"></i>
                         ${escapeHTML(order.shipping_address || 'لم يتم تحديد عنوان')}
                     </td>
-                    <td class="p-4 text-lg font-black text-primary-600">${totalAmount} <span class="text-sm text-slate-500">ج.م</span></td>
+
+                    <td class="safe-text p-4 text-lg font-black text-primary-600">
+                        ${totalAmount}
+                        <span class="text-sm text-slate-500">ج.م</span>
+                    </td>
+
                     <td class="p-4">
                         <div class="flex items-center justify-center gap-2">
-                            <div class="w-full max-w-[170px]">${statusSelect(order)}</div>
-                            <button type="button" onclick="updateStatus(${Number(order.id)})" class="grid h-10 w-10 place-items-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600 transition hover:bg-primary-600 hover:text-white" title="حفظ التعديل"><i class="fas fa-save"></i></button>
-                            <button type="button" onclick="openOrderDetails(${Number(order.id)})" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-700 hover:text-white" title="التفاصيل"><i class="fas fa-eye"></i></button>
-                            ${status !== 'Cancelled' && status !== 'Delivered' ? `<button type="button" onclick="cancelOrder(${Number(order.id)})" class="grid h-10 w-10 place-items-center rounded-xl border border-error-100 bg-error-50 text-error-600 transition hover:bg-error-500 hover:text-white" title="إلغاء الطلب"><i class="fas fa-ban"></i></button>` : ''}
+                            <div class="w-full max-w-[170px] min-w-0">
+                                ${statusSelect(order, 'desktop')}
+                            </div>
+
+                            <button
+                                type="button"
+                                data-action="update-status"
+                                data-order-id="${escapeHTML(order.id)}"
+                                data-view="desktop"
+                                class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary-100 bg-primary-50 text-primary-600 transition hover:bg-primary-600 hover:text-white"
+                                title="حفظ التعديل"
+                                aria-label="حفظ تعديل حالة الطلب"
+                            >
+                                <i class="fas fa-save"></i>
+                            </button>
+
+                            <button
+                                type="button"
+                                data-action="open-details"
+                                data-order-id="${escapeHTML(order.id)}"
+                                class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-700 hover:text-white"
+                                title="التفاصيل"
+                                aria-label="عرض تفاصيل الطلب"
+                            >
+                                <i class="fas fa-eye"></i>
+                            </button>
+
+                            ${status !== 'Cancelled' && status !== 'Delivered' ? `
+                                <button
+                                    type="button"
+                                    data-action="cancel-order"
+                                    data-order-id="${escapeHTML(order.id)}"
+                                    class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-error-100 bg-error-50 text-error-600 transition hover:bg-error-500 hover:text-white"
+                                    title="إلغاء الطلب"
+                                    aria-label="إلغاء الطلب"
+                                >
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                            ` : ''}
                         </div>
                     </td>
                 </tr>
             `;
         }
 
-        function statusSelect(order) {
-            const status = order.status || 'Pending';
-            const statuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
-
-            return `
-                <select id="status-${Number(order.id)}" class="h-11 w-full rounded-xl border px-3 text-sm font-black outline-none transition focus:ring-2 ${getStatusClasses(status)}">
-                    ${statuses.map(item => `<option value="${item}" ${status === item ? 'selected' : ''}>${statusLabel(item)}</option>`).join('')}
-                </select>
-            `;
-        }
-
         function openOrderDetails(orderId) {
-            const order = ordersCache.find(item => Number(item.id) === Number(orderId));
-            if (!order) return showToast('لم يتم العثور على الطلب', 'error');
+            const order = ordersCache.find(item => String(item.id) === String(orderId));
+
+            if (!order) {
+                showToast('لم يتم العثور على الطلب', 'error');
+                return;
+            }
 
             const items = Array.isArray(order.items) ? order.items : [];
-            const subtotal = Number(order.subtotal || items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price_at_purchase || 0), 0));
-            const shipping = Number(order.shipping_amount ?? Math.max(0, Number(order.total_amount || 0) - subtotal));
+            const subtotal = Number(
+                order.subtotal ??
+                items.reduce((sum, item) => {
+                    return sum + Number(item.quantity || 0) * Number(item.price_at_purchase || 0);
+                }, 0)
+            );
 
-            document.getElementById('orderDetailsContent').innerHTML = `
+            const shipping = Number(
+                order.shipping_amount ??
+                Math.max(0, Number(order.total_amount || 0) - subtotal)
+            );
+
+            const orderDetailsContent = document.getElementById('orderDetailsContent');
+            const orderDetailsModal = document.getElementById('orderDetailsModal');
+
+            orderDetailsContent.innerHTML = `
                 <div class="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
                     ${detailItem('رقم الطلب', `#${order.id}`)}
                     ${detailItem('اسم العميل', order.full_name || 'غير مسجل')}
@@ -467,15 +715,24 @@
                 <div class="mb-5 overflow-hidden rounded-xl border border-slate-200">
                     <div class="bg-slate-50 p-4 font-black text-slate-950">المنتجات داخل الطلب</div>
                     <div class="divide-y divide-slate-100">
-                        ${items.map(item => `
-                            <div class="flex flex-col gap-2 p-4 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                    <p class="font-black text-slate-950">${escapeHTML(item.title)}</p>
-                                    <p class="text-sm font-bold text-slate-500">البائع: ${escapeHTML(item.seller_name || '-')} - الكمية: ${Number(item.quantity || 0)} × ${Number(item.price_at_purchase || 0).toFixed(2)} ج.م</p>
+                        ${items.length ? items.map(item => {
+                            const quantity = Number(item.quantity || 0);
+                            const price = Number(item.price_at_purchase || 0);
+                            const total = quantity * price;
+
+                            return `
+                                <div class="flex min-w-0 flex-col gap-2 p-4 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="min-w-0">
+                                        <p class="safe-text font-black text-slate-950">${escapeHTML(item.title || 'منتج')}</p>
+                                        <p class="safe-text text-sm font-bold text-slate-500">
+                                            البائع: ${escapeHTML(item.seller_name || '-')} - الكمية: ${quantity} × ${price.toFixed(2)} ج.م
+                                        </p>
+                                    </div>
+
+                                    <strong class="safe-text shrink-0 text-primary-600">${total.toFixed(2)} ج.م</strong>
                                 </div>
-                                <strong class="text-primary-600">${(Number(item.quantity || 0) * Number(item.price_at_purchase || 0)).toFixed(2)} ج.م</strong>
-                            </div>
-                        `).join('') || '<p class="p-4 text-slate-500">لا توجد منتجات.</p>'}
+                            `;
+                        }).join('') : '<p class="p-4 text-slate-500">لا توجد منتجات.</p>'}
                     </div>
                 </div>
 
@@ -486,23 +743,52 @@
                 </div>
             `;
 
-            document.getElementById('orderDetailsModal').classList.remove('hidden');
-            document.getElementById('orderDetailsModal').classList.add('flex');
+            orderDetailsModal.classList.remove('hidden');
+            orderDetailsModal.classList.add('flex');
         }
 
         function detailItem(label, value) {
-            return `<div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><span class="mb-1 block text-xs font-black text-slate-400">${escapeHTML(label)}</span><strong class="break-words text-slate-800">${escapeHTML(value)}</strong></div>`;
+            return `
+                <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <span class="mb-1 block text-xs font-black text-slate-400">${escapeHTML(label)}</span>
+                    <strong class="safe-text text-slate-800">${escapeHTML(value)}</strong>
+                </div>
+            `;
         }
 
         function closeOrderDetails() {
-            document.getElementById('orderDetailsModal').classList.add('hidden');
-            document.getElementById('orderDetailsModal').classList.remove('flex');
+            const modal = document.getElementById('orderDetailsModal');
+
+            if (!modal) return;
+
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
 
-        async function updateStatus(orderId) {
+        async function updateStatus(orderId, view) {
             const token = getToken();
-            const select = document.getElementById(`status-${Number(orderId)}`);
-            const newStatus = select ? select.value : 'Pending';
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            const selectId = `status-${view}-${safeDomId(orderId)}`;
+            const select = document.getElementById(selectId);
+
+            if (!select) {
+                console.error('[Update Status] Select not found:', selectId);
+                showToast('لم يتم العثور على اختيار الحالة', 'error');
+                return;
+            }
+
+            const newStatus = select.value;
+
+            console.log('[Update Status Request]', {
+                orderId,
+                view,
+                newStatus
+            });
 
             try {
                 const { response, data } = await fetchJson(`${API_URL}/orders/update-status`, {
@@ -511,22 +797,34 @@
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`
                     },
-                    body: JSON.stringify({ order_id: orderId, status: newStatus })
+                    body: JSON.stringify({
+                        order_id: getPayloadOrderId(orderId),
+                        status: newStatus
+                    })
                 });
 
+                console.log('[Update Status Response]', response.status, data);
+
+                if (response.status === 401) {
+                    window.location.href = '../auth/login.html';
+                    return;
+                }
+
                 if (response.ok && data.success !== false) {
-                    showToast('تم تحديث حالة الطلب بنجاح', 'success');
-                    fetchAllOrders();
+                    showToast(data.message || 'تم تحديث حالة الطلب بنجاح', 'success');
+                    refreshDashboard();
                 } else {
                     showToast(data.message || 'عذراً، غير مصرح لك بتحديث الحالة', 'error');
                 }
             } catch (error) {
+                console.error('[Update Status Network Error]', error);
                 showToast('خطأ في الاتصال بالسيرفر، يرجى المحاولة لاحقاً', 'error');
             }
         }
 
         async function cancelOrder(orderId) {
             let ok = true;
+
             if (window.AppUI && typeof window.AppUI.confirmDelete === 'function') {
                 ok = await window.AppUI.confirmDelete('سيظهر الطلب للعميل كطلب ملغي، وسيتم إرجاع الكمية للمخزون.');
             } else {
@@ -537,6 +835,11 @@
 
             const token = getToken();
 
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
             try {
                 const { response, data } = await fetchJson(`${API_URL}/orders/cancel`, {
                     method: 'POST',
@@ -544,26 +847,109 @@
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`
                     },
-                    body: JSON.stringify({ order_id: orderId })
+                    body: JSON.stringify({
+                        order_id: getPayloadOrderId(orderId)
+                    })
                 });
 
-                showToast(data.message || (response.ok ? 'تم إلغاء الطلب' : 'تعذر إلغاء الطلب'), response.ok ? 'success' : 'error');
-                fetchAnalytics();
-                fetchAllOrders();
+                console.log('[Cancel Order Response]', response.status, data);
+
+                if (response.status === 401) {
+                    window.location.href = '../auth/login.html';
+                    return;
+                }
+
+                showToast(
+                    data.message || (response.ok ? 'تم إلغاء الطلب' : 'تعذر إلغاء الطلب'),
+                    response.ok && data.success !== false ? 'success' : 'error'
+                );
+
+                refreshDashboard();
             } catch (error) {
+                console.error('[Cancel Order Network Error]', error);
                 showToast('خطأ في الاتصال بالسيرفر', 'error');
             }
         }
 
+        function handleStatusSelectChange(event) {
+            const select = event.target.closest('[data-status-select="true"]');
+            if (!select) return;
+
+            const baseClasses = [
+                'h-11', 'min-w-0', 'w-full', 'rounded-xl', 'border', 'px-3', 'text-sm',
+                'font-black', 'outline-none', 'transition', 'focus:ring-2'
+            ];
+
+            const allStatusClasses = Object.values(STATUS_CLASSES).join(' ').split(' ');
+            select.className = [...baseClasses, ...getStatusClasses(select.value).split(' ')].join(' ');
+        }
+
+        function handleDocumentClick(event) {
+            const button = event.target.closest('[data-action]');
+            if (!button) return;
+
+            const action = button.dataset.action;
+            const orderId = button.dataset.orderId;
+            const view = button.dataset.view;
+
+            if (action === 'open-details') {
+                openOrderDetails(orderId);
+                return;
+            }
+
+            if (action === 'update-status') {
+                updateStatus(orderId, view);
+                return;
+            }
+
+            if (action === 'cancel-order') {
+                cancelOrder(orderId);
+                return;
+            }
+
+            if (action === 'close-modal') {
+                closeOrderDetails();
+            }
+        }
+
+        function setupEvents() {
+            const refreshBtn = document.getElementById('refreshDashboardBtn');
+            const modal = document.getElementById('orderDetailsModal');
+            const modalBox = document.getElementById('orderDetailsBox');
+
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', refreshDashboard);
+            }
+
+            document.addEventListener('click', handleDocumentClick);
+            document.addEventListener('change', handleStatusSelectChange);
+
+            if (modal) {
+                modal.addEventListener('click', event => {
+                    if (event.target === modal) {
+                        closeOrderDetails();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    closeOrderDetails();
+                }
+            });
+        }
+
         window.fetchAllOrders = fetchAllOrders;
+        window.fetchAnalytics = fetchAnalytics;
+        window.refreshDashboard = refreshDashboard;
         window.openOrderDetails = openOrderDetails;
         window.closeOrderDetails = closeOrderDetails;
         window.updateStatus = updateStatus;
         window.cancelOrder = cancelOrder;
 
         window.addEventListener('load', () => {
-            fetchAnalytics();
-            fetchAllOrders();
+            setupEvents();
+            refreshDashboard();
         });
     })();
     </script>

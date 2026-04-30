@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
     
     <script>
         tailwind.config = {
@@ -301,10 +302,10 @@
                     return;
                 }
                 container.innerHTML = items.map(item => `
-                    <div class="border border-gray-100 rounded-lg p-4 flex gap-3 items-center">
+                    <div class="border border-gray-100 rounded-lg p-4 flex gap-3 items-center min-w-0">
                         <img src="${item.image_url ? '' + item.image_url : 'https://via.placeholder.com/80'}" class="w-16 h-16 object-contain bg-gray-50 rounded">
                         <div class="flex-1 min-w-0">
-                            <a href="../products/product.html?id=${item.id}" class="font-bold text-gray-800 hover:text-primary-600 line-clamp-1">${escapeHTML(item.title)}</a>
+                            <a href="../products/product.html?id=${item.id}" class="product-card-title font-bold text-gray-800 hover:text-primary-600 line-clamp-2">${escapeHTML(item.title)}</a>
                             <p class="text-primary-600 font-bold">${item.price || 0} ج.م</p>
                         </div>
                     </div>
@@ -454,7 +455,7 @@
                 const safeAddress = escapeHTML(order.shipping_address);
 
                 html += `
-                    <div class="border border-gray-200 rounded-lg p-5 hover:border-primary-500 transition-colors">
+                    <div class="min-w-0 border border-gray-200 rounded-lg p-4 sm:p-5 hover:border-primary-500 transition-colors">
                         <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4 border-b border-gray-100 pb-4">
                             <div>
                                 <h3 class="font-bold text-gray-900">طلب رقم #${order.id}</h3>
@@ -466,12 +467,12 @@
                             </div>
                         </div>
                         
-                        <div class="flex justify-between items-end mt-4">
-                            <div class="text-sm text-gray-600 max-w-[70%]">
+                        <div class="flex flex-col gap-4 mt-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div class="min-w-0 text-sm text-gray-600">
                                 <strong class="block mb-1">عنوان الشحن:</strong> 
                                 <span class="leading-relaxed">${safeAddress}</span>
                             </div>
-                            <div class="text-left min-w-fit">
+                            <div class="shrink-0 text-right sm:text-left">
                                 <p class="text-sm text-gray-500 mb-1">الإجمالي</p>
                                 <p class="font-bold text-lg text-primary-600">${order.total_amount || '0'} ج.م</p>
                                 ${['Pending', 'Processing'].includes(order.status || 'Pending') ? `<button type="button" onclick="cancelMyOrder(${order.id})" class="mt-3 text-sm bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 rounded-md font-bold transition">إلغاء الطلب</button>` : ''}

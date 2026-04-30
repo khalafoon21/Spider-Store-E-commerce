@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
 
     <script>
         tailwind.config = {
@@ -18,7 +19,8 @@
                         primary: { 50: '#ECFEFF', 100: '#CFFAFE', 500: '#06B6D4', 600: '#0891B2', 700: '#0E7490' },
                         success: { 50: '#F0FDF4', 100: '#DCFCE7', 500: '#22C55E', 600: '#16A34A' },
                         error: { 50: '#FEF2F2', 100: '#FEE2E2', 500: '#EF4444', 600: '#DC2626' },
-                        warning: { 50: '#FFFBEB', 100: '#FEF3C7', 500: '#F59E0B', 600: '#D97706' }
+                        warning: { 50: '#FFFBEB', 100: '#FEF3C7', 500: '#F59E0B', 600: '#D97706' },
+                        info: { 50: '#EFF6FF', 100: '#DBEAFE', 500: '#3B82F6', 600: '#2563EB' }
                     }
                 }
             }
@@ -26,9 +28,60 @@
     </script>
 
     <style>
-        body { background-color: #F8FAFC; }
-        @keyframes shrinkProgress { from { width: 100%; } to { width: 0%; } }
-        .animate-progress { animation: shrinkProgress 3s linear forwards; }
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            background-color: #F8FAFC;
+        }
+
+        img,
+        video,
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @keyframes shrinkProgress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        .animate-progress {
+            animation: shrinkProgress 3s linear forwards;
+        }
+
+        .safe-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 999px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
 
@@ -38,16 +91,16 @@
     <script src="../../components/ui-feedback.js"></script>
     <script src="../../components/admin-sidebar.js"></script>
 
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
+    <div id="toast-container" class="pointer-events-none fixed bottom-5 left-5 z-[80] flex max-w-[calc(100vw-2.5rem)] flex-col gap-3" aria-live="polite"></div>
 
     <main class="min-h-screen w-full overflow-x-hidden px-3 py-5 sm:px-4 md:mr-64 md:w-[calc(100%-16rem)] lg:px-6 lg:py-8">
 
         <section class="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <div class="min-w-0">
                     <p class="mb-2 text-sm font-black text-primary-600">Admin Panel</p>
-                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">إدارة طلبات البائعين</h1>
-                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+                    <h1 class="safe-text text-2xl font-black text-slate-950 sm:text-3xl">إدارة طلبات البائعين</h1>
+                    <p class="safe-text mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
                         راجع طلبات التسجيل كبائع، وافق على الطلبات المناسبة أو ارفض الطلبات غير المكتملة.
                     </p>
                 </div>
@@ -58,7 +111,11 @@
                         المنتجات
                     </a>
 
-                    <button type="button" onclick="window.reloadSellerRequests()" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                    <button
+                        type="button"
+                        data-action="reload"
+                        class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
                         <i class="fas fa-rotate-right"></i>
                         تحديث
                     </button>
@@ -66,42 +123,42 @@
             </div>
         </section>
 
-        <section class="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-sm font-bold text-slate-500">إجمالي الطلبات</p>
-                <p id="totalCount" class="mt-2 text-2xl font-black text-slate-950">0</p>
+                <p id="totalCount" class="safe-text mt-2 text-2xl font-black text-slate-950">0</p>
             </div>
 
-            <div class="rounded-2xl border border-warning-100 bg-warning-50 p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-warning-100 bg-warning-50 p-4 shadow-sm">
                 <p class="text-sm font-bold text-warning-600">قيد المراجعة</p>
-                <p id="pendingCount" class="mt-2 text-2xl font-black text-warning-600">0</p>
+                <p id="pendingCount" class="safe-text mt-2 text-2xl font-black text-warning-600">0</p>
             </div>
 
-            <div class="rounded-2xl border border-success-100 bg-success-50 p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-success-100 bg-success-50 p-4 shadow-sm">
                 <p class="text-sm font-bold text-success-600">مقبول</p>
-                <p id="approvedCount" class="mt-2 text-2xl font-black text-success-600">0</p>
+                <p id="approvedCount" class="safe-text mt-2 text-2xl font-black text-success-600">0</p>
             </div>
 
-            <div class="rounded-2xl border border-error-100 bg-error-50 p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-error-100 bg-error-50 p-4 shadow-sm">
                 <p class="text-sm font-bold text-error-600">مرفوض</p>
-                <p id="rejectedCount" class="mt-2 text-2xl font-black text-error-600">0</p>
+                <p id="rejectedCount" class="safe-text mt-2 text-2xl font-black text-error-600">0</p>
             </div>
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
-                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                <h2 class="flex min-w-0 items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600">
                         <i class="fas fa-store"></i>
                     </span>
-                    طلبات التسجيل كبائع
+                    <span class="safe-text">طلبات التسجيل كبائع</span>
                 </h2>
 
                 <div class="flex flex-wrap gap-2">
-                    <button type="button" data-filter="all" class="seller-filter-btn rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-white">الكل</button>
-                    <button type="button" data-filter="pending" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">قيد المراجعة</button>
-                    <button type="button" data-filter="approved" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">مقبول</button>
-                    <button type="button" data-filter="rejected" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">مرفوض</button>
+                    <button type="button" data-action="filter" data-filter="all" class="seller-filter-btn rounded-xl bg-primary-500 px-4 py-2 text-sm font-black text-white">الكل</button>
+                    <button type="button" data-action="filter" data-filter="pending" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">قيد المراجعة</button>
+                    <button type="button" data-action="filter" data-filter="approved" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">مقبول</button>
+                    <button type="button" data-action="filter" data-filter="rejected" class="seller-filter-btn rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">مرفوض</button>
                 </div>
             </div>
 
@@ -117,6 +174,7 @@
     <script>
     (() => {
         const API_URL = '/api';
+        const FILTERS = ['all', 'pending', 'approved', 'rejected'];
 
         let sellerRequests = [];
         let currentFilter = 'all';
@@ -126,13 +184,20 @@
             window.loadAdminSidebar('sellers');
         }
 
-        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag]));
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
+
+        function getPayloadId(value) {
+            const id = String(value ?? '').trim();
+            return /^\d+$/.test(id) ? Number(id) : id;
+        }
 
         function getToken() {
             if (window.AppState && typeof window.AppState.getToken === 'function') {
@@ -144,7 +209,8 @@
 
         function showToast(message, type = 'success') {
             if (window.AppUI && typeof window.AppUI.toast === 'function') {
-                return window.AppUI.toast(message, type);
+                window.AppUI.toast(message, type);
+                return;
             }
 
             const container = document.getElementById('toast-container');
@@ -153,12 +219,12 @@
             const toast = document.createElement('div');
             const isSuccess = type === 'success';
 
-            toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
+            toast.className = `pointer-events-auto relative max-w-sm overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
                 isSuccess ? 'border-success-500' : 'border-error-500'
             }`;
 
             toast.innerHTML = `
-                <p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
+                <p class="safe-text text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
                 <div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100">
                     <div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div>
                 </div>
@@ -170,18 +236,43 @@
 
         async function fetchJson(url, options = {}) {
             const response = await fetch(url, options);
-            const data = await response.json().catch(() => ({}));
-            return { response, data };
+            const text = await response.text();
+
+            let data = {};
+
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (error) {
+                console.error('[Non JSON Response]', {
+                    url,
+                    status: response.status,
+                    text
+                });
+            }
+
+            return { response, data, text };
+        }
+
+        function extractSellerRequests(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.requests)) return data.requests;
+            if (Array.isArray(data.sellers)) return data.sellers;
+            if (Array.isArray(data.result)) return data.result;
+            if (Array.isArray(data.data?.requests)) return data.data.requests;
+            if (Array.isArray(data.data?.sellers)) return data.data.sellers;
+            if (Array.isArray(data.data?.data)) return data.data.data;
+            return [];
         }
 
         function normalizeStatus(status) {
-            const value = String(status || '').toLowerCase().trim();
+            const value = String(status ?? '').toLowerCase().trim();
 
-            if (['approved', 'accepted', 'approve', 'approved_seller'].includes(value)) {
+            if (['approved', 'accepted', 'approve', 'approved_seller', 'active'].includes(value)) {
                 return 'approved';
             }
 
-            if (['rejected', 'reject', 'declined'].includes(value)) {
+            if (['rejected', 'reject', 'declined', 'denied'].includes(value)) {
                 return 'rejected';
             }
 
@@ -215,41 +306,54 @@
         }
 
         function getRequestStatus(request) {
-            return request.request_status || request.status || request.seller_status || 'pending';
+            return request?.request_status || request?.status || request?.seller_status || 'pending';
         }
 
         function getRequestId(request) {
-            return request.request_id || request.seller_request_id || request.id;
+            return String(
+                request?.request_id ??
+                request?.seller_request_id ??
+                request?.sellerRequestId ??
+                request?.id ??
+                ''
+            ).trim();
         }
 
         function getUserName(request) {
             return (
-                request.user_name ||
-                request.full_name ||
-                [request.first_name, request.last_name].filter(Boolean).join(' ') ||
-                request.name ||
+                request?.user_name ||
+                request?.full_name ||
+                [request?.first_name, request?.last_name].filter(Boolean).join(' ') ||
+                request?.name ||
+                request?.username ||
                 'مستخدم'
             );
         }
 
         function getStoreName(request) {
-            return request.request_store_name || request.store_name || request.shop_name || request.business_name || 'غير محدد';
+            return (
+                request?.request_store_name ||
+                request?.store_name ||
+                request?.shop_name ||
+                request?.business_name ||
+                'غير محدد'
+            );
         }
 
         function getDescription(request) {
-            return request.request_description || request.store_description || request.description || '';
+            return request?.request_description || request?.store_description || request?.description || '';
         }
 
         function getEmail(request) {
-            return request.email || request.user_email || 'غير متاح';
+            return request?.email || request?.user_email || 'غير متاح';
         }
 
         function getPhone(request) {
-            return request.phone || request.user_phone || 'غير متاح';
+            return request?.phone || request?.user_phone || 'غير متاح';
         }
 
         function getCreatedAt(request) {
-            const raw = request.request_created_at || request.created_at || request.createdAt || request.requested_at;
+            const raw = request?.request_created_at || request?.created_at || request?.createdAt || request?.requested_at;
 
             if (!raw) return 'غير متاح';
 
@@ -268,6 +372,11 @@
             });
         }
 
+        function setText(id, value) {
+            const element = document.getElementById(id);
+            if (element) element.textContent = String(value);
+        }
+
         function updateStats() {
             const total = sellerRequests.length;
             const pending = sellerRequests.filter(item => normalizeStatus(getRequestStatus(item)) === 'pending').length;
@@ -280,13 +389,8 @@
             setText('rejectedCount', rejected);
         }
 
-        function setText(id, value) {
-            const element = document.getElementById(id);
-            if (element) element.textContent = String(value);
-        }
-
         function setFilter(filter) {
-            currentFilter = filter;
+            currentFilter = FILTERS.includes(filter) ? filter : 'all';
 
             document.querySelectorAll('.seller-filter-btn').forEach(button => {
                 const active = button.dataset.filter === currentFilter;
@@ -297,6 +401,16 @@
             });
 
             renderSellerRequests();
+        }
+
+        function setReloadButtonState(disabled) {
+            const reloadButton = document.querySelector('[data-action="reload"]');
+            if (!reloadButton) return;
+
+            reloadButton.disabled = disabled;
+            reloadButton.innerHTML = disabled
+                ? '<i class="fas fa-circle-notch fa-spin"></i> جاري التحميل...'
+                : '<i class="fas fa-rotate-right"></i> تحديث';
         }
 
         function renderLoading() {
@@ -321,8 +435,12 @@
                         <i class="fas fa-store-slash"></i>
                     </span>
                     <h3 class="text-xl font-black text-slate-950">لا توجد بيانات</h3>
-                    <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">${escapeHTML(message)}</p>
-                    <button type="button" onclick="window.reloadSellerRequests()" class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                    <p class="safe-text mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">${escapeHTML(message)}</p>
+                    <button
+                        type="button"
+                        data-action="reload"
+                        class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600"
+                    >
                         <i class="fas fa-rotate-right"></i>
                         إعادة التحميل
                     </button>
@@ -350,53 +468,54 @@
                 const statusMeta = getStatusMeta(status);
                 const isPending = status === 'pending';
                 const description = getDescription(request);
+                const hasValidId = Boolean(id);
 
                 return `
-                    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-primary-100 hover:shadow-md sm:p-5">
-                        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <article class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-primary-100 hover:shadow-md sm:p-5">
+                        <div class="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div class="min-w-0 flex-1">
-                                <div class="mb-4 flex flex-wrap items-center gap-3">
-                                    <span class="grid h-12 w-12 place-items-center rounded-2xl bg-primary-50 text-primary-600">
+                                <div class="mb-4 flex min-w-0 flex-wrap items-center gap-3">
+                                    <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary-50 text-primary-600">
                                         <i class="fas fa-store"></i>
                                     </span>
 
                                     <div class="min-w-0">
-                                        <h3 class="truncate text-lg font-black text-slate-950">${escapeHTML(getStoreName(request))}</h3>
-                                        <p class="mt-1 text-sm font-bold text-slate-500">مقدم الطلب: ${escapeHTML(getUserName(request))}</p>
+                                        <h3 class="safe-text text-lg font-black text-slate-950">${escapeHTML(getStoreName(request))}</h3>
+                                        <p class="safe-text mt-1 text-sm font-bold text-slate-500">مقدم الطلب: ${escapeHTML(getUserName(request))}</p>
                                     </div>
 
-                                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${statusMeta.className}">
+                                    <span class="inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${statusMeta.className}">
                                         <i class="fas ${statusMeta.icon}"></i>
-                                        ${statusMeta.label}
+                                        ${escapeHTML(statusMeta.label)}
                                     </span>
                                 </div>
 
-                                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                                    <div class="rounded-xl bg-slate-50 p-3">
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                    <div class="min-w-0 rounded-xl bg-slate-50 p-3">
                                         <p class="mb-1 text-xs font-black text-slate-400">البريد الإلكتروني</p>
-                                        <p class="truncate text-sm font-bold text-slate-700" dir="ltr">${escapeHTML(getEmail(request))}</p>
+                                        <p class="safe-text text-sm font-bold text-slate-700" dir="ltr">${escapeHTML(getEmail(request))}</p>
                                     </div>
 
-                                    <div class="rounded-xl bg-slate-50 p-3">
+                                    <div class="min-w-0 rounded-xl bg-slate-50 p-3">
                                         <p class="mb-1 text-xs font-black text-slate-400">الهاتف</p>
-                                        <p class="truncate text-sm font-bold text-slate-700" dir="ltr">${escapeHTML(getPhone(request))}</p>
+                                        <p class="safe-text text-sm font-bold text-slate-700" dir="ltr">${escapeHTML(getPhone(request))}</p>
                                     </div>
 
-                                    <div class="rounded-xl bg-slate-50 p-3">
+                                    <div class="min-w-0 rounded-xl bg-slate-50 p-3">
                                         <p class="mb-1 text-xs font-black text-slate-400">تاريخ الطلب</p>
-                                        <p class="truncate text-sm font-bold text-slate-700">${escapeHTML(getCreatedAt(request))}</p>
+                                        <p class="safe-text text-sm font-bold text-slate-700">${escapeHTML(getCreatedAt(request))}</p>
                                     </div>
 
-                                    <div class="rounded-xl bg-slate-50 p-3">
+                                    <div class="min-w-0 rounded-xl bg-slate-50 p-3">
                                         <p class="mb-1 text-xs font-black text-slate-400">رقم الطلب</p>
-                                        <p class="truncate text-sm font-bold text-slate-700">#${escapeHTML(id || '-')}</p>
+                                        <p class="safe-text text-sm font-bold text-slate-700">#${escapeHTML(id || '-')}</p>
                                     </div>
                                 </div>
 
                                 ${description ? `
                                     <div class="mt-3 rounded-xl bg-slate-50 p-3">
                                         <p class="mb-1 text-xs font-black text-slate-400">وصف المتجر</p>
-                                        <p class="text-sm font-semibold leading-7 text-slate-600">${escapeHTML(description)}</p>
+                                        <p class="safe-text text-sm font-semibold leading-7 text-slate-600">${escapeHTML(description)}</p>
                                     </div>
                                 ` : ''}
                             </div>
@@ -404,8 +523,10 @@
                             <div class="flex shrink-0 flex-col gap-2 sm:flex-row xl:w-52 xl:flex-col">
                                 <button
                                     type="button"
-                                    onclick="window.updateSellerRequestStatus(${Number(id)}, 'approved', this)"
-                                    ${isPending && id ? '' : 'disabled'}
+                                    data-action="update-status"
+                                    data-request-id="${escapeHTML(id)}"
+                                    data-status="approved"
+                                    ${isPending && hasValidId ? '' : 'disabled'}
                                     class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-success-500 px-4 text-sm font-black text-white shadow-lg shadow-green-100 transition hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <i class="fas fa-check"></i>
@@ -414,8 +535,10 @@
 
                                 <button
                                     type="button"
-                                    onclick="window.updateSellerRequestStatus(${Number(id)}, 'rejected', this)"
-                                    ${isPending && id ? '' : 'disabled'}
+                                    data-action="update-status"
+                                    data-request-id="${escapeHTML(id)}"
+                                    data-status="rejected"
+                                    ${isPending && hasValidId ? '' : 'disabled'}
                                     class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-error-500 px-4 text-sm font-black text-white shadow-lg shadow-red-100 transition hover:bg-error-600 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <i class="fas fa-xmark"></i>
@@ -439,16 +562,20 @@
             }
 
             isLoading = true;
+            setReloadButtonState(true);
             renderLoading();
 
             try {
                 const { response, data } = await fetchJson(`${API_URL}/admin/sellers`, {
-                    headers: { Authorization: `Bearer ${token}` }
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
                 });
 
                 if (response.status === 401 || response.status === 403) {
-                    showToast('غير مسموح لك بالدخول لهذه الصفحة', 'error');
-                    window.location.href = '../../index.html';
+                    showToast(data.message || 'غير مسموح لك بالدخول لهذه الصفحة', 'error');
+                    window.location.href = '../auth/login.html';
                     return;
                 }
 
@@ -456,33 +583,37 @@
                     throw new Error(data.message || data.error || 'تعذر تحميل طلبات البائعين');
                 }
 
-                sellerRequests = Array.isArray(data.data)
-                    ? data.data
-                    : Array.isArray(data.requests)
-                        ? data.requests
-                        : Array.isArray(data.sellers)
-                            ? data.sellers
-                            : [];
+                sellerRequests = extractSellerRequests(data);
 
                 updateStats();
                 renderSellerRequests();
             } catch (error) {
-                console.error('Load sellers error:', error);
+                console.error('[Load Sellers Error]', error);
                 sellerRequests = [];
                 updateStats();
                 renderEmptyState(error.message || 'تعذر تحميل طلبات البائعين.');
                 showToast(error.message || 'تعذر تحميل طلبات البائعين', 'error');
             } finally {
                 isLoading = false;
+                setReloadButtonState(false);
             }
         }
 
         async function updateSellerRequestStatus(id, status, button) {
             const token = getToken();
-
-            if (!token || !id || !status || !button) return;
-
+            const requestId = String(id ?? '').trim();
             const normalizedStatus = normalizeStatus(status);
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            if (!requestId || !normalizedStatus || !button) {
+                showToast('بيانات الطلب غير مكتملة', 'error');
+                return;
+            }
+
             const confirmMessage = normalizedStatus === 'approved'
                 ? 'هل تريد الموافقة على هذا الطلب وتحويل المستخدم إلى بائع؟'
                 : 'هل تريد رفض هذا الطلب؟';
@@ -490,26 +621,52 @@
             if (!window.confirm(confirmMessage)) return;
 
             const originalHTML = button.innerHTML;
-            button.disabled = true;
+            const siblingButtons = button.closest('article')?.querySelectorAll('[data-action="update-status"]') || [];
+
+            siblingButtons.forEach(item => {
+                item.disabled = true;
+            });
+
             button.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري التنفيذ...';
 
+            console.log('[Update Seller Request]', {
+                id: requestId,
+                status: normalizedStatus
+            });
+
             try {
-                const { response, data } = await fetchJson(`${API_URL}/admin/seller-requests/${id}`, {
+                const { response, data } = await fetchJson(`${API_URL}/admin/seller-requests/${encodeURIComponent(requestId)}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`
                     },
-                    body: JSON.stringify({ status: normalizedStatus })
+                    body: JSON.stringify({
+                        status: normalizedStatus
+                    })
                 });
+
+                console.log('[Update Seller Request Response]', response.status, data);
+
+                if (response.status === 401 || response.status === 403) {
+                    showToast(data.message || 'غير مصرح لك بتنفيذ العملية', 'error');
+                    window.location.href = '../auth/login.html';
+                    return;
+                }
 
                 if (!response.ok || data.success === false) {
                     throw new Error(data.message || data.error || 'تعذر تحديث حالة الطلب');
                 }
 
                 sellerRequests = sellerRequests.map(request => {
-                    if (Number(getRequestId(request)) !== Number(id)) return request;
-                    return { ...request, status: normalizedStatus, request_status: normalizedStatus };
+                    if (String(getRequestId(request)) !== String(requestId)) return request;
+
+                    return {
+                        ...request,
+                        status: normalizedStatus,
+                        request_status: normalizedStatus,
+                        seller_status: normalizedStatus === 'approved' ? 'approved_seller' : normalizedStatus
+                    };
                 });
 
                 updateStats();
@@ -522,29 +679,50 @@
                     'success'
                 );
             } catch (error) {
-                console.error('Update seller request error:', error);
-                button.disabled = false;
+                console.error('[Update Seller Request Error]', error);
                 button.innerHTML = originalHTML;
+
+                siblingButtons.forEach(item => {
+                    item.disabled = false;
+                });
+
                 showToast(error.message || 'تعذر تحديث حالة الطلب', 'error');
             }
         }
 
-        function wireFilters() {
-            document.querySelectorAll('.seller-filter-btn').forEach(button => {
-                button.addEventListener('click', () => setFilter(button.dataset.filter || 'all'));
-            });
+        function handleDocumentClick(event) {
+            const button = event.target.closest('[data-action]');
+            if (!button) return;
+
+            const action = button.dataset.action;
+
+            if (action === 'reload') {
+                loadSellerRequests();
+                return;
+            }
+
+            if (action === 'filter') {
+                setFilter(button.dataset.filter || 'all');
+                return;
+            }
+
+            if (action === 'update-status') {
+                updateSellerRequestStatus(button.dataset.requestId, button.dataset.status, button);
+            }
+        }
+
+        function setupEvents() {
+            document.addEventListener('click', handleDocumentClick);
         }
 
         window.reloadSellerRequests = loadSellerRequests;
         window.updateSellerRequestStatus = updateSellerRequestStatus;
 
+        setupEvents();
+
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                wireFilters();
-                loadSellerRequests();
-            }, { once: true });
+            document.addEventListener('DOMContentLoaded', loadSellerRequests, { once: true });
         } else {
-            wireFilters();
             loadSellerRequests();
         }
     })();

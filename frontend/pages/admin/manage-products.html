@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
 
     <script>
         tailwind.config = {
@@ -57,7 +58,28 @@
     </script>
 
     <style>
+        * { box-sizing: border-box; }
+
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body { background-color: #F8FAFC; }
+
+        img,
+        video,
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .safe-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
 
         @keyframes shrinkProgress {
             from { width: 100%; }
@@ -93,14 +115,14 @@
 
     <main class="min-h-screen w-full overflow-x-hidden px-3 pb-6 pt-28 sm:px-4 sm:pt-28 md:mr-64 md:w-[calc(100%-16rem)] md:pt-6 lg:px-6 lg:py-8">
 
-        <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
+        <div id="toast-container" class="pointer-events-none fixed bottom-5 left-5 z-[80] flex max-w-[calc(100vw-2.5rem)] flex-col gap-3" aria-live="polite"></div>
 
         <header class="mb-5 scroll-mt-28 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <div class="min-w-0">
                     <p class="mb-2 text-sm font-black text-primary-600">Admin Panel</p>
-                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">إدارة المنتجات</h1>
-                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+                    <h1 class="safe-text text-2xl font-black text-slate-950 sm:text-3xl">إدارة المنتجات</h1>
+                    <p class="safe-text mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
                         عرض وتعديل وحذف ومراجعة منتجات الأدمن والبائعين.
                     </p>
                 </div>
@@ -145,11 +167,11 @@
 
         <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="mb-4 flex items-center justify-between gap-3">
-                <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
+                <h2 class="flex min-w-0 items-center gap-2 text-xl font-black text-slate-950">
                     <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600">
                         <i class="fas fa-boxes-stacked"></i>
                     </span>
-                    قائمة المنتجات
+                    <span class="safe-text">قائمة المنتجات</span>
                 </h2>
             </div>
 
@@ -273,6 +295,7 @@
         const API_URL = '/api';
         const BASE_SERVER = '';
         const MAX_IMAGES = 8;
+        const VALID_PRODUCT_STATUSES = ['pending', 'approved', 'rejected'];
 
         let productToDelete = null;
         let productsCache = [];
@@ -280,21 +303,38 @@
         let currentStatusFilter = '';
         let editExistingImages = [];
         let editNewImages = [];
+        let productsRequestSeq = 0;
+        let deleteTimer = null;
+        let editTimer = null;
         const featuredUpdatingIds = new Set();
 
         if (typeof window.loadAdminSidebar === 'function') {
             window.loadAdminSidebar('manage-products');
         }
 
-        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag]));
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
 
-        const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+        function safeText(value, fallback = '') {
+            const text = String(value ?? '').trim();
+            return text || fallback;
+        }
+
+        function safeNumber(value) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : 0;
+        }
+
+        function safeMoney(value) {
+            return safeNumber(value).toFixed(2);
+        }
 
         function getToken() {
             if (window.AppState && typeof window.AppState.getToken === 'function') {
@@ -304,29 +344,93 @@
             return localStorage.getItem('spider_token') || localStorage.getItem('token');
         }
 
+        function getProductId(product) {
+            return String(product?.id ?? product?.product_id ?? product?.productId ?? '').trim();
+        }
+
+        function getPayloadId(id) {
+            const value = String(id ?? '').trim();
+            return /^\d+$/.test(value) ? Number(value) : value;
+        }
+
+        function getEncodedId(id) {
+            return encodeURIComponent(String(id ?? '').trim());
+        }
+
+        function normalizeStatus(status) {
+            const value = String(status ?? 'pending').toLowerCase().trim();
+            return VALID_PRODUCT_STATUSES.includes(value) ? value : 'pending';
+        }
+
+        function getObjectValue(object, keys) {
+            if (!object || typeof object !== 'object') return '';
+
+            for (const key of keys) {
+                const value = object[key];
+                if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+            }
+
+            return '';
+        }
+
+        function normalizeImageValue(value) {
+            if (!value) return '';
+
+            if (typeof value === 'string') {
+                const clean = value.trim();
+                if (!clean) return '';
+
+                if (clean.startsWith('{')) {
+                    try {
+                        return normalizeImageValue(JSON.parse(clean));
+                    } catch (error) {
+                        return clean;
+                    }
+                }
+
+                return clean;
+            }
+
+            if (typeof value === 'object') {
+                return String(
+                    value.url ||
+                    value.src ||
+                    value.path ||
+                    value.image ||
+                    value.image_url ||
+                    value.filename ||
+                    ''
+                ).trim();
+            }
+
+            return '';
+        }
+
         function buildImageUrl(imagePath) {
-            const cleanPath = String(imagePath || '').trim();
+            const cleanPath = normalizeImageValue(imagePath);
 
             if (!cleanPath) {
                 return 'https://via.placeholder.com/150?text=No+Image';
             }
 
-            return /^https?:\/\//i.test(cleanPath)
-                ? cleanPath
-                : `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+            if (/^https?:\/\//i.test(cleanPath) || cleanPath.startsWith('data:image/')) {
+                return cleanPath;
+            }
+
+            return `${BASE_SERVER}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
         }
 
         function productImages(product) {
             const images = [];
 
             const push = image => {
-                const clean = String(image || '').trim();
+                const clean = normalizeImageValue(image);
                 if (clean && !images.includes(clean)) images.push(clean);
             };
 
-            push(product.image_url || product.image);
+            push(product?.image_url || product?.image || product?.thumbnail || product?.main_image);
 
-            [product.images_array, product.images_list, product.images].forEach(value => {
+            [product?.images_array, product?.images_list, product?.images, product?.gallery].forEach(value => {
                 if (Array.isArray(value)) {
                     value.forEach(push);
                     return;
@@ -335,9 +439,13 @@
                 if (typeof value === 'string' && value.trim()) {
                     try {
                         const parsed = JSON.parse(value);
-                        Array.isArray(parsed) ? parsed.forEach(push) : push(parsed);
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(push);
+                        } else {
+                            push(parsed);
+                        }
                     } catch (error) {
-                        value.split(/[,\n]/).forEach(push);
+                        value.split(/[\n,]/).forEach(push);
                     }
                 }
             });
@@ -347,21 +455,21 @@
 
         function showToast(message, type = 'success') {
             if (window.AppUI && typeof window.AppUI.toast === 'function') {
-                return window.AppUI.toast(message, type);
+                window.AppUI.toast(message, type);
+                return;
             }
 
             const container = document.getElementById('toast-container');
             if (!container) return;
 
-            const toast = document.createElement('div');
             const isSuccess = type === 'success';
-
-            toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto relative max-w-sm overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
                 isSuccess ? 'border-success-500' : 'border-error-500'
             }`;
 
             toast.innerHTML = `
-                <p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
+                <p class="safe-text text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
                 <div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100">
                     <div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div>
                 </div>
@@ -373,8 +481,42 @@
 
         async function fetchJson(url, options = {}) {
             const response = await fetch(url, options);
-            const data = await response.json().catch(() => ({}));
-            return { response, data };
+            const text = await response.text();
+            let data = {};
+
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (error) {
+                console.error('[Non JSON Response]', { url, status: response.status, text });
+            }
+
+            return { response, data, text };
+        }
+
+        function extractProducts(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.products)) return data.products;
+            if (Array.isArray(data.result)) return data.result;
+            if (Array.isArray(data.data?.products)) return data.data.products;
+            if (Array.isArray(data.data?.data)) return data.data.data;
+            return [];
+        }
+
+        function extractCategories(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.categories)) return data.categories;
+            if (Array.isArray(data.data?.categories)) return data.data.categories;
+            return [];
+        }
+
+        function extractTags(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.tags)) return data.tags;
+            if (Array.isArray(data.data?.tags)) return data.data.tags;
+            return [];
         }
 
         function formatProductStatus(status) {
@@ -384,10 +526,11 @@
                 rejected: 'مرفوض'
             };
 
-            return map[String(status || '').toLowerCase()] || (status || 'غير محدد');
+            return map[normalizeStatus(status)] || 'غير محدد';
         }
 
         function formatSellerStatus(status) {
+            const normalized = String(status ?? '').toLowerCase().trim();
             const map = {
                 approved_seller: 'معتمد',
                 approved: 'معتمد',
@@ -395,12 +538,11 @@
                 rejected: 'مرفوض'
             };
 
-            return map[String(status || '').toLowerCase()] || (status || 'غير محدد');
+            return map[normalized] || safeText(status, 'غير محدد');
         }
 
         function statusBadge(status) {
-            const normalized = String(status || 'pending').toLowerCase();
-
+            const normalized = normalizeStatus(status);
             const meta = {
                 approved: {
                     label: 'مقبول',
@@ -417,11 +559,7 @@
                     className: 'bg-error-50 text-error-700 border-error-100',
                     icon: 'fa-circle-xmark'
                 }
-            }[normalized] || {
-                label: normalized,
-                className: 'bg-slate-100 text-slate-600 border-slate-200',
-                icon: 'fa-circle-info'
-            };
+            }[normalized];
 
             return `
                 <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${meta.className}">
@@ -433,7 +571,6 @@
 
         function stockBadge(stockValue) {
             const stock = safeNumber(stockValue);
-
             const className = stock > 10
                 ? 'bg-success-50 text-success-700'
                 : stock > 0
@@ -448,28 +585,47 @@
         }
 
         function sourceText(product) {
-            return product.owner_role === 'admin' ? 'أدمن' : 'بائع';
+            const role = String(product?.owner_role || product?.source || '').toLowerCase();
+            if (role === 'admin') return 'أدمن';
+            if (role === 'seller') return 'بائع';
+            return product?.seller_name ? 'بائع' : 'أدمن';
+        }
+
+        function setLoadingButton(button, loading, loadingText = 'جاري التنفيذ...') {
+            if (!button) return;
+
+            if (loading) {
+                button.dataset.originalHtml = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${escapeHTML(loadingText)}`;
+                return;
+            }
+
+            button.disabled = false;
+            button.innerHTML = button.dataset.originalHtml || button.innerHTML;
+            delete button.dataset.originalHtml;
         }
 
         function actionButtons(product) {
-            const id = safeNumber(product.id);
-            const isFeatured = Number(product.featured || 0) === 1;
+            const id = getProductId(product);
+            const isFeatured = Number(product?.featured || 0) === 1;
+            const disabled = !id || featuredUpdatingIds.has(id);
             const featuredClasses = isFeatured
                 ? 'border-warning-100 bg-warning-50 text-warning-600 hover:bg-warning-500 hover:text-white'
                 : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-warning-500 hover:text-white';
 
             return `
                 <div class="flex items-center justify-center gap-2">
-                    <button type="button" onclick="updateProductFeatured(${id}, ${isFeatured ? 0 : 1})" class="grid h-10 w-10 place-items-center rounded-xl border ${featuredClasses} transition" title="${isFeatured ? 'غير مميز' : 'مميز'}">
+                    <button type="button" data-action="toggle-featured" data-product-id="${escapeHTML(id)}" data-featured="${isFeatured ? '0' : '1'}" ${disabled ? 'disabled' : ''} class="grid h-10 w-10 place-items-center rounded-xl border ${featuredClasses} transition disabled:cursor-not-allowed disabled:opacity-50" title="${isFeatured ? 'إلغاء التمييز' : 'تمييز'}" aria-label="${isFeatured ? 'إلغاء تمييز المنتج' : 'تمييز المنتج'}">
                         <i class="${isFeatured ? 'fas' : 'far'} fa-star"></i>
                     </button>
-                    <button type="button" onclick="openDetailsModal(${id})" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-700 hover:text-white" title="التفاصيل">
+                    <button type="button" data-action="open-details" data-product-id="${escapeHTML(id)}" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-700 hover:text-white" title="التفاصيل" aria-label="تفاصيل المنتج">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button type="button" onclick="editProduct(${id})" class="grid h-10 w-10 place-items-center rounded-xl border border-info-100 bg-info-50 text-info-600 transition hover:bg-info-500 hover:text-white" title="تعديل">
+                    <button type="button" data-action="edit-product" data-product-id="${escapeHTML(id)}" class="grid h-10 w-10 place-items-center rounded-xl border border-info-100 bg-info-50 text-info-600 transition hover:bg-info-500 hover:text-white" title="تعديل" aria-label="تعديل المنتج">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button type="button" onclick="openDeleteModal(${id})" class="grid h-10 w-10 place-items-center rounded-xl border border-error-100 bg-error-50 text-error-600 transition hover:bg-error-500 hover:text-white" title="حذف">
+                    <button type="button" data-action="open-delete" data-product-id="${escapeHTML(id)}" class="grid h-10 w-10 place-items-center rounded-xl border border-error-100 bg-error-50 text-error-600 transition hover:bg-error-500 hover:text-white" title="حذف" aria-label="حذف المنتج">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
@@ -477,11 +633,10 @@
         }
 
         function setStatusFilter(status) {
-            currentStatusFilter = status;
+            currentStatusFilter = VALID_PRODUCT_STATUSES.includes(String(status || '').toLowerCase()) ? String(status).toLowerCase() : '';
 
             document.querySelectorAll('.status-filter').forEach(button => {
-                const active = button.dataset.filter === status;
-
+                const active = String(button.dataset.filter || '') === currentStatusFilter;
                 button.className = active
                     ? 'status-filter rounded-xl bg-primary-600 px-4 py-2 text-sm font-black text-white'
                     : 'status-filter rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600';
@@ -515,16 +670,17 @@
             }
         }
 
-        function renderEmpty() {
+        function renderEmpty(message = 'لم يتم العثور على منتجات في هذا التصنيف.') {
             const mobile = document.getElementById('productsMobileContainer');
             const table = document.getElementById('productsContainer');
+            const safeMessage = escapeHTML(message);
 
             if (mobile) {
                 mobile.innerHTML = `
                     <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-14 text-center">
                         <i class="fas fa-box-open mb-4 text-5xl text-slate-300"></i>
                         <h3 class="text-lg font-black text-slate-950">لا توجد منتجات</h3>
-                        <p class="mt-2 text-sm font-semibold text-slate-500">لم يتم العثور على منتجات في هذا التصنيف.</p>
+                        <p class="safe-text mt-2 text-sm font-semibold text-slate-500">${safeMessage}</p>
                     </div>
                 `;
             }
@@ -534,7 +690,36 @@
                     <tr>
                         <td colspan="8" class="p-16 text-center text-slate-400">
                             <i class="fas fa-box-open mb-4 text-5xl"></i>
-                            <p class="text-lg font-black">لا توجد منتجات</p>
+                            <p class="safe-text text-lg font-black">${safeMessage}</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderError(message = 'تعذر تحميل المنتجات') {
+            const mobile = document.getElementById('productsMobileContainer');
+            const table = document.getElementById('productsContainer');
+            const safeMessage = escapeHTML(message);
+
+            if (mobile) {
+                mobile.innerHTML = `
+                    <div class="rounded-2xl border border-error-100 bg-error-50 px-4 py-14 text-center text-error-600">
+                        <i class="fas fa-wifi mb-3 text-4xl"></i>
+                        <p class="safe-text font-black">${safeMessage}</p>
+                        <button type="button" data-action="refresh-products" class="mt-4 rounded-xl bg-error-500 px-4 py-2 text-sm font-black text-white">
+                            إعادة المحاولة
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (table) {
+                table.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="p-12 text-center text-error-600">
+                            <i class="fas fa-wifi mb-3 text-4xl"></i>
+                            <p class="safe-text font-black">${safeMessage}</p>
                         </td>
                     </tr>
                 `;
@@ -542,20 +727,29 @@
         }
 
         async function fetchProducts() {
+            const token = getToken();
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            const requestId = ++productsRequestSeq;
+            const refreshBtn = document.querySelector('[data-action="refresh-products"]');
+            setLoadingButton(refreshBtn, true, 'جاري التحميل...');
             renderLoading();
 
             try {
-                const token = getToken();
                 const query = currentStatusFilter ? `?status=${encodeURIComponent(currentStatusFilter)}` : '';
-
                 const { response, data } = await fetchJson(`${API_URL}/admin/products${query}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${token}` }
                 });
 
+                if (requestId !== productsRequestSeq) return;
+
                 if (response.status === 401 || response.status === 403) {
-                    showToast('غير مسموح لك بالدخول لهذه الصفحة', 'error');
+                    showToast(data.message || 'غير مسموح لك بالدخول لهذه الصفحة', 'error');
                     window.location.href = '../auth/login.html';
                     return;
                 }
@@ -564,39 +758,15 @@
                     throw new Error(data.message || data.error || 'تعذر تحميل المنتجات');
                 }
 
-                productsCache = Array.isArray(data.data) ? data.data : [];
-
+                productsCache = extractProducts(data);
                 renderProducts(productsCache);
             } catch (error) {
-                console.error('Fetch products error:', error);
-
-                const mobile = document.getElementById('productsMobileContainer');
-                const table = document.getElementById('productsContainer');
-
-                if (mobile) {
-                    mobile.innerHTML = `
-                        <div class="rounded-2xl border border-error-100 bg-error-50 px-4 py-14 text-center text-error-600">
-                            <i class="fas fa-wifi mb-3 text-4xl"></i>
-                            <p class="font-black">تعذر تحميل المنتجات</p>
-                            <button type="button" onclick="fetchProducts()" class="mt-4 rounded-xl bg-error-500 px-4 py-2 text-sm font-black text-white">
-                                إعادة المحاولة
-                            </button>
-                        </div>
-                    `;
-                }
-
-                if (table) {
-                    table.innerHTML = `
-                        <tr>
-                            <td colspan="8" class="p-12 text-center text-error-600">
-                                <i class="fas fa-wifi mb-3 text-4xl"></i>
-                                <p class="font-black">تعذر تحميل المنتجات</p>
-                            </td>
-                        </tr>
-                    `;
-                }
-
+                console.error('[Fetch Products Error]', error);
+                productsCache = [];
+                renderError(error.message || 'تعذر تحميل المنتجات');
                 showToast(error.message || 'تعذر تحميل المنتجات', 'error');
+            } finally {
+                setLoadingButton(refreshBtn, false);
             }
         }
 
@@ -620,47 +790,48 @@
             if (!container) return;
 
             container.innerHTML = products.map(product => {
-                const imageUrl = buildImageUrl(productImages(product)[0] || product.image_url);
-                const id = safeNumber(product.id);
+                const imageUrl = buildImageUrl(productImages(product)[0] || product?.image_url);
+                const id = getProductId(product);
+                const title = safeText(product?.title, 'منتج بدون اسم');
 
                 return `
-                    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <div class="flex gap-3">
+                    <article class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div class="flex min-w-0 gap-3">
                             <div class="h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                                <img src="${imageUrl}" alt="${escapeHTML(product.title)}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=No+Image'">
+                                <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(title)}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=No+Image'">
                             </div>
 
                             <div class="min-w-0 flex-1">
                                 <div class="mb-2 flex flex-wrap items-center gap-2">
-                                    ${statusBadge(product.status || 'approved')}
+                                    ${statusBadge(product?.status || 'approved')}
                                 </div>
 
-                                <h3 class="line-clamp-2 text-base font-black text-slate-950">${escapeHTML(product.title)}</h3>
+                                <h3 class="safe-text line-clamp-2 text-base font-black text-slate-950">${escapeHTML(title)}</h3>
 
-                                <p class="mt-1 text-xs font-semibold text-slate-400">
-                                    #${id} ${product.brand ? '| ' + escapeHTML(product.brand) : ''}
+                                <p class="safe-text mt-1 text-xs font-semibold text-slate-400">
+                                    #${escapeHTML(id || '-')} ${product?.brand ? '| ' + escapeHTML(product.brand) : ''}
                                 </p>
 
                                 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
-                                    <span class="rounded-full bg-slate-100 px-3 py-1">${escapeHTML(product.category_name || 'غير محدد')}</span>
-                                    <span class="rounded-full bg-slate-100 px-3 py-1">${sourceText(product)}</span>
+                                    <span class="safe-text rounded-full bg-slate-100 px-3 py-1">${escapeHTML(product?.category_name || 'غير محدد')}</span>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1">${escapeHTML(sourceText(product))}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mt-4 grid grid-cols-2 gap-3">
-                            <div class="rounded-xl bg-slate-50 p-3">
+                            <div class="min-w-0 rounded-xl bg-slate-50 p-3">
                                 <p class="mb-1 text-xs font-black text-slate-400">السعر</p>
-                                <p class="text-base font-black text-primary-600">${safeNumber(product.price).toFixed(2)} ج.م</p>
+                                <p class="safe-text text-base font-black text-primary-600">${safeMoney(product?.price)} ج.م</p>
                             </div>
 
-                            <div class="rounded-xl bg-slate-50 p-3">
+                            <div class="min-w-0 rounded-xl bg-slate-50 p-3">
                                 <p class="mb-1 text-xs font-black text-slate-400">المخزون</p>
-                                ${stockBadge(product.stock_quantity)}
+                                ${stockBadge(product?.stock_quantity)}
                             </div>
                         </div>
 
-                        <div class="mt-4 flex justify-center">
+                        <div class="mt-4 flex justify-center overflow-x-auto pb-1">
                             ${actionButtons(product)}
                         </div>
                     </article>
@@ -673,41 +844,42 @@
             if (!container) return;
 
             container.innerHTML = products.map(product => {
-                const imageUrl = buildImageUrl(productImages(product)[0] || product.image_url);
-                const id = safeNumber(product.id);
+                const imageUrl = buildImageUrl(productImages(product)[0] || product?.image_url);
+                const id = getProductId(product);
+                const title = safeText(product?.title, 'منتج بدون اسم');
 
                 return `
                     <tr class="transition hover:bg-slate-50">
                         <td class="p-4">
                             <div class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                                <img src="${imageUrl}" alt="${escapeHTML(product.title)}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=No+Image'">
+                                <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(title)}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=No+Image'">
                             </div>
                         </td>
 
                         <td class="p-4">
-                            <p class="max-w-[260px] truncate font-black text-slate-800">${escapeHTML(product.title)}</p>
-                            <span class="mt-1 block text-xs font-semibold text-slate-400">#${id} ${product.brand ? '| ' + escapeHTML(product.brand) : ''}</span>
+                            <p class="safe-text max-w-[260px] font-black text-slate-800">${escapeHTML(title)}</p>
+                            <span class="safe-text mt-1 block text-xs font-semibold text-slate-400">#${escapeHTML(id || '-')} ${product?.brand ? '| ' + escapeHTML(product.brand) : ''}</span>
                         </td>
 
                         <td class="p-4">
-                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-                                ${escapeHTML(product.category_name || 'غير محدد')}
+                            <span class="safe-text rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+                                ${escapeHTML(product?.category_name || 'غير محدد')}
                             </span>
                         </td>
 
                         <td class="p-4">
-                            <p class="font-black text-slate-700">${sourceText(product)}</p>
-                            <span class="mt-1 block text-xs font-semibold text-slate-400">${escapeHTML(product.seller_name || 'غير محدد')}</span>
+                            <p class="safe-text font-black text-slate-700">${escapeHTML(sourceText(product))}</p>
+                            <span class="safe-text mt-1 block text-xs font-semibold text-slate-400">${escapeHTML(product?.seller_name || 'غير محدد')}</span>
                         </td>
 
-                        <td class="p-4">${statusBadge(product.status || 'approved')}</td>
+                        <td class="p-4">${statusBadge(product?.status || 'approved')}</td>
 
-                        <td class="p-4 font-black text-primary-600">
-                            ${safeNumber(product.price).toFixed(2)}
+                        <td class="safe-text p-4 font-black text-primary-600">
+                            ${safeMoney(product?.price)}
                             <span class="text-xs font-semibold text-slate-400">ج.م</span>
                         </td>
 
-                        <td class="p-4">${stockBadge(product.stock_quantity)}</td>
+                        <td class="p-4">${stockBadge(product?.stock_quantity)}</td>
 
                         <td class="p-4 text-center">${actionButtons(product)}</td>
                     </tr>
@@ -717,64 +889,31 @@
 
         function renderProductActionButtons(product) {
             const actions = [];
-            const status = String(product.status || 'pending').toLowerCase();
-            const sellerStatus = String(product.seller_status || '').toLowerCase();
-            const isSellerProduct = product.owner_role !== 'admin';
-            const productId = safeNumber(product.id);
-            const sellerRequestId = product.seller_request_id || product.request_id || product.sellerRequestId || null;
+            const status = normalizeStatus(product?.status || 'pending');
+            const sellerStatus = String(product?.seller_status || '').toLowerCase();
+            const isSellerProduct = String(product?.owner_role || '').toLowerCase() !== 'admin';
+            const productId = getProductId(product);
+            const sellerRequestId = String(product?.seller_request_id || product?.request_id || product?.sellerRequestId || '').trim();
+
+            const statusButton = (nextStatus, label, className) => `
+                <button type="button" data-action="update-product-status" data-product-id="${escapeHTML(productId)}" data-status="${escapeHTML(nextStatus)}" class="rounded-xl px-4 py-2 text-sm font-black text-white transition ${className}">
+                    ${escapeHTML(label)}
+                </button>
+            `;
 
             if (status === 'pending') {
-                actions.push(`
-                    <button type="button"
-                        onclick="updateProductStatus(${productId}, 'approved')"
-                        class="rounded-xl bg-success-500 px-4 py-2 text-sm font-black text-white transition hover:bg-success-600">
-                        موافقة
-                    </button>
-                `);
-
-                actions.push(`
-                    <button type="button"
-                        onclick="updateProductStatus(${productId}, 'rejected')"
-                        class="rounded-xl bg-error-500 px-4 py-2 text-sm font-black text-white transition hover:bg-error-600">
-                        رفض
-                    </button>
-                `);
+                actions.push(statusButton('approved', 'موافقة', 'bg-success-500 hover:bg-success-600'));
+                actions.push(statusButton('rejected', 'رفض', 'bg-error-500 hover:bg-error-600'));
             }
 
             if (status === 'approved') {
-                actions.push(`
-                    <button type="button"
-                        onclick="updateProductStatus(${productId}, 'pending')"
-                        class="rounded-xl bg-warning-500 px-4 py-2 text-sm font-black text-white transition hover:bg-warning-600">
-                        إرجاع للمراجعة
-                    </button>
-                `);
-
-                actions.push(`
-                    <button type="button"
-                        onclick="updateProductStatus(${productId}, 'rejected')"
-                        class="rounded-xl bg-error-500 px-4 py-2 text-sm font-black text-white transition hover:bg-error-600">
-                        رفض
-                    </button>
-                `);
+                actions.push(statusButton('pending', 'إرجاع للمراجعة', 'bg-warning-500 hover:bg-warning-600'));
+                actions.push(statusButton('rejected', 'رفض', 'bg-error-500 hover:bg-error-600'));
             }
 
             if (status === 'rejected') {
-                actions.push(`
-                    <button type="button"
-                        onclick="updateProductStatus(${productId}, 'pending')"
-                        class="rounded-xl bg-warning-500 px-4 py-2 text-sm font-black text-white transition hover:bg-warning-600">
-                        إرجاع للمراجعة
-                    </button>
-                `);
-
-                actions.push(`
-                    <button type="button"
-                        onclick="updateProductStatus(${productId}, 'approved')"
-                        class="rounded-xl bg-success-500 px-4 py-2 text-sm font-black text-white transition hover:bg-success-600">
-                        موافقة
-                    </button>
-                `);
+                actions.push(statusButton('pending', 'إرجاع للمراجعة', 'bg-warning-500 hover:bg-warning-600'));
+                actions.push(statusButton('approved', 'موافقة', 'bg-success-500 hover:bg-success-600'));
             }
 
             if (isSellerProduct) {
@@ -786,16 +925,13 @@
                     `);
                 } else if (sellerRequestId) {
                     actions.push(`
-                        <button type="button"
-                            onclick="approveSellerRequest(${Number(sellerRequestId)})"
-                            class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-800">
+                        <button type="button" data-action="approve-seller" data-request-id="${escapeHTML(sellerRequestId)}" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-800">
                             اعتماد البائع
                         </button>
                     `);
                 } else {
                     actions.push(`
-                        <a href="sellers.html"
-                            class="rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-200">
+                        <a href="sellers.html" class="rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-200">
                             راجع طلب البائع
                         </a>
                     `);
@@ -803,17 +939,13 @@
             }
 
             actions.push(`
-                <button type="button"
-                    onclick="editProduct(${productId})"
-                    class="rounded-xl bg-info-500 px-4 py-2 text-sm font-black text-white transition hover:bg-info-600">
+                <button type="button" data-action="edit-product" data-product-id="${escapeHTML(productId)}" class="rounded-xl bg-info-500 px-4 py-2 text-sm font-black text-white transition hover:bg-info-600">
                     تعديل
                 </button>
             `);
 
             actions.push(`
-                <button type="button"
-                    onclick="openDeleteModal(${productId})"
-                    class="rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-200">
+                <button type="button" data-action="open-delete" data-product-id="${escapeHTML(productId)}" class="rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-200">
                     حذف
                 </button>
             `);
@@ -822,7 +954,7 @@
         }
 
         function openDetailsModal(id) {
-            const product = productsCache.find(item => Number(item.id) === Number(id));
+            const product = productsCache.find(item => String(getProductId(item)) === String(id));
 
             if (!product) {
                 showToast('لم يتم العثور على المنتج', 'error');
@@ -830,10 +962,11 @@
             }
 
             const images = productImages(product);
+            const title = safeText(product?.title, 'منتج بدون اسم');
 
             const imageHtml = images.length
                 ? images.map(img => `
-                    <img src="${buildImageUrl(img)}" class="h-24 w-24 rounded-xl border border-slate-200 bg-slate-50 object-cover" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=No+Image'">
+                    <img src="${escapeHTML(buildImageUrl(img))}" alt="${escapeHTML(title)}" class="h-24 w-24 rounded-xl border border-slate-200 bg-slate-50 object-cover" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=No+Image'">
                 `).join('')
                 : '<p class="text-sm font-semibold text-slate-400">لا توجد صور</p>';
 
@@ -845,26 +978,26 @@
 
                     <div class="space-y-4">
                         <div>
-                            <h3 class="text-2xl font-black text-slate-950">${escapeHTML(product.title)}</h3>
-                            <p class="mt-1 text-sm font-semibold text-slate-400">#${product.id} - ${escapeHTML(product.created_at || '')}</p>
+                            <h3 class="safe-text text-2xl font-black text-slate-950">${escapeHTML(title)}</h3>
+                            <p class="safe-text mt-1 text-sm font-semibold text-slate-400">#${escapeHTML(getProductId(product) || '-')} - ${escapeHTML(product?.created_at || '')}</p>
                         </div>
 
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            ${detailItem('السعر', `${safeNumber(product.price).toFixed(2)} ج.م`)}
-                            ${detailItem('الخصم', `${safeNumber(product.discount)}%`)}
-                            ${detailItem('المخزون', safeNumber(product.stock_quantity))}
-                            ${detailItem('القسم', product.category_name || 'غير محدد')}
-                            ${detailItem('البراند', product.brand || 'غير محدد')}
-                            ${detailItem('الوسوم', product.tags || 'لا توجد')}
-                            ${detailItem('صاحب المنتج', product.seller_name || 'غير محدد')}
+                            ${detailItem('السعر', `${safeMoney(product?.price)} ج.م`)}
+                            ${detailItem('الخصم', `${safeNumber(product?.discount)}%`)}
+                            ${detailItem('المخزون', safeNumber(product?.stock_quantity))}
+                            ${detailItem('القسم', product?.category_name || 'غير محدد')}
+                            ${detailItem('البراند', product?.brand || 'غير محدد')}
+                            ${detailItem('الوسوم', product?.tags || 'لا توجد')}
+                            ${detailItem('صاحب المنتج', product?.seller_name || 'غير محدد')}
                             ${detailItem('المصدر', sourceText(product))}
-                            ${detailItem('حالة المنتج', formatProductStatus(product.status || 'pending'))}
-                            ${detailItem('حالة البائع', formatSellerStatus(product.seller_status || 'pending'))}
+                            ${detailItem('حالة المنتج', formatProductStatus(product?.status || 'pending'))}
+                            ${detailItem('حالة البائع', formatSellerStatus(product?.seller_status || 'pending'))}
                         </div>
 
                         <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
                             <h4 class="mb-2 font-black text-slate-950">الوصف</h4>
-                            <p class="whitespace-pre-line text-sm font-semibold leading-7 text-slate-600">${escapeHTML(product.description || 'لا يوجد وصف')}</p>
+                            <p class="safe-text whitespace-pre-line text-sm font-semibold leading-7 text-slate-600">${escapeHTML(product?.description || 'لا يوجد وصف')}</p>
                         </div>
 
                         <div class="flex flex-wrap gap-2 pt-2">
@@ -881,108 +1014,150 @@
 
         function detailItem(label, value) {
             return `
-                <div class="rounded-xl border border-slate-100 bg-white p-3">
+                <div class="min-w-0 rounded-xl border border-slate-100 bg-white p-3">
                     <span class="mb-1 block text-xs font-black text-slate-400">${escapeHTML(label)}</span>
-                    <strong class="text-sm font-black text-slate-800">${escapeHTML(value)}</strong>
+                    <strong class="safe-text text-sm font-black text-slate-800">${escapeHTML(value)}</strong>
                 </div>
             `;
         }
 
         function closeDetailsModal() {
             const modal = document.getElementById('productDetailsModal');
+            if (!modal) return;
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
 
-        async function updateProductStatus(id, status) {
+        async function updateProductStatus(id, status, button = null) {
             const token = getToken();
+            const productId = String(id ?? '').trim();
+            const nextStatus = normalizeStatus(status);
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            if (!productId) {
+                showToast('رقم المنتج غير صحيح', 'error');
+                return;
+            }
+
+            setLoadingButton(button, true, 'جاري الحفظ...');
 
             try {
-                const { response, data } = await fetchJson(`${API_URL}/admin/products/${id}/status`, {
+                const { response, data } = await fetchJson(`${API_URL}/admin/products/${getEncodedId(productId)}/status`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`
                     },
-                    body: JSON.stringify({ status })
+                    body: JSON.stringify({ status: nextStatus })
                 });
 
-                showToast(data.message || (response.ok ? 'تم تحديث الحالة' : 'تعذر تحديث الحالة'), response.ok ? 'success' : 'error');
+                console.log('[Update Product Status]', response.status, data);
 
-                if (response.ok) {
-                    closeDetailsModal();
-                    await fetchProducts();
+                if (response.status === 401 || response.status === 403) {
+                    showToast(data.message || 'غير مصرح لك بتنفيذ العملية', 'error');
+                    return;
                 }
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر تحديث الحالة');
+                }
+
+                showToast(data.message || 'تم تحديث الحالة', 'success');
+                closeDetailsModal();
+                await fetchProducts();
             } catch (error) {
-                showToast('تعذر تحديث حالة المنتج', 'error');
+                console.error('[Update Product Status Error]', error);
+                showToast(error.message || 'تعذر تحديث حالة المنتج', 'error');
+            } finally {
+                setLoadingButton(button, false);
             }
         }
 
-        async function updateProductFeatured(id, featured) {
+        async function updateProductFeatured(id, featured, button = null) {
             const token = getToken();
-            const productId = Number(id);
+            const productId = String(id ?? '').trim();
             const nextFeatured = featured ? 1 : 0;
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
 
             if (!productId || featuredUpdatingIds.has(productId)) return;
 
             try {
                 featuredUpdatingIds.add(productId);
+                setLoadingButton(button, true, '');
 
                 const { response, data } = await updateProductFeaturedWithProductUpdate(productId, nextFeatured, token);
 
-                showToast(data.message || (response.ok ? 'تم تحديث تمييز المنتج' : 'تعذر تحديث تمييز المنتج'), response.ok ? 'success' : 'error');
-
-                if (response.ok) {
-                    const cachedProduct = productsCache.find(item => Number(item.id) === productId);
-                    if (cachedProduct) cachedProduct.featured = nextFeatured;
-                    renderProducts(productsCache);
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر تحديث تمييز المنتج');
                 }
+
+                showToast(data.message || 'تم تحديث تمييز المنتج', 'success');
+
+                const cachedProduct = productsCache.find(item => String(getProductId(item)) === productId);
+                if (cachedProduct) cachedProduct.featured = nextFeatured;
+                renderProducts(productsCache);
             } catch (error) {
-                showToast('تعذر تحديث تمييز المنتج', 'error');
+                console.error('[Update Featured Error]', error);
+                showToast(error.message || 'تعذر تحديث تمييز المنتج', 'error');
             } finally {
                 featuredUpdatingIds.delete(productId);
+                setLoadingButton(button, false);
             }
         }
 
         async function updateProductFeaturedWithProductUpdate(id, featured, token) {
-            const product = productsCache.find(item => Number(item.id) === Number(id));
+            const product = productsCache.find(item => String(getProductId(item)) === String(id));
 
             if (!product) {
-                throw new Error('Product not found');
+                throw new Error('لم يتم العثور على المنتج');
             }
 
             const formData = new FormData();
-            formData.append('title', product.title || '');
-            formData.append('price', safeNumber(product.price));
-            formData.append('discount', safeNumber(product.discount));
-            formData.append('stock_quantity', safeNumber(product.stock_quantity));
-            formData.append('brand', product.brand || '');
-            formData.append('category_id', product.category_id == null ? '' : product.category_id);
-            formData.append('tags', product.tags || '');
-            formData.append('description', product.description || '');
-            formData.append('status', product.status || 'approved');
+            formData.append('title', product?.title || '');
+            formData.append('price', safeNumber(product?.price));
+            formData.append('discount', safeNumber(product?.discount));
+            formData.append('stock_quantity', safeNumber(product?.stock_quantity));
+            formData.append('brand', product?.brand || '');
+            formData.append('category_id', product?.category_id == null ? '' : String(product.category_id));
+            formData.append('tags', product?.tags || '');
+            formData.append('description', product?.description || '');
+            formData.append('status', normalizeStatus(product?.status || 'approved'));
             formData.append('featured', featured ? 1 : 0);
             formData.append('existing_images', JSON.stringify(productImages(product)));
 
-            return fetchJson(`${API_URL}/products/${id}`, {
+            return fetchJson(`${API_URL}/products/${getEncodedId(id)}`, {
                 method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
+                headers: { Authorization: `Bearer ${token}` },
                 body: formData
             });
         }
 
-        async function approveSellerRequest(requestId) {
+        async function approveSellerRequest(requestId, button = null) {
             const token = getToken();
+            const id = String(requestId ?? '').trim();
 
-            if (!requestId) {
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            if (!id) {
                 showToast('لا يوجد رقم طلب بائع مرتبط بهذا المنتج', 'error');
                 return;
             }
 
+            setLoadingButton(button, true, 'جاري الاعتماد...');
+
             try {
-                const { response, data } = await fetchJson(`${API_URL}/admin/seller-requests/${requestId}`, {
+                const { response, data } = await fetchJson(`${API_URL}/admin/seller-requests/${getEncodedId(id)}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -999,38 +1174,48 @@
                 closeDetailsModal();
                 await fetchProducts();
             } catch (error) {
-                console.error('Approve seller request error:', error);
+                console.error('[Approve Seller Request Error]', error);
                 showToast(error.message || 'تعذر اعتماد البائع', 'error');
+            } finally {
+                setLoadingButton(button, false);
             }
         }
 
         function openDeleteModal(id) {
-            productToDelete = id;
+            productToDelete = String(id ?? '').trim();
+
+            if (!productToDelete) {
+                showToast('رقم المنتج غير صحيح', 'error');
+                return;
+            }
 
             const modal = document.getElementById('deleteModal');
             const modalContent = document.getElementById('deleteModalContent');
 
+            clearTimeout(deleteTimer);
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
                 modalContent.classList.add('scale-100');
-            }, 10);
+            });
         }
 
         function closeDeleteModal() {
             productToDelete = null;
-
             const modal = document.getElementById('deleteModal');
             const modalContent = document.getElementById('deleteModalContent');
+
+            if (!modal || !modalContent) return;
 
             modal.classList.add('opacity-0');
             modalContent.classList.remove('scale-100');
             modalContent.classList.add('scale-95');
 
-            setTimeout(() => {
+            clearTimeout(deleteTimer);
+            deleteTimer = setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }, 300);
@@ -1040,120 +1225,151 @@
             if (!productToDelete) return;
 
             const token = getToken();
+            const button = document.getElementById('confirmDeleteBtn');
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            setLoadingButton(button, true, 'جاري الحذف...');
 
             try {
-                const { response, data } = await fetchJson(`${API_URL}/products/${productToDelete}`, {
+                const { response, data } = await fetchJson(`${API_URL}/products/${getEncodedId(productToDelete)}`, {
                     method: 'DELETE',
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    headers: { Authorization: `Bearer ${token}` }
                 });
 
-                showToast(data.message || (response.ok ? 'تم حذف المنتج' : 'تعذر حذف المنتج'), response.ok ? 'success' : 'error');
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر حذف المنتج');
+                }
 
+                showToast(data.message || 'تم حذف المنتج', 'success');
                 closeDeleteModal();
                 closeDetailsModal();
-
-                if (response.ok) fetchProducts();
+                productsCache = productsCache.filter(item => String(getProductId(item)) !== String(productToDelete));
+                renderProducts(productsCache);
             } catch (error) {
-                showToast('تعذر حذف المنتج', 'error');
+                console.error('[Delete Product Error]', error);
+                showToast(error.message || 'تعذر حذف المنتج', 'error');
+            } finally {
+                setLoadingButton(button, false);
             }
         }
 
         async function fetchCategoriesForEdit() {
             if (categoriesCache.length > 0) return categoriesCache;
 
-            const { response, data } = await fetchJson(`${API_URL}/categories`);
+            try {
+                const { response, data } = await fetchJson(`${API_URL}/categories`);
 
-            if (!response.ok || data.success === false) {
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر تحميل الأقسام');
+                }
+
+                categoriesCache = extractCategories(data);
+                return categoriesCache;
+            } catch (error) {
+                console.error('[Fetch Categories Error]', error);
+                showToast(error.message || 'تعذر تحميل الأقسام', 'error');
                 return [];
             }
-
-            categoriesCache = Array.isArray(data.data) ? data.data : [];
-            return categoriesCache;
         }
 
         async function fetchTagsForEdit() {
             try {
                 const { response, data } = await fetchJson(`${API_URL}/tags`);
-
                 if (!response.ok || data.success === false) return;
 
-                const tags = Array.isArray(data.data) ? data.data : [];
+                const tags = extractTags(data);
                 const list = document.getElementById('tagsList');
-
                 if (!list) return;
 
-                list.innerHTML = tags.map(tag => `<option value="${escapeHTML(tag.name)}"></option>`).join('');
-            } catch (error) {}
+                list.innerHTML = tags.map(tag => {
+                    const name = typeof tag === 'string' ? tag : tag?.name || tag?.title || tag?.tag || '';
+                    return name ? `<option value="${escapeHTML(name)}"></option>` : '';
+                }).join('');
+            } catch (error) {
+                console.error('[Fetch Tags Error]', error);
+            }
         }
 
         async function populateCategorySelect(selectedId) {
             const select = document.getElementById('editCategory');
-            const categories = await fetchCategoriesForEdit();
+            if (!select) return;
 
-            select.innerHTML = '<option value="">غير محدد</option>' + categories.map(category => `
-                <option value="${safeNumber(category.id)}" ${String(category.id) === String(selectedId) ? 'selected' : ''}>
-                    ${escapeHTML(category.name)}
-                </option>
-            `).join('');
+            const categories = await fetchCategoriesForEdit();
+            const selected = String(selectedId ?? '');
+
+            select.innerHTML = '<option value="">غير محدد</option>' + categories.map(category => {
+                const id = String(category?.id ?? category?.category_id ?? '');
+                const name = category?.name || category?.title || 'قسم بدون اسم';
+                return `
+                    <option value="${escapeHTML(id)}" ${String(id) === selected ? 'selected' : ''}>
+                        ${escapeHTML(name)}
+                    </option>
+                `;
+            }).join('');
         }
 
         function editProduct(id) {
-            const product = productsCache.find(item => Number(item.id) === Number(id));
+            const product = productsCache.find(item => String(getProductId(item)) === String(id));
 
             if (!product) {
                 showToast('لم يتم العثور على المنتج', 'error');
                 return;
             }
 
-            document.getElementById('editProductId').value = product.id;
-            document.getElementById('editTitle').value = product.title || '';
-            document.getElementById('editPrice').value = safeNumber(product.price);
-            document.getElementById('editDiscount').value = safeNumber(product.discount);
-            document.getElementById('editStock').value = safeNumber(product.stock_quantity);
-            document.getElementById('editBrand').value = product.brand || '';
-            document.getElementById('editTags').value = product.tags || '';
-            document.getElementById('editDescription').value = product.description || '';
+            document.getElementById('editProductId').value = getProductId(product);
+            document.getElementById('editTitle').value = product?.title || '';
+            document.getElementById('editPrice').value = safeNumber(product?.price);
+            document.getElementById('editDiscount').value = safeNumber(product?.discount);
+            document.getElementById('editStock').value = safeNumber(product?.stock_quantity);
+            document.getElementById('editBrand').value = product?.brand || '';
+            document.getElementById('editTags').value = product?.tags || '';
+            document.getElementById('editDescription').value = product?.description || '';
             document.getElementById('editImage').value = '';
 
+            clearEditNewImages();
             editExistingImages = productImages(product);
             editNewImages = [];
 
             renderEditImages();
-            populateCategorySelect(product.category_id);
+            populateCategorySelect(product?.category_id);
             fetchTagsForEdit();
             closeDetailsModal();
 
             const modal = document.getElementById('editModal');
             const modalContent = document.getElementById('editModalContent');
 
+            clearTimeout(editTimer);
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
                 modalContent.classList.add('scale-100');
-            }, 10);
+            });
         }
 
         function renderEditImages() {
             const grid = document.getElementById('editImagePreviewGrid');
+            if (!grid) return;
 
             const existingHtml = editExistingImages.map((src, index) => `
                 <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
-                    <img src="${buildImageUrl(src)}" class="h-24 w-full bg-slate-50 object-cover">
-                    <button type="button" onclick="removeEditExistingImage(${index})" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white">
+                    <img src="${escapeHTML(buildImageUrl(src))}" alt="صورة المنتج" class="h-24 w-full bg-slate-50 object-cover" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=No+Image'">
+                    <button type="button" data-action="remove-existing-image" data-index="${index}" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white" aria-label="حذف الصورة">
                         <i class="fas fa-times text-xs"></i>
                     </button>
                 </div>
             `).join('');
 
-            const newHtml = editNewImages.map((file, index) => `
+            const newHtml = editNewImages.map((item, index) => `
                 <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
-                    <img src="${URL.createObjectURL(file)}" class="h-24 w-full bg-slate-50 object-cover">
-                    <button type="button" onclick="removeEditNewImage(${index})" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white">
+                    <img src="${escapeHTML(item.previewUrl)}" alt="صورة جديدة" class="h-24 w-full bg-slate-50 object-cover">
+                    <button type="button" data-action="remove-new-image" data-index="${index}" class="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-error-600 text-white" aria-label="حذف الصورة الجديدة">
                         <i class="fas fa-times text-xs"></i>
                     </button>
                 </div>
@@ -1168,75 +1384,128 @@
         }
 
         function removeEditNewImage(index) {
+            const item = editNewImages[Number(index)];
+            if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
             editNewImages.splice(Number(index), 1);
             renderEditImages();
+        }
+
+        function clearEditNewImages() {
+            editNewImages.forEach(item => {
+                if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+            });
+            editNewImages = [];
         }
 
         function closeEditModal() {
             const modal = document.getElementById('editModal');
             const modalContent = document.getElementById('editModalContent');
 
+            if (!modal || !modalContent) return;
+
             modal.classList.add('opacity-0');
             modalContent.classList.remove('scale-100');
             modalContent.classList.add('scale-95');
 
-            setTimeout(() => {
+            clearTimeout(editTimer);
+            editTimer = setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
+                clearEditNewImages();
+                editExistingImages = [];
+                document.getElementById('editImage').value = '';
+                renderEditImages();
             }, 300);
         }
 
         async function saveProductEdit(event) {
             event.preventDefault();
 
-            const id = document.getElementById('editProductId').value;
-            const product = productsCache.find(item => Number(item.id) === Number(id));
+            const id = String(document.getElementById('editProductId').value || '').trim();
+            const product = productsCache.find(item => String(getProductId(item)) === String(id));
             const token = getToken();
+            const saveBtn = document.getElementById('saveEditBtn');
+
+            if (!token) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            if (!id) {
+                showToast('رقم المنتج غير صحيح', 'error');
+                return;
+            }
 
             if (editExistingImages.length + editNewImages.length > MAX_IMAGES) {
                 showToast('الحد الأقصى 8 صور للمنتج', 'error');
                 return;
             }
 
-            const formData = new FormData();
+            const title = document.getElementById('editTitle').value.trim();
+            const price = document.getElementById('editPrice').value;
+            const stock = document.getElementById('editStock').value;
 
-            formData.append('title', document.getElementById('editTitle').value.trim());
-            formData.append('price', document.getElementById('editPrice').value);
+            if (!title) {
+                showToast('اسم المنتج مطلوب', 'error');
+                return;
+            }
+
+            if (safeNumber(price) < 0 || safeNumber(stock) < 0) {
+                showToast('السعر والمخزون لا يمكن أن يكونا أقل من صفر', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('price', price);
             formData.append('discount', document.getElementById('editDiscount').value || 0);
-            formData.append('stock_quantity', document.getElementById('editStock').value);
+            formData.append('stock_quantity', stock);
             formData.append('brand', document.getElementById('editBrand').value.trim());
             formData.append('category_id', document.getElementById('editCategory').value);
             formData.append('tags', document.getElementById('editTags').value.trim());
             formData.append('description', document.getElementById('editDescription').value.trim());
-            formData.append('status', product ? (product.status || 'approved') : 'approved');
-            formData.append('featured', product && product.featured ? 1 : 0);
+            formData.append('status', product ? normalizeStatus(product?.status || 'approved') : 'approved');
+            formData.append('featured', product && Number(product.featured || 0) === 1 ? 1 : 0);
             formData.append('existing_images', JSON.stringify(editExistingImages));
 
-            editNewImages.forEach(image => formData.append('images', image));
+            editNewImages.forEach(item => formData.append('images', item.file));
+
+            setLoadingButton(saveBtn, true, 'جاري الحفظ...');
 
             try {
-                const { response, data } = await fetchJson(`${API_URL}/products/${id}`, {
+                const { response, data } = await fetchJson(`${API_URL}/products/${getEncodedId(id)}`, {
                     method: 'PUT',
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    },
+                    headers: { Authorization: `Bearer ${token}` },
                     body: formData
                 });
 
-                showToast(data.message || (response.ok ? 'تم تحديث المنتج' : 'تعذر تحديث المنتج'), response.ok ? 'success' : 'error');
-
-                if (response.ok) {
-                    closeEditModal();
-                    await fetchTagsForEdit();
-                    await fetchProducts();
+                if (response.status === 401 || response.status === 403) {
+                    showToast(data.message || 'غير مصرح لك بتنفيذ العملية', 'error');
+                    return;
                 }
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || data.error || 'تعذر تحديث المنتج');
+                }
+
+                showToast(data.message || 'تم تحديث المنتج', 'success');
+                closeEditModal();
+                await fetchTagsForEdit();
+                await fetchProducts();
             } catch (error) {
-                showToast('تعذر تحديث المنتج', 'error');
+                console.error('[Save Product Edit Error]', error);
+                showToast(error.message || 'تعذر تحديث المنتج', 'error');
+            } finally {
+                setLoadingButton(saveBtn, false);
             }
         }
 
         function handleEditImageChange(event) {
-            const incoming = Array.from(event.target.files || []);
+            const incoming = Array.from(event.target.files || []).filter(file => file.type.startsWith('image/'));
+
+            if (incoming.length !== Array.from(event.target.files || []).length) {
+                showToast('يمكنك رفع صور فقط', 'error');
+            }
 
             if (editExistingImages.length + editNewImages.length + incoming.length > MAX_IMAGES) {
                 showToast('الحد الأقصى 8 صور للمنتج', 'error');
@@ -1244,7 +1513,11 @@
                 return;
             }
 
-            editNewImages = editNewImages.concat(incoming);
+            editNewImages = editNewImages.concat(incoming.map(file => ({
+                file,
+                previewUrl: URL.createObjectURL(file)
+            })));
+
             event.target.value = '';
             renderEditImages();
         }
@@ -1258,6 +1531,151 @@
             }
 
             window.location.href = '../auth/login.html';
+        }
+
+        function handleDocumentClick(event) {
+            const button = event.target.closest('[data-action]');
+            if (!button) return;
+
+            const action = button.dataset.action;
+
+            if (action === 'refresh-products') {
+                fetchProducts();
+                return;
+            }
+
+            if (action === 'set-status-filter') {
+                setStatusFilter(button.dataset.filter || '');
+                return;
+            }
+
+            if (action === 'open-details') {
+                openDetailsModal(button.dataset.productId);
+                return;
+            }
+
+            if (action === 'edit-product') {
+                editProduct(button.dataset.productId);
+                return;
+            }
+
+            if (action === 'open-delete') {
+                openDeleteModal(button.dataset.productId);
+                return;
+            }
+
+            if (action === 'close-delete-modal') {
+                closeDeleteModal();
+                return;
+            }
+
+            if (action === 'close-details-modal') {
+                closeDetailsModal();
+                return;
+            }
+
+            if (action === 'close-edit-modal') {
+                closeEditModal();
+                return;
+            }
+
+            if (action === 'update-product-status') {
+                updateProductStatus(button.dataset.productId, button.dataset.status, button);
+                return;
+            }
+
+            if (action === 'toggle-featured') {
+                updateProductFeatured(button.dataset.productId, Number(button.dataset.featured), button);
+                return;
+            }
+
+            if (action === 'approve-seller') {
+                approveSellerRequest(button.dataset.requestId, button);
+                return;
+            }
+
+            if (action === 'remove-existing-image') {
+                removeEditExistingImage(button.dataset.index);
+                return;
+            }
+
+            if (action === 'remove-new-image') {
+                removeEditNewImage(button.dataset.index);
+            }
+        }
+
+        function setupStaticButtons() {
+            const refreshButton = document.querySelector('button[onclick="fetchProducts()"]');
+            if (refreshButton) {
+                refreshButton.removeAttribute('onclick');
+                refreshButton.dataset.action = 'refresh-products';
+            }
+
+            document.querySelectorAll('.status-filter').forEach(button => {
+                button.removeAttribute('onclick');
+                button.dataset.action = 'set-status-filter';
+            });
+
+            const deleteCancel = document.querySelector('#deleteModal button[onclick="closeDeleteModal()"]');
+            if (deleteCancel) {
+                deleteCancel.removeAttribute('onclick');
+                deleteCancel.dataset.action = 'close-delete-modal';
+            }
+
+            const detailsClose = document.querySelector('#productDetailsModal button[onclick="closeDetailsModal()"]');
+            if (detailsClose) {
+                detailsClose.removeAttribute('onclick');
+                detailsClose.dataset.action = 'close-details-modal';
+                detailsClose.setAttribute('aria-label', 'إغلاق تفاصيل المنتج');
+            }
+
+            document.querySelectorAll('#editModal button[onclick="closeEditModal()"]')?.forEach(button => {
+                button.removeAttribute('onclick');
+                button.dataset.action = 'close-edit-modal';
+                if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', 'إغلاق تعديل المنتج');
+            });
+        }
+
+        function setupModalEvents() {
+            const deleteModal = document.getElementById('deleteModal');
+            const detailsModal = document.getElementById('productDetailsModal');
+            const editModal = document.getElementById('editModal');
+
+            if (deleteModal) {
+                deleteModal.addEventListener('click', event => {
+                    if (event.target === deleteModal) closeDeleteModal();
+                });
+            }
+
+            if (detailsModal) {
+                detailsModal.addEventListener('click', event => {
+                    if (event.target === detailsModal) closeDetailsModal();
+                });
+            }
+
+            if (editModal) {
+                editModal.addEventListener('click', event => {
+                    if (event.target === editModal) closeEditModal();
+                });
+            }
+
+            document.addEventListener('keydown', event => {
+                if (event.key !== 'Escape') return;
+
+                if (!editModal.classList.contains('hidden')) {
+                    closeEditModal();
+                    return;
+                }
+
+                if (!deleteModal.classList.contains('hidden')) {
+                    closeDeleteModal();
+                    return;
+                }
+
+                if (!detailsModal.classList.contains('hidden')) {
+                    closeDetailsModal();
+                }
+            });
         }
 
         window.setStatusFilter = setStatusFilter;
@@ -1276,14 +1694,22 @@
         window.removeEditNewImage = removeEditNewImage;
         window.logout = logout;
 
-        document.getElementById('confirmDeleteBtn').addEventListener('click', deleteCurrentProduct);
-        document.getElementById('editProductForm').addEventListener('submit', saveProductEdit);
-        document.getElementById('editImage').addEventListener('change', handleEditImageChange);
-
-        window.addEventListener('load', () => {
+        function init() {
+            setupStaticButtons();
+            setupModalEvents();
+            document.addEventListener('click', handleDocumentClick);
+            document.getElementById('confirmDeleteBtn')?.addEventListener('click', deleteCurrentProduct);
+            document.getElementById('editProductForm')?.addEventListener('submit', saveProductEdit);
+            document.getElementById('editImage')?.addEventListener('change', handleEditImageChange);
             fetchTagsForEdit();
             fetchProducts();
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init, { once: true });
+        } else {
+            init();
+        }
     })();
     </script>
 </body>

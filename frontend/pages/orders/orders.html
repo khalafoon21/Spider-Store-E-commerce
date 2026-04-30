@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
 
     <script>
         tailwind.config = {
@@ -71,7 +72,7 @@
 
         <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <div class="min-w-0">
                     <p class="mb-2 text-sm font-black text-primary-600">Spider Store</p>
                     <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">طلباتي</h1>
                     <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
@@ -79,7 +80,7 @@
                     </p>
                 </div>
 
-                <a href="../../index.html" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600">
+                <a href="../../index.html" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-black text-white shadow-lg shadow-cyan-100 transition hover:bg-primary-600 sm:w-auto">
                     <i class="fas fa-store"></i>
                     متابعة التسوق
                 </a>
@@ -512,7 +513,7 @@
                     const shipments = Array.isArray(order.seller_shipments) ? order.seller_shipments : [];
 
                     return `
-                        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary-100 hover:shadow-md">
+                        <article class="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-primary-100 hover:shadow-md">
                             <div class="flex flex-col gap-4 border-b border-slate-100 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <div class="mb-2 flex flex-wrap items-center gap-2">
@@ -532,17 +533,17 @@
                                 </div>
                             </div>
 
-                            <div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                                <div>
+                            <div class="grid min-w-0 gap-4 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                                <div class="min-w-0">
                                     <p class="mb-3 text-sm font-black text-slate-700">المنتجات</p>
 
                                     <div class="space-y-2">
                                         ${
                                             previewItems.length
                                                 ? previewItems.map(item => `
-                                                    <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3">
-                                                        <div class="min-w-0">
-                                                            <p class="truncate text-sm font-black text-slate-800">
+                                                    <div class="order-line rounded-xl border border-slate-100 bg-white p-3">
+                                                        <div class="order-line__content">
+                                                            <p class="order-line__title text-sm font-black leading-6 text-slate-800">
                                                                 ${escapeHTML(item.title || item.product_title || 'منتج')}
                                                             </p>
 
@@ -551,7 +552,7 @@
                                                             </p>
                                                         </div>
 
-                                                        <span class="shrink-0 text-sm font-black text-slate-900">
+                                                        <span class="order-line__price text-sm font-black text-slate-900">
                                                             ${money(Number(item.price_at_purchase || item.price || 0) * Number(item.quantity || 1))}
                                                         </span>
                                                     </div>
@@ -571,7 +572,7 @@
                                     </div>
                                 </div>
 
-                                <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                <div class="min-w-0 rounded-2xl border border-slate-100 bg-slate-50 p-4">
                                     <p class="mb-2 text-sm font-black text-slate-700">عنوان الشحن</p>
 
                                     <p class="mb-4 line-clamp-3 text-sm font-semibold leading-7 text-slate-500">

@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
 
     <script>
         tailwind.config = {
@@ -74,7 +75,7 @@
                 </span>
             </div>
 
-            <div id="wishlistGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+            <div id="wishlistGrid" class="xs-stack grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
                 <div class="col-span-full py-12 text-center text-slate-500">
                     <i class="fas fa-spinner fa-spin mb-3 text-4xl text-primary-500"></i>
                     <p class="font-bold">جاري تحميل قائمة الأمنيات...</p>
@@ -297,7 +298,7 @@
 
                         <div class="flex flex-1 flex-col p-3 sm:p-4">
                             <a href="../products/product.html?id=${encodedProductId}" class="transition hover:text-primary-600">
-                                <h3 class="mb-2 line-clamp-2 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:text-base">
+                                <h3 class="product-card-title mb-2 line-clamp-3 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:line-clamp-2 sm:text-base">
                                     ${escapeHTML(item.title)}
                                 </h3>
                             </a>

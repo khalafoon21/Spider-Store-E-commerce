@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../../styles/responsive.css">
 
     <script>
         tailwind.config = {
@@ -57,8 +58,26 @@
     </script>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             background-color: #F8FAFC;
+        }
+
+        img,
+        video,
+        svg {
+            max-width: 100%;
+            height: auto;
         }
 
         @keyframes shrinkProgress {
@@ -88,6 +107,11 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        .safe-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
     </style>
 </head>
 
@@ -95,21 +119,22 @@
 
     <main class="min-h-screen w-full overflow-x-hidden px-3 pb-6 pt-28 sm:px-4 sm:pt-28 md:mr-64 md:w-[calc(100%-16rem)] md:pt-6 lg:px-6 lg:py-8">
 
-        <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" aria-live="polite"></div>
+        <div id="toast-container" class="pointer-events-none fixed bottom-5 left-5 z-[80] flex max-w-[calc(100vw-2.5rem)] flex-col gap-3" aria-live="polite"></div>
 
         <header class="mb-5 scroll-mt-28 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <div class="min-w-0">
                     <p class="mb-2 text-sm font-black text-primary-600">Admin Panel</p>
-                    <h1 class="text-2xl font-black text-slate-950 sm:text-3xl">إدارة المستخدمين</h1>
-                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+                    <h1 class="safe-text text-2xl font-black text-slate-950 sm:text-3xl">إدارة المستخدمين</h1>
+                    <p class="safe-text mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
                         راجع حسابات الأعضاء وعدّل صلاحياتهم بشكل آمن بين مستخدم، بائع، ومدير.
                     </p>
                 </div>
 
                 <button
                     type="button"
-                    onclick="fetchUsers()"
+                    id="refreshUsersBtn"
+                    data-action="refresh-users"
                     class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 sm:w-auto"
                 >
                     <i class="fas fa-rotate-right"></i>
@@ -119,24 +144,24 @@
         </header>
 
         <section class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-sm font-black text-slate-400">إجمالي المستخدمين</p>
-                <p id="totalUsersCount" class="mt-2 text-3xl font-black text-slate-950">0</p>
+                <p id="totalUsersCount" class="safe-text mt-2 text-3xl font-black text-slate-950">0</p>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-sm font-black text-slate-400">مستخدمين عاديين</p>
-                <p id="customerUsersCount" class="mt-2 text-3xl font-black text-slate-950">0</p>
+                <p id="customerUsersCount" class="safe-text mt-2 text-3xl font-black text-slate-950">0</p>
             </div>
 
-            <div class="rounded-2xl border border-info-100 bg-info-50 p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-info-100 bg-info-50 p-4 shadow-sm">
                 <p class="text-sm font-black text-info-700">بائعين</p>
-                <p id="sellerUsersCount" class="mt-2 text-3xl font-black text-info-700">0</p>
+                <p id="sellerUsersCount" class="safe-text mt-2 text-3xl font-black text-info-700">0</p>
             </div>
 
-            <div class="rounded-2xl border border-error-100 bg-error-50 p-4 shadow-sm">
+            <div class="min-w-0 rounded-2xl border border-error-100 bg-error-50 p-4 shadow-sm">
                 <p class="text-sm font-black text-error-700">مديرين</p>
-                <p id="adminUsersCount" class="mt-2 text-3xl font-black text-error-700">0</p>
+                <p id="adminUsersCount" class="safe-text mt-2 text-3xl font-black text-error-700">0</p>
             </div>
         </section>
 
@@ -155,16 +180,16 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    <button type="button" data-role-filter="" onclick="setRoleFilter('')" class="role-filter rounded-xl bg-primary-600 px-4 py-2 text-sm font-black text-white">
+                    <button type="button" data-action="set-role-filter" data-role-filter="" class="role-filter rounded-xl bg-primary-600 px-4 py-2 text-sm font-black text-white">
                         الكل
                     </button>
-                    <button type="button" data-role-filter="user" onclick="setRoleFilter('user')" class="role-filter rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+                    <button type="button" data-action="set-role-filter" data-role-filter="user" class="role-filter rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
                         مستخدم
                     </button>
-                    <button type="button" data-role-filter="seller" onclick="setRoleFilter('seller')" class="role-filter rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+                    <button type="button" data-action="set-role-filter" data-role-filter="seller" class="role-filter rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
                         بائع
                     </button>
-                    <button type="button" data-role-filter="admin" onclick="setRoleFilter('admin')" class="role-filter rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
+                    <button type="button" data-action="set-role-filter" data-role-filter="admin" class="role-filter rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-600">
                         مدير
                     </button>
                 </div>
@@ -173,11 +198,11 @@
 
         <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 class="flex items-center gap-2 text-xl font-black text-slate-950">
-                    <span class="grid h-10 w-10 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                <h2 class="flex min-w-0 items-center gap-2 text-xl font-black text-slate-950">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600">
                         <i class="fas fa-users"></i>
                     </span>
-                    قائمة الأعضاء
+                    <span class="safe-text">قائمة الأعضاء</span>
                 </h2>
 
                 <span id="userCount" class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-sm font-black text-primary-700">
@@ -220,7 +245,7 @@
         </section>
     </main>
 
-    <div id="confirmRoleModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-3 opacity-0 transition-opacity duration-300 sm:p-4">
+    <div id="confirmRoleModal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-black/50 p-3 opacity-0 transition-opacity duration-300 sm:p-4">
         <div id="confirmRoleModalContent" class="w-full max-w-md scale-95 rounded-2xl bg-white p-5 shadow-2xl transition-transform duration-300 sm:p-6">
             <div class="mb-5 text-center">
                 <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-warning-50 text-3xl text-warning-600">
@@ -228,21 +253,21 @@
                 </div>
 
                 <h3 class="mb-2 text-xl font-black text-slate-950">تأكيد تغيير الصلاحية</h3>
-                <p id="confirmRoleText" class="text-sm font-semibold leading-7 text-slate-500"></p>
+                <p id="confirmRoleText" class="safe-text text-sm font-semibold leading-7 text-slate-500"></p>
             </div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                     type="button"
                     id="confirmRoleBtn"
-                    class="inline-flex h-11 items-center justify-center rounded-xl bg-primary-600 px-4 text-sm font-black text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 text-sm font-black text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     تأكيد التغيير
                 </button>
 
                 <button
                     type="button"
-                    onclick="closeRoleModal()"
+                    data-action="close-role-modal"
                     class="inline-flex h-11 items-center justify-center rounded-xl bg-slate-100 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-200"
                 >
                     إلغاء
@@ -259,21 +284,43 @@
     (() => {
         const API_URL = '/api';
 
+        const ALLOWED_ROLES = ['user', 'seller', 'admin'];
+
+        const ROLE_LABELS = {
+            user: 'مستخدم',
+            seller: 'بائع',
+            admin: 'مدير'
+        };
+
         let usersCache = [];
         let currentRoleFilter = '';
         let pendingRoleChange = null;
+        let modalCloseTimer = null;
+        let searchTimer = null;
 
         if (typeof window.loadAdminSidebar === 'function') {
             window.loadAdminSidebar('users');
         }
 
-        const escapeHTML = value => String(value || '').replace(/[&<>'"]/g, char => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[char]));
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[char]));
+        }
+
+        function safeDomId(value) {
+            const id = String(value ?? '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+            return id || 'unknown';
+        }
+
+        function getPayloadUserId(userId) {
+            const value = String(userId ?? '');
+            return /^\d+$/.test(value) ? Number(value) : value;
+        }
 
         function getToken() {
             if (window.AppState && typeof window.AppState.getToken === 'function') {
@@ -283,9 +330,68 @@
             return localStorage.getItem('spider_token') || localStorage.getItem('token');
         }
 
+        function parseJwtPayload(token) {
+            try {
+                if (!token || !token.includes('.')) return null;
+
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const json = decodeURIComponent(
+                    atob(base64)
+                        .split('')
+                        .map(char => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
+                        .join('')
+                );
+
+                return JSON.parse(json);
+            } catch (error) {
+                console.warn('[JWT Parse Error]', error);
+                return null;
+            }
+        }
+
+        function getCurrentUser() {
+            if (window.AppState && typeof window.AppState.getUser === 'function') {
+                const user = window.AppState.getUser();
+                if (user) return user;
+            }
+
+            const possibleKeys = ['spider_user', 'user', 'current_user', 'auth_user'];
+
+            for (const key of possibleKeys) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') return parsed;
+                } catch (error) {}
+            }
+
+            const payload = parseJwtPayload(getToken());
+            return payload || null;
+        }
+
+        function getCurrentUserId() {
+            const user = getCurrentUser();
+
+            if (!user || typeof user !== 'object') return null;
+
+            return user.id ?? user.user_id ?? user.userId ?? user.sub ?? null;
+        }
+
+        function isCurrentUser(user) {
+            const currentId = getCurrentUserId();
+
+            if (currentId === null || currentId === undefined) return false;
+
+            return String(user?.id ?? '') === String(currentId);
+        }
+
         function showToast(message, type = 'success') {
             if (window.AppUI && typeof window.AppUI.toast === 'function') {
-                return window.AppUI.toast(message, type);
+                window.AppUI.toast(message, type);
+                return;
             }
 
             const container = document.getElementById('toast-container');
@@ -294,12 +400,12 @@
             const isSuccess = type === 'success';
 
             const toast = document.createElement('div');
-            toast.className = `pointer-events-auto relative overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
+            toast.className = `pointer-events-auto relative max-w-sm overflow-hidden rounded-xl border-r-4 bg-white/95 p-4 shadow-xl transition-all duration-500 ${
                 isSuccess ? 'border-success-500' : 'border-error-500'
             }`;
 
             toast.innerHTML = `
-                <p class="text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
+                <p class="safe-text text-sm font-bold ${isSuccess ? 'text-slate-800' : 'text-error-600'}">${escapeHTML(message)}</p>
                 <div class="absolute bottom-0 left-0 h-1 w-full bg-slate-100">
                     <div class="h-full ${isSuccess ? 'bg-success-500' : 'bg-error-500'} animate-progress"></div>
                 </div>
@@ -311,49 +417,69 @@
 
         async function fetchJson(url, options = {}) {
             const response = await fetch(url, options);
-            const data = await response.json().catch(() => ({}));
-            return { response, data };
+            const text = await response.text();
+
+            let data = {};
+
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (error) {
+                console.error('[Non JSON Response]', {
+                    url,
+                    status: response.status,
+                    text
+                });
+            }
+
+            return { response, data, text };
+        }
+
+        function extractUsers(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.users)) return data.users;
+            if (Array.isArray(data.result)) return data.result;
+            if (Array.isArray(data.data?.users)) return data.data.users;
+            if (Array.isArray(data.data?.data)) return data.data.data;
+            return [];
         }
 
         function normalizeRole(role) {
-            const value = String(role || 'user').toLowerCase();
+            const value = String(role ?? 'user').toLowerCase().trim();
 
-            if (value === 'customer') return 'user';
-            if (['user', 'seller', 'admin'].includes(value)) return value;
+            if (value === 'customer' || value === 'client' || value === 'member') return 'user';
+            if (ALLOWED_ROLES.includes(value)) return value;
 
             return 'user';
         }
 
         function getDisplayName(user) {
             const parts = [
-                user.first_name,
-                user.last_name
+                user?.first_name,
+                user?.last_name
             ].filter(Boolean).join(' ').trim();
 
-            return parts || user.username || user.name || 'بدون اسم';
+            return parts || user?.username || user?.name || 'بدون اسم';
         }
 
         function getInitials(user) {
             const name = getDisplayName(user);
-            const email = String(user.email || '').trim();
+            const email = String(user?.email || '').trim();
 
             if (name && name !== 'بدون اسم') {
-                return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+                return name
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map(part => part[0])
+                    .join('')
+                    .toUpperCase();
             }
 
             return email.slice(0, 2).toUpperCase() || 'U';
         }
 
         function roleLabel(role) {
-            const normalized = normalizeRole(role);
-
-            const labels = {
-                user: 'مستخدم',
-                seller: 'بائع',
-                admin: 'مدير'
-            };
-
-            return labels[normalized] || 'مستخدم';
+            return ROLE_LABELS[normalizeRole(role)] || 'مستخدم';
         }
 
         function roleBadge(role) {
@@ -380,17 +506,20 @@
             return `
                 <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${meta.className}">
                     <i class="fas ${meta.icon}"></i>
-                    ${meta.label}
+                    ${escapeHTML(meta.label)}
                 </span>
             `;
         }
 
         function hasSellerRequest(user) {
-            return user && (
-                user.has_seller_request === true ||
-                user.has_seller_request === 1 ||
-                user.has_seller_request === '1' ||
-                Boolean(user.seller_request_id)
+            return Boolean(
+                user &&
+                (
+                    user.has_seller_request === true ||
+                    user.has_seller_request === 1 ||
+                    user.has_seller_request === '1' ||
+                    user.seller_request_id
+                )
             );
         }
 
@@ -428,9 +557,9 @@
         }
 
         function sellerStatusBadge(user) {
-            const normalizedRole = normalizeRole(user && user.role);
-            const sellerStatus = String(user && user.seller_status || '').toLowerCase();
-            const requestStatus = String(user && user.seller_request_status || '').toLowerCase();
+            const normalizedRole = normalizeRole(user?.role);
+            const sellerStatus = String(user?.seller_status || '').toLowerCase();
+            const requestStatus = String(user?.seller_request_status || '').toLowerCase();
             const hasRequest = hasSellerRequest(user);
 
             if (normalizedRole !== 'seller') {
@@ -443,7 +572,7 @@
                 return `
                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${requestMeta.className}">
                         <i class="fas ${requestMeta.icon}"></i>
-                        ${requestMeta.label}
+                        ${escapeHTML(requestMeta.label)}
                     </span>
                 `;
             }
@@ -480,7 +609,7 @@
             return `
                 <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black ${sellerMeta.className}">
                     <i class="fas ${sellerMeta.icon}"></i>
-                    ${sellerMeta.label}
+                    ${escapeHTML(sellerMeta.label)}
                 </span>
             `;
         }
@@ -494,48 +623,67 @@
             return 'bg-slate-100 text-slate-600 border-slate-200';
         }
 
-        function roleSelect(user) {
-            const role = normalizeRole(user.role);
-            const id = Number(user.id);
+        function roleSelect(user, view) {
+            const role = normalizeRole(user?.role);
+            const userId = String(user?.id ?? '');
+            const domId = safeDomId(userId);
+            const selectId = `role-${view}-${domId}`;
+            const buttonId = `save-role-${view}-${domId}`;
+            const isSelf = isCurrentUser(user);
 
             return `
-                <div class="flex items-center justify-center gap-2">
-                    <div class="relative w-full max-w-[150px]">
-                        <select
-                            id="role-${id}"
-                            data-original-role="${role}"
-                            onchange="handleRoleSelectChange(${id})"
-                            class="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-sm font-black text-slate-700 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
-                        >
-                            <option value="user" ${role === 'user' ? 'selected' : ''}>مستخدم</option>
-                            <option value="seller" ${role === 'seller' ? 'selected' : ''}>بائع</option>
-                            <option value="admin" ${role === 'admin' ? 'selected' : ''}>مدير</option>
-                        </select>
+                <div class="min-w-0">
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="relative w-full max-w-[150px] min-w-0">
+                            <select
+                                id="${escapeHTML(selectId)}"
+                                data-role-select="true"
+                                data-user-id="${escapeHTML(userId)}"
+                                data-view="${escapeHTML(view)}"
+                                data-original-role="${escapeHTML(role)}"
+                                ${isSelf ? 'disabled' : ''}
+                                class="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-sm font-black text-slate-700 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                                <option value="user" ${role === 'user' ? 'selected' : ''}>مستخدم</option>
+                                <option value="seller" ${role === 'seller' ? 'selected' : ''}>بائع</option>
+                                <option value="admin" ${role === 'admin' ? 'selected' : ''}>مدير</option>
+                            </select>
 
-                        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3 text-slate-400">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </span>
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3 text-slate-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            id="${escapeHTML(buttonId)}"
+                            data-action="open-role-modal"
+                            data-user-id="${escapeHTML(userId)}"
+                            data-view="${escapeHTML(view)}"
+                            disabled
+                            class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-slate-100 text-slate-400 transition enabled:border-primary-100 enabled:bg-primary-50 enabled:text-primary-600 enabled:hover:bg-primary-600 enabled:hover:text-white disabled:cursor-not-allowed"
+                            title="${isSelf ? 'لا يمكن تعديل صلاحيتك من هنا' : 'حفظ الصلاحية'}"
+                            aria-label="${isSelf ? 'لا يمكن تعديل صلاحيتك من هنا' : 'حفظ الصلاحية'}"
+                        >
+                            <i class="fas fa-save"></i>
+                        </button>
                     </div>
 
-                    <button
-                        type="button"
-                        id="save-role-${id}"
-                        onclick="openRoleModal(${id})"
-                        disabled
-                        class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-slate-100 text-slate-400 transition enabled:border-primary-100 enabled:bg-primary-50 enabled:text-primary-600 enabled:hover:bg-primary-600 enabled:hover:text-white disabled:cursor-not-allowed"
-                        title="حفظ الصلاحية"
-                    >
-                        <i class="fas fa-save"></i>
-                    </button>
+                    ${isSelf ? `
+                        <p class="mt-2 text-center text-xs font-bold text-warning-700">
+                            لا يمكن تعديل صلاحيتك من هنا
+                        </p>
+                    ` : ''}
                 </div>
             `;
         }
 
         function setRoleFilter(role) {
-            currentRoleFilter = role;
+            currentRoleFilter = normalizeRole(role);
+            if (!role) currentRoleFilter = '';
 
             document.querySelectorAll('.role-filter').forEach(button => {
-                const active = button.dataset.roleFilter === role;
+                const active = String(button.dataset.roleFilter || '') === currentRoleFilter;
 
                 button.className = active
                     ? 'role-filter rounded-xl bg-primary-600 px-4 py-2 text-sm font-black text-white'
@@ -545,13 +693,29 @@
             renderUsers();
         }
 
-        function handleRoleSelectChange(userId) {
-            const select = document.getElementById(`role-${userId}`);
-            const button = document.getElementById(`save-role-${userId}`);
+        function handleRoleSelectChange(select) {
+            if (!select) return;
 
-            if (!select || !button) return;
+            const userId = select.dataset.userId;
+            const view = select.dataset.view;
+            const button = document.getElementById(`save-role-${view}-${safeDomId(userId)}`);
 
-            button.disabled = select.value === select.dataset.originalRole;
+            if (!button) return;
+
+            button.disabled = normalizeRole(select.value) === normalizeRole(select.dataset.originalRole);
+        }
+
+        function resetRoleSelect(userId, view) {
+            const select = document.getElementById(`role-${view}-${safeDomId(userId)}`);
+            const button = document.getElementById(`save-role-${view}-${safeDomId(userId)}`);
+
+            if (!select) return;
+
+            select.value = normalizeRole(select.dataset.originalRole);
+
+            if (button) {
+                button.disabled = true;
+            }
         }
 
         function updateCounters() {
@@ -573,9 +737,10 @@
                 const role = normalizeRole(user.role);
                 const name = getDisplayName(user).toLowerCase();
                 const email = String(user.email || '').toLowerCase();
+                const id = String(user.id || '').toLowerCase();
 
                 const matchRole = !currentRoleFilter || role === currentRoleFilter;
-                const matchSearch = !searchValue || name.includes(searchValue) || email.includes(searchValue);
+                const matchSearch = !searchValue || name.includes(searchValue) || email.includes(searchValue) || id.includes(searchValue);
 
                 return matchRole && matchSearch;
             });
@@ -609,13 +774,14 @@
         function renderEmpty(message = 'لا توجد مستخدمين.') {
             const mobile = document.getElementById('usersMobileContainer');
             const table = document.getElementById('usersContainer');
+            const safeMessage = escapeHTML(message);
 
             if (mobile) {
                 mobile.innerHTML = `
                     <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-14 text-center">
                         <i class="fas fa-users-slash mb-4 text-5xl text-slate-300"></i>
                         <h3 class="text-lg font-black text-slate-950">لا توجد بيانات</h3>
-                        <p class="mt-2 text-sm font-semibold text-slate-500">${escapeHTML(message)}</p>
+                        <p class="safe-text mt-2 text-sm font-semibold text-slate-500">${safeMessage}</p>
                     </div>
                 `;
             }
@@ -625,7 +791,7 @@
                     <tr>
                         <td colspan="5" class="p-14 text-center text-slate-400">
                             <i class="fas fa-users-slash mb-4 text-5xl"></i>
-                            <p class="font-black">${escapeHTML(message)}</p>
+                            <p class="safe-text font-black">${safeMessage}</p>
                         </td>
                     </tr>
                 `;
@@ -660,16 +826,12 @@
                     throw new Error(data.message || data.error || 'تعذر تحميل المستخدمين');
                 }
 
-                usersCache = Array.isArray(data.data)
-                    ? data.data
-                    : Array.isArray(data.users)
-                        ? data.users
-                        : [];
+                usersCache = extractUsers(data);
 
                 updateCounters();
                 renderUsers();
             } catch (error) {
-                console.error('Fetch users error:', error);
+                console.error('[Fetch Users Error]', error);
                 usersCache = [];
                 updateCounters();
                 document.getElementById('userCount').innerHTML = '<i class="fas fa-users"></i> 0 مستخدم';
@@ -700,14 +862,14 @@
         }
 
         function renderUserCard(user) {
-            const id = Number(user.id);
+            const id = String(user.id ?? '');
             const role = normalizeRole(user.role);
             const name = getDisplayName(user);
             const email = user.email || 'لا يوجد بريد';
 
             return `
-                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div class="flex items-start gap-3">
+                <article class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="flex min-w-0 items-start gap-3">
                         <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border text-sm font-black ${avatarClass(role)}">
                             ${escapeHTML(getInitials(user))}
                         </div>
@@ -718,22 +880,22 @@
                                 ${sellerStatusBadge(user)}
                             </div>
 
-                            <h3 class="truncate text-base font-black text-slate-950">${escapeHTML(name)}</h3>
-                            <p class="mt-1 truncate text-sm font-semibold text-slate-500" dir="ltr">${escapeHTML(email)}</p>
-                            <p class="mt-1 text-xs font-black text-slate-400">#${id}</p>
+                            <h3 class="safe-text text-base font-black text-slate-950">${escapeHTML(name)}</h3>
+                            <p class="safe-text mt-1 text-sm font-semibold text-slate-500" dir="ltr">${escapeHTML(email)}</p>
+                            <p class="safe-text mt-1 text-xs font-black text-slate-400">#${escapeHTML(id)}</p>
                         </div>
                     </div>
 
                     <div class="mt-4 rounded-2xl bg-slate-50 p-3">
                         <p class="mb-2 text-xs font-black text-slate-400">تعديل الصلاحية</p>
-                        ${roleSelect(user)}
+                        ${roleSelect(user, 'mobile')}
                     </div>
                 </article>
             `;
         }
 
         function renderUserRow(user) {
-            const id = Number(user.id);
+            const id = String(user.id ?? '');
             const role = normalizeRole(user.role);
             const name = getDisplayName(user);
             const email = user.email || 'لا يوجد بريد';
@@ -741,32 +903,41 @@
             return `
                 <tr class="transition hover:bg-slate-50">
                     <td class="p-4">
-                        <div class="flex items-center gap-3">
+                        <div class="flex min-w-0 items-center gap-3">
                             <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-sm font-black ${avatarClass(role)}">
                                 ${escapeHTML(getInitials(user))}
                             </div>
 
                             <div class="min-w-0">
-                                <p class="max-w-[240px] truncate font-black text-slate-800">${escapeHTML(name)}</p>
-                                <span class="mt-1 block text-xs font-semibold text-slate-400">#${id}</span>
+                                <p class="safe-text max-w-[240px] font-black text-slate-800">${escapeHTML(name)}</p>
+                                <span class="safe-text mt-1 block text-xs font-semibold text-slate-400">#${escapeHTML(id)}</span>
                             </div>
                         </div>
                     </td>
 
-                    <td class="p-4 font-semibold text-slate-600" dir="ltr">${escapeHTML(email)}</td>
+                    <td class="max-w-[280px] truncate p-4 font-semibold text-slate-600" dir="ltr" title="${escapeHTML(email)}">
+                        ${escapeHTML(email)}
+                    </td>
+
                     <td class="p-4">${roleBadge(role)}</td>
                     <td class="p-4">${sellerStatusBadge(user)}</td>
-                    <td class="p-4 text-center">${roleSelect(user)}</td>
+                    <td class="p-4 text-center">${roleSelect(user, 'desktop')}</td>
                 </tr>
             `;
         }
 
-        function openRoleModal(userId) {
-            const user = usersCache.find(item => Number(item.id) === Number(userId));
-            const select = document.getElementById(`role-${userId}`);
+        function openRoleModal(userId, view) {
+            const user = usersCache.find(item => String(item.id) === String(userId));
+            const select = document.getElementById(`role-${view}-${safeDomId(userId)}`);
 
             if (!user || !select) {
                 showToast('لم يتم العثور على المستخدم', 'error');
+                return;
+            }
+
+            if (isCurrentUser(user)) {
+                showToast('لا يمكن تعديل صلاحيتك من هذه الصفحة', 'error');
+                resetRoleSelect(userId, view);
                 return;
             }
 
@@ -779,7 +950,8 @@
             }
 
             pendingRoleChange = {
-                userId: Number(userId),
+                userId: String(userId),
+                view,
                 oldRole,
                 newRole,
                 userName: getDisplayName(user)
@@ -794,27 +966,35 @@
             const modal = document.getElementById('confirmRoleModal');
             const content = document.getElementById('confirmRoleModalContent');
 
+            clearTimeout(modalCloseTimer);
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 modal.classList.remove('opacity-0');
                 content.classList.remove('scale-95');
                 content.classList.add('scale-100');
-            }, 10);
+            });
         }
 
-        function closeRoleModal() {
-            pendingRoleChange = null;
-
+        function closeRoleModal(resetSelect = true) {
             const modal = document.getElementById('confirmRoleModal');
             const content = document.getElementById('confirmRoleModalContent');
+
+            if (resetSelect && pendingRoleChange) {
+                resetRoleSelect(pendingRoleChange.userId, pendingRoleChange.view);
+            }
+
+            pendingRoleChange = null;
 
             modal.classList.add('opacity-0');
             content.classList.remove('scale-100');
             content.classList.add('scale-95');
 
-            setTimeout(() => {
+            clearTimeout(modalCloseTimer);
+
+            modalCloseTimer = setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }, 300);
@@ -832,9 +1012,16 @@
                 return;
             }
 
+            const payload = {
+                user_id: getPayloadUserId(pendingRoleChange.userId),
+                new_role: pendingRoleChange.newRole
+            };
+
             button.dataset.originalHtml = button.innerHTML;
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري الحفظ...';
+
+            console.log('[Update User Role Request]', payload);
 
             try {
                 const { response, data } = await fetchJson(`${API_URL}/admin/users/role`, {
@@ -843,21 +1030,25 @@
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`
                     },
-                    body: JSON.stringify({
-                        user_id: pendingRoleChange.userId,
-                        new_role: pendingRoleChange.newRole
-                    })
+                    body: JSON.stringify(payload)
                 });
+
+                console.log('[Update User Role Response]', response.status, data);
+
+                if (response.status === 401 || response.status === 403) {
+                    showToast(data.message || 'غير مصرح لك بتنفيذ العملية', 'error');
+                    return;
+                }
 
                 if (!response.ok || data.success === false) {
                     throw new Error(data.message || data.error || 'تعذر تحديث الصلاحية');
                 }
 
                 showToast(data.message || 'تم تحديث صلاحية المستخدم بنجاح', 'success');
-                closeRoleModal();
+                closeRoleModal(false);
                 await fetchUsers();
             } catch (error) {
-                console.error('Update role error:', error);
+                console.error('[Update Role Error]', error);
                 showToast(error.message || 'تعذر تحديث الصلاحية', 'error');
             } finally {
                 button.disabled = false;
@@ -876,15 +1067,81 @@
             window.location.href = '../auth/login.html';
         }
 
+        function handleDocumentClick(event) {
+            const button = event.target.closest('[data-action]');
+            if (!button) return;
+
+            const action = button.dataset.action;
+
+            if (action === 'refresh-users') {
+                fetchUsers();
+                return;
+            }
+
+            if (action === 'set-role-filter') {
+                setRoleFilter(button.dataset.roleFilter || '');
+                return;
+            }
+
+            if (action === 'open-role-modal') {
+                openRoleModal(button.dataset.userId, button.dataset.view);
+                return;
+            }
+
+            if (action === 'close-role-modal') {
+                closeRoleModal(true);
+            }
+        }
+
+        function handleDocumentChange(event) {
+            const select = event.target.closest('[data-role-select="true"]');
+            if (!select) return;
+
+            handleRoleSelectChange(select);
+        }
+
+        function setupEvents() {
+            const confirmBtn = document.getElementById('confirmRoleBtn');
+            const searchInput = document.getElementById('userSearch');
+            const modal = document.getElementById('confirmRoleModal');
+
+            document.addEventListener('click', handleDocumentClick);
+            document.addEventListener('change', handleDocumentChange);
+
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', confirmRoleChange);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(renderUsers, 120);
+                });
+            }
+
+            if (modal) {
+                modal.addEventListener('click', event => {
+                    if (event.target === modal) {
+                        closeRoleModal(true);
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    const modalIsOpen = !document.getElementById('confirmRoleModal').classList.contains('hidden');
+                    if (modalIsOpen) closeRoleModal(true);
+                }
+            });
+        }
+
         window.fetchUsers = fetchUsers;
         window.setRoleFilter = setRoleFilter;
-        window.handleRoleSelectChange = handleRoleSelectChange;
         window.openRoleModal = openRoleModal;
         window.closeRoleModal = closeRoleModal;
         window.logout = logout;
 
-        document.getElementById('confirmRoleBtn').addEventListener('click', confirmRoleChange);
-        document.getElementById('userSearch').addEventListener('input', renderUsers);
+        setupEvents();
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', fetchUsers, { once: true });
