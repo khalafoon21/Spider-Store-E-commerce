@@ -27,7 +27,11 @@
     </script>
     
     <style>
+        html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
         body { background-color: #F8FAFC; }
+        img, video, svg { max-width: 100%; height: auto; }
+        .safe-text { overflow-wrap: anywhere; word-break: break-word; }
+        button:disabled { cursor: not-allowed; }
         .smooth-transition { transition: all 0.3s ease-in-out; }
         .fade-in { animation: fadeIn 0.6s ease-in-out; }
 
@@ -98,7 +102,58 @@
         </section>
 
         <div class="flex-1">
-            
+
+        <section id="homepageFilters" class="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+            <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h2 class="flex items-center gap-2 text-base font-black text-slate-950 sm:text-lg">
+                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-primary-600">
+                        <i class="fas fa-filter"></i>
+                    </span>
+                    فلترة وترتيب المنتجات
+                </h2>
+
+                <span id="filteredProductsCount" class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-50 px-4 py-2 text-sm font-black text-primary-700">
+                    <i class="fas fa-box"></i>
+                    0 منتج
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <label class="block">
+                    <span class="mb-1 block text-xs font-black text-slate-400">الترتيب</span>
+                    <select id="sortSelect" class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                        <option value="newest">الأحدث</option>
+                        <option value="price_asc">الأقل سعرًا</option>
+                        <option value="price_desc">الأعلى سعرًا</option>
+                        <option value="rating_desc">الأعلى تقييمًا</option>
+                        <option value="discount_desc">أعلى خصم</option>
+                        <option value="name_asc">الاسم أ-ي</option>
+                    </select>
+                </label>
+
+                <label class="block">
+                    <span class="mb-1 block text-xs font-black text-slate-400">السعر من</span>
+                    <input id="minPriceInput" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                </label>
+
+                <label class="block">
+                    <span class="mb-1 block text-xs font-black text-slate-400">السعر إلى</span>
+                    <input id="maxPriceInput" type="number" min="0" step="1" inputmode="numeric" placeholder="مثلاً 3000" class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50">
+                </label>
+
+                <label class="flex h-11 items-center gap-2 self-end rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700">
+                    <input id="inStockOnly" type="checkbox" class="h-4 w-4 accent-cyan-600">
+                    المتاح فقط
+                </label>
+
+                <button type="button" id="clearFiltersBtn" class="inline-flex h-11 items-center justify-center gap-2 self-end rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-error-100 hover:bg-error-50 hover:text-error-600">
+                    <i class="fas fa-rotate-left"></i>
+                    مسح الفلاتر
+                </button>
+            </div>
+
+            <p id="activeFiltersLabel" class="safe-text mt-3 hidden rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500"></p>
+        </section>
             <section id="latestSection" class="mb-8 sm:mb-10">
                 <div class="mb-4 flex items-center justify-between gap-3 border-r-4 border-secondary-500 pr-3 sm:mb-5">
                     <h2 id="latestTitle" class="text-2xl font-bold text-gray-900">وصل حديثاً</h2>
@@ -121,9 +176,9 @@
             <h2 class="text-2xl font-bold text-primary-500 mb-4">Spider Store</h2>
             <p class="text-gray-400 mb-8 max-w-md mx-auto">وجهتك الأولى لأفضل إكسسوارات الألعاب في مصر.</p>
             <div class="flex justify-center gap-6 mb-8 text-2xl">
-                <a href="#" class="hover:text-primary-500 transition-colors"><i class="fab fa-facebook"></i></a>
-                <a href="#" class="hover:text-primary-500 transition-colors"><i class="fab fa-instagram"></i></a>
-                <a href="#" class="hover:text-primary-500 transition-colors"><i class="fab fa-whatsapp"></i></a>
+                <a href="#" aria-label="Facebook" class="hover:text-primary-500 transition-colors"><i class="fab fa-facebook"></i></a>
+                <a href="#" aria-label="Instagram" class="hover:text-primary-500 transition-colors"><i class="fab fa-instagram"></i></a>
+                <a href="#" aria-label="WhatsApp" class="hover:text-primary-500 transition-colors"><i class="fab fa-whatsapp"></i></a>
             </div>
             <p class="text-gray-500 text-sm">© 2026 Spider Store. جميع الحقوق محفوظة.</p>
         </div>
@@ -143,12 +198,19 @@
         let categoriesCache = [];
         let wishlistProductIds = new Set();
         let liveSearchTimer = null;
+        let filterTimer = null;
+        let currentSort = urlParams.get('sort') || 'newest';
+        let minPriceFilter = urlParams.get('min_price') || '';
+        let maxPriceFilter = urlParams.get('max_price') || '';
+        let inStockOnly = urlParams.get('in_stock') === '1';
+        let latestProductsCache = [];
 
         let banners = [];
         let currentSlide = 0;
         let sliderInterval = null;
+        let productsRequestSeq = 0;
 
-        const escapeHTML = str => String(str || '').replace(/[&<>'"]/g, tag => ({
+        const escapeHTML = str => String(str ?? '').replace(/[&<>'"]/g, tag => ({
             '&': '&amp;',
             '<': '&lt;',
             '>': '&gt;',
@@ -157,7 +219,11 @@
         }[tag]));
 
         const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
-        const safeId = value => encodeURIComponent(String(value || ''));
+        const safeId = value => encodeURIComponent(String(value ?? ''));
+
+        const normalizeId = value => String(value ?? '').trim();
+        const getPayloadId = value => /^\d+$/.test(normalizeId(value)) ? Number(normalizeId(value)) : normalizeId(value);
+        const isSuccessResponse = (response, data) => response.ok && data.success !== false;
 
         const safeIconClass = value => String(value || 'fa-tags')
             .split(/\s+/)
@@ -180,6 +246,35 @@
             return '#';
         };
 
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+
+            let data = {};
+
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (error) {
+                console.error('[Non JSON Response]', { url, status: response.status, text });
+            }
+
+            return { response, data, text };
+        }
+
+        function extractList(data, keys = []) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data.data)) return data.data;
+
+            for (const key of keys) {
+                if (Array.isArray(data?.[key])) return data[key];
+                if (Array.isArray(data?.data?.[key])) return data.data[key];
+            }
+
+            if (Array.isArray(data?.data?.data)) return data.data.data;
+            if (Array.isArray(data?.result)) return data.result;
+            return [];
+        }
+
         const buildImageUrl = imagePath => {
             const cleanPath = String(imagePath || '').trim();
             if (!cleanPath) return '';
@@ -194,7 +289,7 @@
             if (isCategoryImageIcon(cleanIcon)) {
                 return `
                     <img
-                        src="${buildImageUrl(cleanIcon)}"
+                        src="${escapeHTML(buildImageUrl(cleanIcon))}"
                         class="h-7 w-7 object-contain"
                         alt="${escapeHTML(name || 'Category icon')}"
                         loading="lazy"
@@ -232,6 +327,119 @@
                 : basePrice.toFixed(0);
         };
 
+        const getFinalPriceNumber = product => Number(calcFinalPrice(product?.price, product?.discount));
+
+        const getProductStock = product => safeNumber(
+            product?.stock_quantity ??
+            product?.stock ??
+            product?.quantity ??
+            product?.available_quantity
+        );
+
+        const isProductOutOfStock = product => {
+            const stockStatus = String(product?.stock_status || product?.availability || '').toLowerCase();
+            if (['out_of_stock', 'out-of-stock', 'sold_out', 'sold-out', 'unavailable'].includes(stockStatus)) return true;
+            if (product?.in_stock === false || product?.available === false) return true;
+            return getProductStock(product) <= 0;
+        };
+
+        function hasActiveProductFilters() {
+            return Boolean(
+                currentCategoryId ||
+                searchQuery ||
+                minPriceFilter ||
+                maxPriceFilter ||
+                inStockOnly ||
+                currentSort !== 'newest'
+            );
+        }
+
+        function applyProductFilters(products) {
+            const min = minPriceFilter !== '' ? safeNumber(minPriceFilter) : null;
+            const max = maxPriceFilter !== '' ? safeNumber(maxPriceFilter) : null;
+
+            let output = products.filter(product => {
+                const finalPrice = getFinalPriceNumber(product);
+                if (min !== null && finalPrice < min) return false;
+                if (max !== null && finalPrice > max) return false;
+                if (inStockOnly && isProductOutOfStock(product)) return false;
+                return true;
+            });
+
+            output = [...output].sort((a, b) => {
+                const priceA = getFinalPriceNumber(a);
+                const priceB = getFinalPriceNumber(b);
+                const ratingA = safeNumber(a.rating_average);
+                const ratingB = safeNumber(b.rating_average);
+                const discountA = safeNumber(a.discount);
+                const discountB = safeNumber(b.discount);
+                const nameA = String(a.title || '').localeCompare(String(b.title || ''), 'ar');
+                const dateA = new Date(a.created_at || a.createdAt || a.updated_at || 0).getTime() || 0;
+                const dateB = new Date(b.created_at || b.createdAt || b.updated_at || 0).getTime() || 0;
+
+                if (currentSort === 'price_asc') return priceA - priceB;
+                if (currentSort === 'price_desc') return priceB - priceA;
+                if (currentSort === 'rating_desc') return ratingB - ratingA;
+                if (currentSort === 'discount_desc') return discountB - discountA;
+                if (currentSort === 'name_asc') return nameA;
+                return dateB - dateA;
+            });
+
+            return output;
+        }
+
+        function updateFilterSummary(filteredCount, totalCount) {
+            const count = document.getElementById('filteredProductsCount');
+            const label = document.getElementById('activeFiltersLabel');
+
+            if (count) {
+                count.innerHTML = '<i class="fas fa-box"></i> ' + filteredCount + ' من ' + totalCount + ' منتج';
+            }
+
+            if (!label) return;
+
+            const parts = [];
+            if (currentCategoryId) parts.push('تصنيف محدد');
+            if (searchQuery) parts.push('بحث: ' + escapeHTML(searchQuery));
+            if (minPriceFilter) parts.push('من ' + escapeHTML(minPriceFilter) + ' ج.م');
+            if (maxPriceFilter) parts.push('إلى ' + escapeHTML(maxPriceFilter) + ' ج.م');
+            if (inStockOnly) parts.push('المتاح فقط');
+            if (currentSort !== 'newest') parts.push('ترتيب: ' + escapeHTML(getSortLabel(currentSort)));
+
+            if (!parts.length) {
+                label.classList.add('hidden');
+                label.textContent = '';
+                return;
+            }
+
+            label.classList.remove('hidden');
+            label.innerHTML = 'الفلاتر النشطة: ' + parts.join(' · ');
+        }
+
+        function getSortLabel(value) {
+            return {
+                newest: 'الأحدث',
+                price_asc: 'الأقل سعرًا',
+                price_desc: 'الأعلى سعرًا',
+                rating_desc: 'الأعلى تقييمًا',
+                discount_desc: 'أعلى خصم',
+                name_asc: 'الاسم أ-ي'
+            }[value] || 'الأحدث';
+        }
+
+        function syncFilterControls() {
+            const sort = document.getElementById('sortSelect');
+            const min = document.getElementById('minPriceInput');
+            const max = document.getElementById('maxPriceInput');
+            const stock = document.getElementById('inStockOnly');
+
+            if (sort) sort.value = currentSort;
+            if (min) min.value = minPriceFilter;
+            if (max) max.value = maxPriceFilter;
+            if (stock) stock.checked = inStockOnly;
+        }
+
+
         function renderProductsSkeleton(containerId, count = 6) {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -249,6 +457,8 @@
         }
 
         async function initPage() {
+            syncFilterControls();
+            wireHomepageFilterControls();
             renderProductsSkeleton('productsGrid');
             renderProductsSkeleton('bestSellersGrid', 5);
 
@@ -266,29 +476,26 @@
             const heroContainer = document.getElementById('heroContainer');
 
             try {
-                const res = await fetch(`${API_URL}/banners`);
-                const data = await res.json().catch(() => ({}));
+                const { response, data } = await fetchJson(`${API_URL}/banners`);
+                const bannerList = isSuccessResponse(response, data)
+                    ? extractList(data, ['banners'])
+                    : [];
 
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-                    banners = data.data.filter(banner => banner && (banner.image_url || banner.title || banner.description));
+                banners = bannerList.filter(banner => banner && (banner.image_url || banner.image || banner.title || banner.description));
 
-                    if (!banners.length) {
-                        if (heroContainer) heroContainer.classList.add('hidden');
-                        return;
-                    }
-
-                    currentSlide = 0;
-
-                    if (heroContainer) heroContainer.classList.remove('hidden');
-
-                    renderSlider();
-                    startSliderTimer();
+                if (!banners.length) {
+                    if (heroContainer) heroContainer.classList.add('hidden');
                     return;
                 }
 
-                if (heroContainer) heroContainer.classList.add('hidden');
+                currentSlide = 0;
+
+                if (heroContainer) heroContainer.classList.remove('hidden');
+
+                renderSlider();
+                startSliderTimer();
             } catch (err) {
-                console.error('Banners fetch error', err);
+                console.error('[Banners Fetch Error]', err);
                 if (heroContainer) heroContainer.classList.add('hidden');
             }
         }
@@ -322,7 +529,7 @@
                         hasImage
                             ? `
                                 <img
-                                    src="${imageUrl}"
+                                    src="${escapeHTML(imageUrl)}"
                                     class="absolute inset-0 h-full w-full object-cover"
                                     alt="${escapeHTML(title || 'Banner')}"
                                     loading="lazy"
@@ -420,18 +627,17 @@
             const list = document.getElementById('categoriesList');
 
             try {
-                const res = await fetch(`${API_URL}/categories`);
-                const data = await res.json().catch(() => ({}));
+                const { response, data } = await fetchJson(`${API_URL}/categories`);
 
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-                    categoriesCache = data.data;
-                    renderCategories();
-                    return;
-                }
+                categoriesCache = isSuccessResponse(response, data)
+                    ? extractList(data, ['categories'])
+                    : [];
 
-                categoriesCache = [];
                 renderCategories();
             } catch (err) {
+                console.error('[Categories Fetch Error]', err);
+                categoriesCache = [];
+
                 if (list) {
                     list.innerHTML = '<p class="text-sm text-error-500 p-2">تعذر تحميل الأقسام.</p>';
                 }
@@ -497,7 +703,8 @@
             const grid = document.getElementById('productsGrid');
             const bestSellersGrid = document.getElementById('bestSellersGrid');
             const bestSellersSection = document.getElementById('bestSellersSection');
-            const hasFilters = Boolean(currentCategoryId || searchQuery);
+            const hasFilters = hasActiveProductFilters();
+            const requestSeq = ++productsRequestSeq;
 
             if (document.getElementById('latestTitle')) {
                 document.getElementById('latestTitle').innerText = hasFilters ? 'نتائج البحث / التصنيف' : 'أحدث المنتجات';
@@ -506,7 +713,7 @@
             if (bestSellersSection) {
                 bestSellersSection.style.display = hasFilters ? 'none' : '';
             }
-             
+
             try {
                 let apiUrl = `${API_URL}/products`;
                 const queryParams = [];
@@ -515,27 +722,35 @@
                 if (searchQuery) queryParams.push(`search=${encodeURIComponent(searchQuery)}`);
                 if (queryParams.length > 0) apiUrl += `?${queryParams.join('&')}`;
 
-                const res = await fetch(apiUrl);
-                const data = await res.json().catch(() => ({}));
+                const { response, data } = await fetchJson(apiUrl);
 
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-                    renderProductCards(data.data, grid);
+                if (requestSeq !== productsRequestSeq) return;
 
-                    if (!currentCategoryId && !searchQuery && bestSellersGrid) {
-                        await renderFeaturedProducts(bestSellersGrid);
-                    }
-
-                    return;
+                if (!isSuccessResponse(response, data)) {
+                    throw new Error(data.message || data.error || 'تعذر تحميل المنتجات');
                 }
 
-                if (grid) {
-                    grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">لا توجد منتجات مطابقة.</p>';
+                const products = extractList(data, ['products']);
+                latestProductsCache = products;
+                const filteredProducts = applyProductFilters(products);
+                updateFilterSummary(filteredProducts.length, products.length);
+
+                if (filteredProducts.length) {
+                    renderProductCards(filteredProducts, grid);
+                } else if (grid) {
+                    grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">لا توجد منتجات مطابقة للفلاتر الحالية.</p>';
                 }
 
-                if (bestSellersGrid) {
+                if (!hasFilters && bestSellersGrid) {
+                    await renderFeaturedProducts(bestSellersGrid);
+                } else if (bestSellersGrid) {
                     bestSellersGrid.innerHTML = '';
                 }
             } catch (err) {
+                console.error('[Products Fetch Error]', err);
+
+                if (requestSeq !== productsRequestSeq) return;
+
                 if (grid) {
                     grid.innerHTML = '<p class="col-span-full text-center text-error-500 py-8">حدث خطأ في الاتصال.</p>';
                 }
@@ -551,9 +766,10 @@
             const section = document.getElementById('bestSellersSection');
 
             try {
-                const response = await fetch(`${API_URL}/products?featured=1`);
-                const data = await response.json().catch(() => ({}));
-                const products = data.success && Array.isArray(data.data) ? data.data : [];
+                const { response, data } = await fetchJson(`${API_URL}/products?featured=1`);
+                const products = isSuccessResponse(response, data)
+                    ? extractList(data, ['products'])
+                    : [];
 
                 if (!products.length) {
                     container.innerHTML = '';
@@ -564,6 +780,7 @@
                 if (section) section.style.display = '';
                 renderProductCards(products.slice(0, 5), container);
             } catch (error) {
+                console.error('[Featured Products Fetch Error]', error);
                 container.innerHTML = '';
                 if (section) section.style.display = 'none';
             }
@@ -573,15 +790,18 @@
             if (!container) return;
 
             container.innerHTML = productsArray.map(product => {
-                const productId = safeId(product.id);
+                const rawProductId = normalizeId(product.id);
+                const productId = safeId(rawProductId);
                 const price = safeNumber(product.price);
                 const discount = safeNumber(product.discount);
+                const stock = getProductStock(product);
+                const isOutOfStock = isProductOutOfStock(product);
                 const hasDiscount = discount > 0;
                 const ratingAverage = safeNumber(product.rating_average);
                 const ratingCount = safeNumber(product.rating_count);
                 const fullStars = Math.max(0, Math.min(5, Math.round(ratingAverage)));
                 const stars = '<i class="fas fa-star"></i>'.repeat(fullStars) + '<i class="far fa-star text-gray-300"></i>'.repeat(5 - fullStars);
-                const inWishlist = wishlistProductIds.has(Number(product.id));
+                const inWishlist = wishlistProductIds.has(rawProductId);
 
                 const wishlistClasses = inWishlist
                     ? 'border-error-100 bg-error-50 text-error-500'
@@ -589,6 +809,9 @@
 
                 const wishlistIcon = inWishlist ? 'fas fa-heart' : 'far fa-heart';
                 const productImage = buildImageUrl(getProductImage(product)) || 'https://via.placeholder.com/300?text=No+Image';
+                const cartButtonClasses = isOutOfStock
+                    ? 'cursor-not-allowed bg-slate-200 text-slate-500 shadow-none'
+                    : 'bg-primary-500 text-white shadow-lg shadow-cyan-100 hover:bg-primary-600';
 
                 return `
                     <div class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-lg">
@@ -599,11 +822,19 @@
                                     : ''
                             }
 
+                            ${
+                                isOutOfStock
+                                    ? '<span class="absolute right-3 top-3 z-10 rounded-full bg-slate-900/80 px-3 py-1 text-xs font-black text-white">نفدت الكمية</span>'
+                                    : ''
+                            }
+
                             <a href="pages/products/product.html?id=${productId}" class="w-full">
                                 <img
-                                    src="${productImage}"
+                                    src="${escapeHTML(productImage)}"
                                     class="aspect-square w-full object-contain transition-transform duration-500 group-hover:scale-105"
                                     alt="${escapeHTML(product.title)}"
+                                    loading="lazy"
+                                    decoding="async"
                                     onerror="this.onerror=null;this.src='https://via.placeholder.com/300?text=No+Image'"
                                 >
                             </a>
@@ -611,7 +842,7 @@
 
                         <div class="flex flex-1 flex-col p-3 sm:p-4">
                             <a href="pages/products/product.html?id=${productId}" class="transition-colors hover:text-primary-600">
-                                <h3 class="product-card-title mb-2 line-clamp-3 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:line-clamp-2 sm:text-base">
+                                <h3 class="safe-text product-card-title mb-2 line-clamp-3 min-h-[2.75rem] text-sm font-black leading-6 text-slate-800 sm:line-clamp-2 sm:text-base">
                                     ${escapeHTML(product.title)}
                                 </h3>
                             </a>
@@ -647,10 +878,12 @@
                                         type="button"
                                         data-action="add-to-cart"
                                         data-product-id="${productId}"
-                                        class="add-to-cart-btn z-20 flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary-500 px-2 text-sm font-black text-white shadow-lg shadow-cyan-100 transition-all hover:bg-primary-600 sm:h-11"
+                                        data-stock="${stock}"
+                                        data-out-of-stock="${isOutOfStock ? '1' : '0'}"
+                                        class="add-to-cart-btn z-20 flex h-10 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-black transition-all sm:h-11 ${cartButtonClasses}"
                                     >
-                                        <i class="fas fa-cart-plus pointer-events-none"></i>
-                                        <span class="hidden sm:inline">السلة</span>
+                                        <i class="fas ${isOutOfStock ? 'fa-ban' : 'fa-cart-plus'} pointer-events-none"></i>
+                                        <span class="hidden sm:inline">${isOutOfStock ? 'نفدت' : 'السلة'}</span>
                                     </button>
                                 </div>
                             </div>
@@ -671,26 +904,30 @@
             }
 
             try {
-                const response = await fetch(`${API_URL}/wishlist`, {
+                const { response, data } = await fetchJson(`${API_URL}/wishlist`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
-                const data = await response.json().catch(() => ({}));
-                const items = Array.isArray(data.data) ? data.data : [];
+                const items = isSuccessResponse(response, data)
+                    ? extractList(data, ['wishlist', 'items', 'products'])
+                    : [];
 
                 wishlistProductIds = new Set(
                     items
-                        .map(item => Number(item.id || item.product_id))
+                        .map(item => normalizeId(item.product_id ?? item.product?.id ?? item.id))
                         .filter(Boolean)
                 );
             } catch (error) {
+                console.error('[Wishlist State Error]', error);
                 wishlistProductIds = new Set();
             }
         }
 
         function updateWishlistButtons(productId, inWishlist) {
+            const normalizedProductId = normalizeId(productId);
+
             document.querySelectorAll('[data-action="wishlist"]').forEach(button => {
-                if (Number(button.dataset.productId) !== Number(productId)) return;
+                if (decodeURIComponent(button.dataset.productId || '') !== normalizedProductId) return;
 
                 button.dataset.inWishlist = inWishlist ? '1' : '0';
 
@@ -720,23 +957,22 @@
             if (!button || button.dataset.busy === '1') return;
 
             button.dataset.busy = '1';
+            button.disabled = true;
 
-            const productId = Number(id);
+            const productId = decodeURIComponent(normalizeId(id));
             const isActive = button.dataset.inWishlist === '1' || wishlistProductIds.has(productId);
 
             try {
-                const response = await fetch(`${API_URL}${isActive ? '/wishlist/remove' : '/wishlist'}`, {
+                const { response, data } = await fetchJson(`${API_URL}${isActive ? '/wishlist/remove' : '/wishlist'}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${token}`
                     },
-                    body: JSON.stringify({ product_id: productId })
+                    body: JSON.stringify({ product_id: getPayloadId(productId) })
                 });
 
-                const data = await response.json().catch(() => ({}));
-
-                if (response.ok || data.success) {
+                if (isSuccessResponse(response, data)) {
                     if (isActive) wishlistProductIds.delete(productId);
                     else wishlistProductIds.add(productId);
 
@@ -747,20 +983,68 @@
                     showToast(data.message || 'تعذر تحديث قائمة الأمنيات', 'error');
                 }
             } catch (err) {
-                console.error(err);
+                console.error('[Wishlist Toggle Error]', err);
                 showToast('تعذر تحديث قائمة الأمنيات', 'error');
             } finally {
                 button.dataset.busy = '0';
+                button.disabled = false;
             }
         };
+
+
+
+        function isOutOfStockCartError(response, data) {
+            const message = String((data && data.message) || '') + ' ' + String((data && data.error) || '') + ' ' + String((data && data.code) || '');
+            const clean = message.toLowerCase();
+            return (
+                response.status === 409 ||
+                clean.includes('out of stock') ||
+                clean.includes('sold out') ||
+                clean.includes('stock') ||
+                clean.includes('quantity') ||
+                clean.includes('نفدت') ||
+                clean.includes('نفذ') ||
+                clean.includes('المخزون') ||
+                clean.includes('الكمية') ||
+                clean.includes('تحديث السلة')
+            );
+        }
+
+        function markProductOutOfStock(productId) {
+            const normalized = normalizeId(productId);
+
+            document.querySelectorAll('[data-action="add-to-cart"]').forEach(button => {
+                if (decodeURIComponent(button.dataset.productId || '') !== normalized) return;
+
+                button.dataset.outOfStock = '1';
+                button.dataset.stock = '0';
+                button.className = 'add-to-cart-btn z-20 flex h-10 cursor-not-allowed items-center justify-center gap-1.5 rounded-xl bg-slate-200 px-2 text-sm font-black text-slate-500 shadow-none transition-all sm:h-11';
+                button.innerHTML = '<i class="fas fa-ban pointer-events-none"></i><span class="hidden sm:inline">نفدت</span>';
+            });
+        }
 
         window.addToCart = async function(button, id) {
             const token = window.AppState
                 ? window.AppState.getToken()
-                : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token')); 
-            
+                : (localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token'));
+
+            const productId = decodeURIComponent(normalizeId(id));
+
+            if (!productId) {
+                showToast('رقم المنتج غير صحيح', 'error');
+                return;
+            }
+
+            if (button?.dataset.busy === '1') return;
+
+            if (button?.dataset.outOfStock === '1') {
+                showToast('نفدت الكمية', 'error');
+                markProductOutOfStock(productId);
+                return;
+            }
+
             if (!token) {
-                addGuestCartItem(id, 1);
+                addGuestCartItem(productId, 1);
                 showToast('تمت إضافة المنتج لسلة الزائر');
 
                 if (typeof window.updateGlobalCartCount === 'function') {
@@ -777,31 +1061,34 @@
             }
 
             try {
-                const response = await fetch(`${API_URL}/cart`, {
+                const { response, data } = await fetchJson(`${API_URL}/cart`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}` 
+                        Authorization: `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        product_id: parseInt(id, 10),
+                        product_id: getPayloadId(productId),
                         quantity: 1
                     })
                 });
 
-                const data = await response.json().catch(() => ({}));
-
-                if (response.ok || data.success) {
-                    showToast('تم إضافة المنتج للسلة بنجاح!');
+                if (isSuccessResponse(response, data)) {
+                    showToast(data.message || 'تم إضافة المنتج للسلة بنجاح!');
 
                     if (typeof window.updateGlobalCartCount === 'function') {
                         window.updateGlobalCartCount();
                     }
                 } else {
-                    showToast(data.message || 'حدث خطأ أثناء الإضافة', 'error');
+                    if (isOutOfStockCartError(response, data)) {
+                        showToast('نفدت الكمية', 'error');
+                        markProductOutOfStock(productId);
+                    } else {
+                        showToast(data.message || data.error || 'حدث خطأ أثناء الإضافة', 'error');
+                    }
                 }
             } catch (err) {
-                console.error(err);
+                console.error('[Cart Add Error]', err);
                 showToast('خطأ في الاتصال بالخادم', 'error');
             } finally {
                 if (button) {
@@ -829,12 +1116,12 @@
         };
 
         function addGuestCartItem(id, quantity) {
-            const productId = Number(id);
+            const productId = normalizeId(id);
 
             if (!productId) return;
 
-            if (window.AppState) {
-                window.AppState.addCartItem(productId, quantity);
+            if (window.AppState && typeof window.AppState.addCartItem === 'function') {
+                window.AppState.addCartItem(getPayloadId(productId), quantity);
                 return;
             }
 
@@ -846,14 +1133,14 @@
                 cart = [];
             }
 
-            const existing = cart.find(item => Number(item.id || item.product_id) === productId);
+            const existing = cart.find(item => normalizeId(item.id ?? item.product_id) === productId);
 
             if (existing) {
                 existing.quantity = Number(existing.quantity || 0) + quantity;
             } else {
                 cart.push({
-                    id: productId,
-                    product_id: productId,
+                    id: getPayloadId(productId),
+                    product_id: getPayloadId(productId),
                     quantity
                 });
             }
@@ -871,22 +1158,14 @@
             window.toggleWishlist(button, button.dataset.productId);
         });
 
-        ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(eventName => {
-            document.addEventListener(eventName, event => {
-                const button = event.target.closest('[data-action="add-to-cart"]');
-                if (!button) return;
+        document.addEventListener('click', event => {
+            const button = event.target.closest('[data-action="add-to-cart"]');
+            if (!button) return;
 
-                event.preventDefault();
-                event.stopPropagation();
+            event.preventDefault();
+            event.stopPropagation();
 
-                if (typeof event.stopImmediatePropagation === 'function') {
-                    event.stopImmediatePropagation();
-                }
-
-                if (eventName === 'click') {
-                    window.handleProductCardCartClick(event, button);
-                }
-            }, true);
+            window.handleProductCardCartClick(event, button);
         });
 
         document.addEventListener('submit', event => {
@@ -905,6 +1184,10 @@
 
             if (currentCategoryId) params.set('category', currentCategoryId);
             if (searchQuery) params.set('search', searchQuery);
+            if (currentSort && currentSort !== 'newest') params.set('sort', currentSort);
+            if (minPriceFilter) params.set('min_price', minPriceFilter);
+            if (maxPriceFilter) params.set('max_price', maxPriceFilter);
+            if (inStockOnly) params.set('in_stock', '1');
 
             window.history.replaceState(
                 {},
@@ -914,10 +1197,65 @@
         }
 
         function runFilteredProducts() {
+            syncFilterControls();
             updateHomeUrl();
             renderCategories();
             renderProductsSkeleton('productsGrid');
             fetchProducts();
+        }
+
+
+
+        function wireHomepageFilterControls() {
+            const sort = document.getElementById('sortSelect');
+            const min = document.getElementById('minPriceInput');
+            const max = document.getElementById('maxPriceInput');
+            const stock = document.getElementById('inStockOnly');
+            const clear = document.getElementById('clearFiltersBtn');
+
+            const runDebounced = () => {
+                clearTimeout(filterTimer);
+                filterTimer = setTimeout(runFilteredProducts, 250);
+            };
+
+            if (sort) {
+                sort.addEventListener('change', () => {
+                    currentSort = sort.value || 'newest';
+                    runFilteredProducts();
+                });
+            }
+
+            if (min) {
+                min.addEventListener('input', () => {
+                    minPriceFilter = min.value.trim();
+                    runDebounced();
+                });
+            }
+
+            if (max) {
+                max.addEventListener('input', () => {
+                    maxPriceFilter = max.value.trim();
+                    runDebounced();
+                });
+            }
+
+            if (stock) {
+                stock.addEventListener('change', () => {
+                    inStockOnly = stock.checked;
+                    runFilteredProducts();
+                });
+            }
+
+            if (clear) {
+                clear.addEventListener('click', () => {
+                    currentSort = 'newest';
+                    minPriceFilter = '';
+                    maxPriceFilter = '';
+                    inStockOnly = false;
+                    syncFilterControls();
+                    runFilteredProducts();
+                });
+            }
         }
 
         function wireHomepageLiveFilters() {
@@ -966,7 +1304,7 @@
 
                 <div class="flex-1">
                     <h4 class="font-bold text-gray-800 text-sm">${isSuccess ? 'تم بنجاح' : 'تنبيه'}</h4>
-                    <p class="text-xs text-gray-500 font-medium mt-0.5 leading-relaxed">${escapeHTML(message)}</p>
+                    <p class="safe-text text-xs text-gray-500 font-medium mt-0.5 leading-relaxed">${escapeHTML(message)}</p>
                 </div>
 
                 <button type="button" class="flex-shrink-0 text-gray-400 hover:text-gray-700" onclick="this.parentElement.remove()">
